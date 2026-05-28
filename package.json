@@ -1,0 +1,8 @@
+{
+  "name": "brixter",
+  "private": true,
+  "workspaces": [
+    "playground",
+    "packages/*"
+  ]
+}

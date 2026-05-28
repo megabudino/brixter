@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+@source "../../../packages/brix-builder/dist";
+@source "../../../packages/brixter-dashboard/src/lib/ui";
+@source "../../../packages/brixter-dashboard/src/lib/editor";
+@plugin '@tailwindcss/typography';
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+	--font-display: 'DM Serif Display', serif;
+}
+
+body {
+	background-color: var(--color-gray-50);
+}
+
+body.dark {
+	background-color: var(--color-gray-900);
+}
+
+@utility text-heading {
+	color: var(--color-gray-900);
+	&:where(.dark, .dark *) {
+		color: var(--color-gray-50);
+	}
+}
+
+@utility text-secondary {
+	color: var(--color-gray-600);
+	&:where(.dark, .dark *) {
+		color: var(--color-gray-400);
+	}
+}
+
+@utility text-label {
+	color: var(--color-gray-700);
+	&:where(.dark, .dark *) {
+		color: var(--color-gray-300);
+	}
+}
+
+@utility text-muted {
+	color: var(--color-gray-500);
+	&:where(.dark, .dark *) {
+		color: var(--color-gray-400);
+	}
+}
+
+@utility text-error {
+	color: var(--color-red-600);
+	&:where(.dark, .dark *) {
+		color: var(--color-red-400);
+	}
+}
+
+.prose :is(h1, h2, h3, h4, th) {
+	font-family: var(--font-display);
+}

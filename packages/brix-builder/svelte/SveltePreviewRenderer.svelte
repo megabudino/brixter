@@ -1,0 +1,423 @@
+<script lang="ts">
+	import { getBuilderDefinition } from '../editor-controller.js';
+	import {
+		getValueAtPath,
+		isRichTextValue,
+		normalizeBuilderPropsForRender,
+		type BuilderRichTextValue
+	} from '../core.js';
+	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
+	import PreviewTextEditor from '../editor/PreviewTextEditor.svelte';
+	import RichTextEditor from '../editor/RichTextEditor.svelte';
+	import type { BuilderAppPreviewProps } from '../editor/contracts.js';
+	import type { PreviewOverlay } from '../preview-dom.js';
+	import type { BrikDefinition } from './adapter.js';
+
+	let {
+		definitions,
+		blocks,
+		propsErrors,
+		previewOverlays,
+		previewCollectionOverlays,
+		activeBlockId,
+		activeRichTextEdit,
+		activeTextEdit,
+		previewContainer,
+		onPreviewClick,
+		onPreviewKeydown,
+		onSelectBlock,
+		onCloseRichTextEdit,
+		onCloseTextEdit,
+		onUpdateRichText,
+		onUpdateText,
+		onQueueFileEdit,
+		onAddBlockAfter,
+		onAddItem,
+		onRemoveItem,
+		onMoveItem,
+		onOpenReorderModal
+	}: BuilderAppPreviewProps & { definitions: BrikDefinition[] } = $props();
+
+	let openInserterBlockId = $state<string | null>(null);
+	let hoveredCollectionItem = $state<string | null>(null);
+
+	function toggleInserter(blockId: string): void {
+		openInserterBlockId = openInserterBlockId === blockId ? null : blockId;
+	}
+
+	function insertBlockAfter(blockId: string, type: string): void {
+		onAddBlockAfter(blockId, type);
+		openInserterBlockId = null;
+	}
+
+	function closeInserter(): void {
+		openInserterBlockId = null;
+	}
+
+	function getCollectionItemKey(blockId: string, collectionPath: string, index: number): string {
+		return `${blockId}:${collectionPath}:${index}`;
+	}
+
+	function updateHoveredCollectionItem(
+		blockId: string,
+		overlays: PreviewOverlay[],
+		event: MouseEvent
+	): void {
+		if (
+			event.target instanceof Element &&
+			event.target.closest('.collection-item-toolbar, .collection-item-add-button')
+		) {
+			return;
+		}
+
+		const container = event.currentTarget;
+		if (!(container instanceof HTMLElement)) {
+			return;
+		}
+
+		const containerRect = container.getBoundingClientRect();
+		const pointerX = event.clientX - containerRect.left;
+		const pointerY = event.clientY - containerRect.top;
+
+		const match = overlays.find((overlay) => {
+			const top = Math.max(0, overlay.top + 36);
+			const bottom = top + overlay.height;
+			const left = overlay.left;
+			const right = left + overlay.width;
+			return pointerX >= left && pointerX <= right && pointerY >= top && pointerY <= bottom;
+		});
+
+		hoveredCollectionItem = match
+			? getCollectionItemKey(blockId, match.collectionPath, match.index)
+			: null;
+	}
+
+	function hidePreviewEditTarget(
+		node: HTMLElement,
+		params: { selector: string | null; selectorIndex: number }
+	): { update: (nextParams: { selector: string | null; selectorIndex: number }) => void; destroy: () => void } {
+		let currentParams = params;
+		let hiddenElement: HTMLElement | null = null;
+		let updateToken = 0;
+
+		void applyHiddenTarget();
+
+		async function applyHiddenTarget(): Promise<void> {
+			const token = ++updateToken;
+			hiddenElement?.style.removeProperty('visibility');
+			hiddenElement = null;
+
+			if (!currentParams.selector) {
+				return;
+			}
+
+			await Promise.resolve();
+			if (token !== updateToken) {
+				return;
+			}
+
+			const target = Array.from(node.querySelectorAll(currentParams.selector))[
+				currentParams.selectorIndex
+			];
+			if (target instanceof HTMLElement) {
+				hiddenElement = target;
+				hiddenElement.style.visibility = 'hidden';
+			}
+		}
+
+		return {
+			update(nextParams) {
+				currentParams = nextParams;
+				void applyHiddenTarget();
+			},
+			destroy() {
+				updateToken += 1;
+				hiddenElement?.style.removeProperty('visibility');
+			}
+		};
+	}
+</script>
+
+<div>
+	{#each blocks as block (block.id)}
+		{@const definition = getBuilderDefinition(block.type, definitions)}
+		{#if !propsErrors[block.id]}
+			{@const BlockComponent = definition.component}
+			{@const renderProps = normalizeBuilderPropsForRender(block.props) as Record<string, unknown>}
+			{@const activeEditor = activeRichTextEdit?.blockId === block.id ? activeRichTextEdit : null}
+			{@const activeEditorValue = activeEditor ? getValueAtPath(block.props, activeEditor.path) : null}
+			{@const activeTextEditor = activeTextEdit?.blockId === block.id ? activeTextEdit : null}
+			{@const activeTextEditorValue = activeTextEditor ? getValueAtPath(block.props, activeTextEditor.path) : null}
+			{#if definition.previewBindings.length > 0}
+				<div
+					use:previewContainer={{ block, definition }}
+					use:hidePreviewEditTarget={{
+						selector: activeEditor?.selector ?? activeTextEditor?.selector ?? null,
+						selectorIndex: activeEditor?.selectorIndex ?? activeTextEditor?.selectorIndex ?? 0
+					}}
+					class={activeBlockId === block.id
+						? 'group relative cursor-pointer outline outline-2 outline-[#3858e9] outline-offset-0 transition'
+						: 'group relative cursor-pointer outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#3858e9]'}
+					role="button"
+					tabindex="0"
+					aria-label={`Modifica elementi del brik ${definition.type}`}
+					onclick={(event: MouseEvent) => onPreviewClick(block, event)}
+					onkeydown={(event: KeyboardEvent) => onPreviewKeydown(block, event)}
+					onmousemove={(event: MouseEvent) =>
+						updateHoveredCollectionItem(block.id, previewOverlays[block.id] ?? [], event)}
+					onmouseleave={() => {
+						hoveredCollectionItem = null;
+					}}>
+					<BlockComponent {...renderProps} />
+
+					{#if definition.collections.length > 0}
+						<div class="pointer-events-none absolute inset-0">
+							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
+								<div
+									class="collection-overlay pointer-events-auto absolute z-10"
+									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
+									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#3858e9] transition"></div>
+									<button
+										type="button"
+										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center rounded-full border border-[#1e1e1e] bg-white text-lg leading-none text-[#1e1e1e] opacity-0 shadow-sm transition hover:bg-[#3858e9] hover:text-white"
+										aria-label={`Aggiungi ${overlay.label}`}
+										onclick={(event) => {
+											event.stopPropagation();
+											onAddItem(block, overlay.collectionPath);
+										}}>
+										+
+									</button>
+								</div>
+							{/each}
+
+							{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+								<div
+									class="collection-item-overlay pointer-events-none absolute z-20"
+									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
+									<div
+										class={hoveredCollectionItem ===
+										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#3858e9] transition'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#3858e9] transition'}>
+									</div>
+									<div
+										class={hoveredCollectionItem ===
+										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
+											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
+										<button
+											type="button"
+											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											onclick={(event) => {
+												event.stopPropagation();
+												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
+											}}>
+											↑
+										</button>
+										<button
+											type="button"
+											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											onclick={(event) => {
+												event.stopPropagation();
+												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
+											}}>
+											↓
+										</button>
+										<button
+											type="button"
+											class="h-full px-2.5 text-[#b32d2e] hover:bg-[#fcf0f1]"
+											onclick={(event) => {
+												event.stopPropagation();
+												onRemoveItem(block, overlay.collectionPath, overlay.index);
+											}}>
+											×
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+
+					{#if activeEditor && isRichTextValue(activeEditorValue)}
+						<div
+							class="pointer-events-auto absolute z-20"
+							style={`top:${activeEditor.top}px; left:${activeEditor.left}px; width:${activeEditor.width}px; min-height:${activeEditor.minHeight}px; ${activeEditor.textStyle};`}>
+							<RichTextEditor
+								value={activeEditorValue as BuilderRichTextValue}
+								mode={activeEditor.mode}
+								chrome="inline"
+								autofocus={true}
+								editorStyle={activeEditor.textStyle}
+								onBlur={onCloseRichTextEdit}
+								onChange={(nextValue) => onUpdateRichText(block, activeEditor.path, nextValue)} />
+						</div>
+					{/if}
+
+					{#if activeTextEditor && typeof activeTextEditorValue === 'string'}
+						<div
+							class="pointer-events-auto absolute z-20"
+							style={`top:${activeTextEditor.top}px; left:${activeTextEditor.left}px; width:${activeTextEditor.width}px; min-height:${activeTextEditor.minHeight}px; ${activeTextEditor.textStyle};`}>
+							<PreviewTextEditor
+								value={activeTextEditorValue}
+								multiline={activeTextEditor.multiline}
+								textStyle={activeTextEditor.textStyle}
+								onBlur={onCloseTextEdit}
+								onChange={(nextValue) => onUpdateText(block, activeTextEditor.path, nextValue)} />
+						</div>
+					{/if}
+
+					<PreviewBlockInserter
+						{definitions}
+						open={openInserterBlockId === block.id}
+						onToggle={() => toggleInserter(block.id)}
+						onClose={closeInserter}
+						onInsert={(type) => insertBlockAfter(block.id, type)} />
+				</div>
+			{:else}
+				<div
+					use:previewContainer={{ block, definition }}
+					use:hidePreviewEditTarget={{
+						selector: activeEditor?.selector ?? activeTextEditor?.selector ?? null,
+						selectorIndex: activeEditor?.selectorIndex ?? activeTextEditor?.selectorIndex ?? 0
+					}}
+					class={activeBlockId === block.id
+						? 'group relative outline outline-2 outline-[#3858e9] outline-offset-0'
+						: 'group relative outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#3858e9]'}
+					role="button"
+					tabindex="0"
+					aria-label={`Seleziona brik ${definition.type}`}
+					onclick={() => onSelectBlock(block.id)}
+					onkeydown={(event: KeyboardEvent) => {
+						if (event.key === 'Enter' || event.key === ' ') {
+							event.preventDefault();
+							onSelectBlock(block.id);
+						}
+					}}
+					onmousemove={(event: MouseEvent) =>
+						updateHoveredCollectionItem(block.id, previewOverlays[block.id] ?? [], event)}
+					onmouseleave={() => {
+						hoveredCollectionItem = null;
+					}}>
+					<BlockComponent {...renderProps} />
+
+					{#if definition.collections.length > 0}
+						<div class="pointer-events-none absolute inset-0">
+							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
+								<div
+									class="collection-overlay pointer-events-auto absolute z-10"
+									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
+									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#3858e9] transition"></div>
+									<button
+										type="button"
+										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center rounded-full border border-[#1e1e1e] bg-white text-lg leading-none text-[#1e1e1e] opacity-0 shadow-sm transition hover:bg-[#3858e9] hover:text-white"
+										aria-label={`Aggiungi ${overlay.label}`}
+										onclick={(event) => {
+											event.stopPropagation();
+											onAddItem(block, overlay.collectionPath);
+										}}>
+										+
+									</button>
+								</div>
+							{/each}
+
+							{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+								<div
+									class="collection-item-overlay pointer-events-none absolute z-20"
+									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
+									<div
+										class={hoveredCollectionItem ===
+										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#3858e9] transition'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#3858e9] transition'}>
+									</div>
+									<div
+										class={hoveredCollectionItem ===
+										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
+											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
+										<button
+											type="button"
+											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											onclick={(event) => {
+												event.stopPropagation();
+												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
+											}}>
+											↑
+										</button>
+										<button
+											type="button"
+											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											onclick={(event) => {
+												event.stopPropagation();
+												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
+											}}>
+											↓
+										</button>
+										<button
+											type="button"
+											class="h-full px-2.5 text-[#b32d2e] hover:bg-[#fcf0f1]"
+											onclick={(event) => {
+												event.stopPropagation();
+												onRemoveItem(block, overlay.collectionPath, overlay.index);
+											}}>
+											×
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+
+					{#if activeEditor && isRichTextValue(activeEditorValue)}
+						<div
+							class="pointer-events-auto absolute z-20"
+							style={`top:${activeEditor.top}px; left:${activeEditor.left}px; width:${activeEditor.width}px; min-height:${activeEditor.minHeight}px; ${activeEditor.textStyle};`}>
+							<RichTextEditor
+								value={activeEditorValue as BuilderRichTextValue}
+								mode={activeEditor.mode}
+								chrome="inline"
+								autofocus={true}
+								editorStyle={activeEditor.textStyle}
+								onBlur={onCloseRichTextEdit}
+								onChange={(nextValue) => onUpdateRichText(block, activeEditor.path, nextValue)} />
+						</div>
+					{/if}
+
+					{#if activeTextEditor && typeof activeTextEditorValue === 'string'}
+						<div
+							class="pointer-events-auto absolute z-20"
+							style={`top:${activeTextEditor.top}px; left:${activeTextEditor.left}px; width:${activeTextEditor.width}px; min-height:${activeTextEditor.minHeight}px; ${activeTextEditor.textStyle};`}>
+							<PreviewTextEditor
+								value={activeTextEditorValue}
+								multiline={activeTextEditor.multiline}
+								textStyle={activeTextEditor.textStyle}
+								onBlur={onCloseTextEdit}
+								onChange={(nextValue) => onUpdateText(block, activeTextEditor.path, nextValue)} />
+						</div>
+					{/if}
+
+					<PreviewBlockInserter
+						{definitions}
+						open={openInserterBlockId === block.id}
+						onToggle={() => toggleInserter(block.id)}
+						onClose={closeInserter}
+						onInsert={(type) => insertBlockAfter(block.id, type)} />
+				</div>
+			{/if}
+		{:else}
+			<div class="border border-dashed border-[#b32d2e] bg-[#fcf0f1] px-4 py-3 text-sm text-[#b32d2e]">
+				Correggi i contenuti di questo brik per vedere di nuovo la preview.
+			</div>
+		{/if}
+	{/each}
+</div>
+
+<style>
+	.collection-overlay:hover .collection-outline,
+	.collection-overlay:focus-within .collection-outline,
+	.collection-overlay:hover .collection-add-button,
+	.collection-overlay:focus-within .collection-add-button {
+		opacity: 1;
+	}
+</style>
+
