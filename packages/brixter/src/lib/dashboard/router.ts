@@ -1,7 +1,17 @@
 import { error, fail, redirect, type Actions, type RequestEvent } from '@sveltejs/kit';
+import { getAuth } from '../server/auth.ts';
+import { getConfig } from '../server/config.ts';
 import { getDb } from '../server/db.ts';
 import { getOctokit, getRepo } from '../server/github.ts';
 import { getRepoConfig, updateRepoConfig } from '../server/repo-config.ts';
+import {
+	buildRouteListing,
+	isPageFilePath,
+	isWithinRepoRoot,
+	normalizeRepoPath,
+	routeBreadcrumbs,
+	type TreeEntry
+} from '../server/sveltekit-routes.ts';
 import { marked } from 'marked';
 
 type DashboardPage = 'branches' | 'login' | 'setup' | 'new-branch' | 'settings' | 'branch';
@@ -116,7 +126,42 @@ async function loadNewBranch({ locals }: RequestEvent) {
 	return { repo: { name: repo.name, defaultBranch: repo.defaultBranch } };
 }
 
-async function fetchDirectoryTree(branch: string): Promise<string[]> {
+async function loadSettings({ locals }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+	if (locals.user.role !== 'admin') throw error(403, 'Only admins can access settings');
+
+	const config = getRepoConfig();
+	const coreConfig = getConfig();
+	const repo = getRepo();
+
+	return {
+		repo: { name: repo.name, fullName: repo.fullName },
+		config,
+		routesRoot: coreConfig.routesRoot
+	};
+}
+
+function parentPathFor(path: string, routesRoot: string): string | null {
+	if (path === routesRoot) return null;
+	const parent = path.split('/').slice(0, -1).join('/');
+	return parent && isWithinRepoRoot(parent, routesRoot) ? parent : null;
+}
+
+function validateDirectoryName(name: string): string | null {
+	if (!name) return 'Directory name is required.';
+	if (name === '.' || name === '..') return 'Directory name is reserved.';
+	if (name.includes('/') || name.includes('\\')) return 'Directory name cannot contain slashes.';
+	if (name.startsWith('+')) return 'Directory name cannot start with "+".';
+	return null;
+}
+
+function branchHref(branch: string, path = ''): string {
+	const base = `/admin/b/${encodeURIComponent(branch)}`;
+	if (!path) return base;
+	return `${base}/${path.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+async function fetchRepoTree(branch: string): Promise<TreeEntry[]> {
 	const octokit = getOctokit();
 	const repo = getRepo();
 
@@ -143,23 +188,70 @@ async function fetchDirectoryTree(branch: string): Promise<string[]> {
 	});
 
 	return tree.tree
-		.filter((item: { type?: string }) => item.type === 'tree')
-		.map((item: { path?: string }) => item.path as string)
-		.sort();
+		.filter((item: { type?: string }) => item.type === 'tree' || item.type === 'blob')
+		.map((item: { path?: string; type?: string }) => ({
+			path: item.path as string,
+			type: item.type as 'tree' | 'blob'
+		}));
 }
 
-async function loadSettings({ locals }: RequestEvent) {
-	if (!locals.user) throw redirect(302, '/admin/login');
-	if (locals.user.role !== 'admin') throw error(403, 'Only admins can access settings');
-
-	const config = getRepoConfig();
+async function loadBranchFile(
+	branch: string,
+	filePath: string,
+	mediaPath: string
+): Promise<Record<string, unknown>> {
+	const octokit = getOctokit();
 	const repo = getRepo();
-	const directories = await fetchDirectoryTree(repo.defaultBranch);
+
+	const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+		owner: repo.owner,
+		repo: repo.name,
+		path: filePath,
+		ref: branch
+	});
+
+	const file = data as {
+		name: string;
+		path: string;
+		sha: string;
+		download_url: string;
+		size: number;
+		content?: string;
+		encoding?: string;
+	};
+
+	let htmlContent: string | undefined;
+	let frontmatter: string | undefined;
+
+	if (file.name.endsWith('.md') && file.content && file.encoding === 'base64') {
+		const raw = Buffer.from(file.content, 'base64').toString('utf-8');
+		const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+
+		if (fmMatch) {
+			frontmatter = fmMatch[1];
+			htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
+		} else {
+			htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
+		}
+
+		const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
+		htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
+			const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
+			const proxyParams = new URLSearchParams({ branch, path: repoPath });
+			return `src="/admin/api/repo-image?${proxyParams}"`;
+		});
+	}
 
 	return {
-		repo: { name: repo.name, fullName: repo.fullName },
-		config,
-		directories
+		file: {
+			name: file.name,
+			path: file.path,
+			sha: file.sha,
+			downloadUrl: file.download_url,
+			size: file.size,
+			htmlContent,
+			frontmatter
+		}
 	};
 }
 
@@ -167,13 +259,13 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	if (!locals.user) throw redirect(302, '/admin/login');
 	if (!match.branch) throw error(404, 'Not found');
 
-	const config = getRepoConfig();
-	const { allowedPaths, allowedExtensions, mediaPath } = config;
+	const { mediaPath } = getRepoConfig();
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
 	const octokit = getOctokit();
 	const repo = getRepo();
 	const defaultBranch = repo.defaultBranch;
-	const branchBase = `/admin/b/${match.branch}`;
-	const filePath = match.path ?? '';
+	const requestedPath = normalizeRepoPath(match.path);
+	const filePath = requestedPath || routesRoot;
 
 	let behindBy = 0;
 	if (match.branch !== defaultBranch) {
@@ -192,139 +284,72 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		}
 	}
 
-	if (allowedPaths.length > 0 && filePath) {
-		const isAllowedOrParent = allowedPaths.some(
-			(ap) => ap === filePath || ap.startsWith(filePath + '/')
-		);
-		const isChildOfAllowed = allowedPaths.some((ap) => filePath.startsWith(ap + '/'));
-		if (!isAllowedOrParent && !isChildOfAllowed) throw error(403, 'Access denied');
-	}
+	if (!isWithinRepoRoot(filePath, routesRoot)) throw error(403, 'Access denied');
 
-	if (!filePath && allowedPaths.length > 0) {
-		const entries = allowedPaths
-			.map((ap) => ({ name: ap.split('/').pop()!, type: 'dir' as const, path: ap }))
-			.sort((a, b) => a.name.localeCompare(b.name));
-
-		return {
-			repo: { name: repo.name, fullName: repo.fullName, mediaPath },
-			branch: match.branch,
-			defaultBranch,
-			filePath,
-			entries,
-			allowedPaths,
-			behindBy
-		};
-	}
-
+	let tree: TreeEntry[];
 	try {
-		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: filePath,
-			ref: match.branch
-		});
-
-		if (!Array.isArray(data)) {
-			const file = data as {
-				name: string;
-				path: string;
-				sha: string;
-				download_url: string;
-				size: number;
-				content?: string;
-				encoding?: string;
-			};
-
-			let htmlContent: string | undefined;
-			let frontmatter: string | undefined;
-
-			if (file.name.endsWith('.md') && file.content && file.encoding === 'base64') {
-				const raw = Buffer.from(file.content, 'base64').toString('utf-8');
-				const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-
-				if (fmMatch) {
-					frontmatter = fmMatch[1];
-					htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
-				} else {
-					htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
-				}
-
-				const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
-				htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
-					const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
-					const proxyParams = new URLSearchParams({ branch: match.branch!, path: repoPath });
-					return `src="/admin/api/repo-image?${proxyParams}"`;
-				});
-			}
-
-			return {
-				repo: { name: repo.name, fullName: repo.fullName, mediaPath },
-				branch: match.branch,
-				defaultBranch,
-				filePath,
-				file: {
-					name: file.name,
-					path: file.path,
-					sha: file.sha,
-					downloadUrl: file.download_url,
-					size: file.size,
-					htmlContent,
-					frontmatter
-				},
-				entries: [],
-				allowedPaths,
-				behindBy
-			};
-		}
-
-		const entries = data
-			.map((item) => ({
-				name: item.name,
-				type: item.type as 'file' | 'dir',
-				path: item.path,
-				downloadUrl: item.download_url as string | null
-			}))
-			.filter((item: { name: string; type: string; path: string }) => {
-				if (allowedPaths.length === 0) {
-					return item.type === 'dir' || allowedExtensions.includes('.' + item.name.split('.').pop());
-				}
-
-				const isInsideAllowed = allowedPaths.some((ap) => item.path.startsWith(ap + '/'));
-				if (isInsideAllowed) {
-					if (item.type === 'dir') return true;
-					const ext = '.' + item.name.split('.').pop();
-					return allowedExtensions.includes(ext);
-				}
-
-				if (item.type === 'dir') {
-					return allowedPaths.some((ap) => ap === item.path || ap.startsWith(item.path + '/'));
-				}
-
-				return false;
-			})
-			.sort((a, b) => {
-				if (a.type === b.type) return a.name.localeCompare(b.name);
-				return a.type === 'dir' ? -1 : 1;
-			});
-
-		const dirs = entries.filter((e) => e.type === 'dir');
-		const files = entries.filter((e) => e.type === 'file');
-		if (dirs.length === 1 && files.length === 0) throw redirect(302, `${branchBase}/${dirs[0].path}`);
-
-		return {
-			repo: { name: repo.name, fullName: repo.fullName, mediaPath },
-			branch: match.branch,
-			defaultBranch,
-			filePath,
-			entries,
-			allowedPaths,
-			behindBy
-		};
+		tree = await fetchRepoTree(match.branch);
 	} catch (err: unknown) {
-		const e = err as { status?: number; response?: { status?: number; data?: { message?: string } } };
+		const e = err as {
+			status?: number;
+			response?: { status?: number; data?: { message?: string } };
+		};
 		if (e.status) throw err;
 		throw error(e.response?.status ?? 500, e.response?.data?.message ?? 'Failed to load contents');
 	}
+
+	const node = tree.find((entry) => entry.path === filePath);
+	const isFile = node?.type === 'blob' || (!node && isPageFilePath(filePath));
+
+	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath, routesRoot };
+
+	if (isFile) {
+		let filePayload: Record<string, unknown>;
+		try {
+			filePayload = await loadBranchFile(match.branch, filePath, mediaPath);
+		} catch (err: unknown) {
+			const e = err as {
+				status?: number;
+				response?: { status?: number; data?: { message?: string } };
+			};
+			if (e.status) throw err;
+			throw error(
+				e.response?.status ?? 500,
+				e.response?.data?.message ?? 'Failed to load contents'
+			);
+		}
+
+		const file = filePayload.file as { path: string };
+		return {
+			repo: repoMeta,
+			branch: match.branch,
+			defaultBranch,
+			filePath,
+			explorerRoot: routesRoot,
+			parentPath: parentPathFor(file.path, routesRoot),
+			breadcrumbs: routeBreadcrumbs(file.path, routesRoot),
+			...filePayload,
+			entries: [],
+			childDirNames: [],
+			behindBy
+		};
+	}
+
+	const { ownPage, entries: routeEntries, childDirNames } = buildRouteListing(tree, filePath);
+	const entries = ownPage ? [ownPage, ...routeEntries] : routeEntries;
+
+	return {
+		repo: repoMeta,
+		branch: match.branch,
+		defaultBranch,
+		filePath,
+		explorerRoot: routesRoot,
+		parentPath: requestedPath ? parentPathFor(filePath, routesRoot) : null,
+		breadcrumbs: routeBreadcrumbs(filePath, routesRoot),
+		entries,
+		childDirNames,
+		behindBy
+	};
 }
 
 export async function loadDashboard(event: RequestEvent) {
@@ -364,7 +389,37 @@ export async function loadDashboard(event: RequestEvent) {
 	};
 }
 
-async function loginAction({ request }: RequestEvent) {
+function applySetCookieHeaders(headers: Headers, cookies: RequestEvent['cookies']) {
+	const header = headers.get('set-cookie');
+	if (!header) return;
+
+	const [pair, ...attributes] = header.split(';').map((part) => part.trim());
+	const separator = pair.indexOf('=');
+	if (separator === -1) return;
+
+	const name = pair.slice(0, separator);
+	const value = pair.slice(separator + 1);
+	const options: Parameters<typeof cookies.set>[2] = {
+		path: '/',
+		encode: (cookieValue) => cookieValue
+	};
+
+	for (const attribute of attributes) {
+		const [rawKey, rawValue] = attribute.split('=');
+		const key = rawKey.toLowerCase();
+		if (key === 'httponly') options.httpOnly = true;
+		if (key === 'secure') options.secure = true;
+		if (key === 'path' && rawValue) options.path = rawValue;
+		if (key === 'max-age' && rawValue) options.maxAge = Number(rawValue);
+		if (key === 'samesite' && rawValue) {
+			options.sameSite = rawValue.toLowerCase() as 'strict' | 'lax' | 'none';
+		}
+	}
+
+	cookies.set(name, value, options);
+}
+
+async function loginAction({ request, cookies }: RequestEvent) {
 	const formData = await request.formData();
 	const email = formData.get('email')?.toString().trim() ?? '';
 	const password = formData.get('password')?.toString() ?? '';
@@ -372,34 +427,47 @@ async function loginAction({ request }: RequestEvent) {
 	if (!email || !password) return fail(400, { message: 'Email and password are required.', email });
 
 	try {
-		const { getAuth } = await import('../server/auth.ts');
-		await getAuth().api.signInEmail({ body: { email, password } });
-	} catch {
+		const result = await getAuth().api.signInEmail({
+			body: { email, password },
+			headers: request.headers,
+			returnHeaders: true
+		});
+		applySetCookieHeaders(result.headers, cookies);
+	} catch (err) {
+		if (process.env.NODE_ENV !== 'production') {
+			console.error('brixter login failed', err);
+		}
 		return fail(400, { message: 'Invalid email or password.', email });
 	}
 
 	throw redirect(302, '/admin');
 }
 
-async function setupAction({ request }: RequestEvent) {
+async function setupAction({ request, cookies }: RequestEvent) {
 	const formData = await request.formData();
 	const name = formData.get('name')?.toString().trim() ?? '';
 	const email = formData.get('email')?.toString().trim() ?? '';
 	const password = formData.get('password')?.toString() ?? '';
 	const confirmPassword = formData.get('confirmPassword')?.toString() ?? '';
 
-	if (!name || !email || !password) return fail(400, { message: 'All fields are required.', name, email });
+	if (!name || !email || !password)
+		return fail(400, { message: 'All fields are required.', name, email });
 	if (password.length < 8) {
 		return fail(400, { message: 'Password must be at least 8 characters.', name, email });
 	}
-	if (password !== confirmPassword) return fail(400, { message: 'Passwords do not match.', name, email });
+	if (password !== confirmPassword)
+		return fail(400, { message: 'Passwords do not match.', name, email });
 
 	try {
-		const { getAuth } = await import('../server/auth.ts');
 		const auth = getAuth();
 		const user = await auth.api.signUpEmail({ body: { email, password, name } });
 		getDb().prepare('UPDATE "user" SET role = ? WHERE id = ?').run('admin', user.user.id);
-		await auth.api.signInEmail({ body: { email, password } });
+		const result = await auth.api.signInEmail({
+			body: { email, password },
+			headers: request.headers,
+			returnHeaders: true
+		});
+		applySetCookieHeaders(result.headers, cookies);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Account creation failed.';
 		return fail(400, { message, name, email });
@@ -447,7 +515,6 @@ async function settingsAction({ request, locals }: RequestEvent) {
 
 	const formData = await request.formData();
 	const extensionsRaw = formData.get('extensions')?.toString().trim() ?? '';
-	const selectedPaths = formData.getAll('allowed_paths').map((p) => p.toString());
 	const mediaPath = formData.get('media_path')?.toString().trim() ?? '';
 	const extensions = extensionsRaw
 		.split(',')
@@ -458,7 +525,7 @@ async function settingsAction({ request, locals }: RequestEvent) {
 		return fail(400, { message: 'At least one valid extension is required (e.g. .md).' });
 	}
 
-	updateRepoConfig({ allowedPaths: selectedPaths, allowedExtensions: extensions, mediaPath });
+	updateRepoConfig({ allowedPaths: [], allowedExtensions: extensions, mediaPath });
 	return { success: true };
 }
 
@@ -481,7 +548,9 @@ async function mergeAction({ locals, url }: RequestEvent) {
 		});
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, { mergeError: e.response?.data?.message ?? 'Merge failed' });
+		return fail(e.response?.status ?? 500, {
+			mergeError: e.response?.data?.message ?? 'Merge failed'
+		});
 	}
 
 	return { mergeSuccess: true };
@@ -497,9 +566,11 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 	const markdown = formData.get('markdown')?.toString() ?? '';
 	const frontmatterYaml = formData.get('frontmatter')?.toString() ?? '';
 	const sha = formData.get('sha')?.toString() ?? '';
-	const filePath = match.path ?? '';
+	const filePath = normalizeRepoPath(match.path);
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
 
 	if (!filePath || !sha) return fail(400, { saveError: 'Missing file path or sha.' });
+	if (!isWithinRepoRoot(filePath, routesRoot)) return fail(403, { saveError: 'Access denied.' });
 
 	const fileContent = frontmatterYaml.trim()
 		? `---\n${frontmatterYaml.trim()}\n---\n${markdown}`
@@ -519,28 +590,107 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 		});
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, { saveError: e.response?.data?.message ?? 'Save failed' });
+		return fail(e.response?.status ?? 500, {
+			saveError: e.response?.data?.message ?? 'Save failed'
+		});
 	}
 
 	return { saveSuccess: true };
 }
 
+async function createDirectoryAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'branch' || !match.branch)
+		return fail(404, { createDirectoryError: 'Not found.' });
+
+	const formData = await request.formData();
+	const name = formData.get('directory_name')?.toString().trim() ?? '';
+	const validationError = validateDirectoryName(name);
+	if (validationError)
+		return fail(400, { createDirectoryError: validationError, directoryName: name });
+
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
+	const currentPath = normalizeRepoPath(match.path) || routesRoot;
+	if (!isWithinRepoRoot(currentPath, routesRoot)) {
+		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
+	}
+
+	const directoryPath = `${currentPath}/${name}`;
+	if (!isWithinRepoRoot(directoryPath, routesRoot)) {
+		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
+	}
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	try {
+		await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+			owner: repo.owner,
+			repo: repo.name,
+			path: directoryPath,
+			ref: match.branch
+		});
+
+		return fail(409, {
+			createDirectoryError: `Directory "${name}" already exists.`,
+			directoryName: name
+		});
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		if (e.response?.status !== 404) {
+			return fail(e.response?.status ?? 500, {
+				createDirectoryError: e.response?.data?.message ?? 'Failed to check directory.',
+				directoryName: name
+			});
+		}
+	}
+
+	try {
+		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+			owner: repo.owner,
+			repo: repo.name,
+			path: `${directoryPath}/.gitkeep`,
+			message: `Create ${directoryPath}`,
+			content: Buffer.from('').toString('base64'),
+			branch: match.branch
+		});
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			createDirectoryError: e.response?.data?.message ?? 'Failed to create directory.',
+			directoryName: name
+		});
+	}
+
+	throw redirect(303, branchHref(match.branch, directoryPath));
+}
+
 export const dashboardActions: Actions = {
-	default: async (event) => {
+	login: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 		const match = matchPage(event.url.pathname);
-		switch (match.page) {
-			case 'login':
-				return loginAction(event);
-			case 'setup':
-				return setupAction(event);
-			case 'new-branch':
-				return newBranchAction(event);
-			case 'settings':
-				return settingsAction(event);
-			default:
-				throw error(405, 'Method not allowed');
-		}
+		if (match.page !== 'login') throw error(405, 'Method not allowed');
+		return loginAction(event);
+	},
+	setup: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		const match = matchPage(event.url.pathname);
+		if (match.page !== 'setup') throw error(405, 'Method not allowed');
+		return setupAction(event);
+	},
+	newBranch: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		const match = matchPage(event.url.pathname);
+		if (match.page !== 'new-branch') throw error(405, 'Method not allowed');
+		return newBranchAction(event);
+	},
+	settings: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		const match = matchPage(event.url.pathname);
+		if (match.page !== 'settings') throw error(405, 'Method not allowed');
+		return settingsAction(event);
 	},
 	merge: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
@@ -549,5 +699,9 @@ export const dashboardActions: Actions = {
 	save: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 		return saveAction(event);
+	},
+	createDirectory: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return createDirectoryAction(event);
 	}
 };

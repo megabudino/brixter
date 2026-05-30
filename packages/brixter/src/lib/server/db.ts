@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { getConfig } from './config.ts';
+import { getCoreConfig } from './config.ts';
 
 let instance: Database.Database | null = null;
 
@@ -9,7 +9,7 @@ let instance: Database.Database | null = null;
  */
 export function getDb(): Database.Database {
 	if (instance) return instance;
-	const { databaseUrl } = getConfig();
+	const { databaseUrl } = getCoreConfig();
 	instance = new Database(databaseUrl);
 	instance.pragma('journal_mode = WAL');
 	instance.pragma('foreign_keys = ON');

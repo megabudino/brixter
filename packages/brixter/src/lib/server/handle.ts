@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { getAuth } from './auth.ts';
-import { getConfig } from './config.ts';
+import { getCoreConfig } from './config.ts';
 import { isSetupComplete } from './setup.ts';
 
 /**
@@ -22,7 +22,7 @@ import { isSetupComplete } from './setup.ts';
  * - hydrates `event.locals.{session,user}` from the active session
  */
 export const handle: Handle = async ({ event, resolve }) => {
-	const { adminPath } = getConfig();
+	const { adminPath } = getCoreConfig();
 	const loginPath = `${adminPath}/login`;
 	const setupPath = `${adminPath}/setup`;
 	const path = event.url.pathname;

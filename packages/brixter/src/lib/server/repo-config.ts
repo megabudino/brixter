@@ -7,7 +7,7 @@ export interface RepoConfig {
 }
 
 const DEFAULT_CONFIG: RepoConfig = {
-	allowedPaths: ['src/routes', 'src/drafts'],
+	allowedPaths: [],
 	allowedExtensions: ['.md', '.yaml', '.yml', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'],
 	mediaPath: ''
 };

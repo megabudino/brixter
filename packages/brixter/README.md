@@ -1,32 +1,50 @@
-# sv
+# brixter
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Brixter CMS package for SvelteKit apps.
 
-## Creating a project
+## Init
 
-If you're seeing this, you've probably already done this step. Congrats!
+After installing the package, wire the dashboard into a SvelteKit app:
 
 ```sh
-# create a new project
-npx sv create my-app
+brixter init
 ```
 
-To recreate this project with the same configuration:
+The init command creates the hidden `__brixter` route shims, wires SvelteKit
+hooks, adds the Vite plugin, documents required environment variables, and adds
+Tailwind sources for package components. It does not copy dashboard
+implementation files into the app.
+
+Useful options:
 
 ```sh
-# recreate this project
-bun x sv@0.12.7 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" playwright tailwindcss="plugins:none" sveltekit-adapter="adapter:node" mdsvex --install bun brixter
+brixter init --dry-run
+brixter init --cwd ./apps/web
+brixter init --admin-path /admin
+```
+
+## Explorer
+
+The dashboard explorer is SvelteKit-first: it starts from the app's
+`src/routes` directory and shows route pages instead of arbitrary repository
+folders. If the SvelteKit app lives below the repository root, Brixter infers
+that from Vite's `root` and uses a repo-relative routes root such as
+`playground/src/routes`.
+
+You can override discovery explicitly:
+
+```ts
+brixter({ appRoot: 'playground' });
+// or
+brixter({ routesRoot: 'playground/src/routes' });
 ```
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Start a development server:
 
 ```sh
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
 ## Building

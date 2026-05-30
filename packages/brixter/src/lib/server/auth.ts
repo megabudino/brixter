@@ -1,11 +1,9 @@
 import { betterAuth } from 'better-auth';
-import { sveltekitCookies } from 'better-auth/svelte-kit';
-import { getRequestEvent } from '$app/server';
-import { getConfig } from './config.ts';
+import { getCoreConfig } from './config.ts';
 import { getDb } from './db.ts';
 
 function build() {
-	const { origin, authSecret } = getConfig();
+	const { origin, authSecret } = getCoreConfig();
 	return betterAuth({
 		baseURL: origin,
 		secret: authSecret,
@@ -24,7 +22,7 @@ function build() {
 				}
 			}
 		},
-		plugins: [sveltekitCookies(getRequestEvent)]
+		plugins: []
 	});
 }
 

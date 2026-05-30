@@ -7,12 +7,10 @@
 </script>
 
 <div class="mx-auto max-w-md px-6 py-16">
-	<a href="/admin" class="text-sm text-secondary transition-colors hover:text-heading">
-		← Back
-	</a>
+	<a href="/admin" class="text-secondary hover:text-heading text-sm transition-colors"> ← Back </a>
 	<div class="mb-6">
-		<h1 class="mt-4 font-display text-3xl text-gray-900 dark:text-gray-50">New branch</h1>
-		<p class="mt-2 text-sm text-muted">
+		<h1 class="font-display mt-4 text-3xl text-gray-900 dark:text-gray-50">New branch</h1>
+		<p class="text-muted mt-2 text-sm">
 			Branched from <code class="text-xs">{data.repo.defaultBranch}</code>. Use lowercase letters
 			and hyphens only. Keep it short and descriptive.<br />
 		</p>
@@ -20,6 +18,7 @@
 
 	<form
 		method="post"
+		action="?/newBranch"
 		use:enhance={() => {
 			submitting = true;
 			return async ({ update }) => {
@@ -38,7 +37,7 @@
 		/>
 
 		{#if form?.message}
-			<p class="text-sm text-error">{form.message}</p>
+			<p class="text-error text-sm">{form.message}</p>
 		{/if}
 
 		<Button class="w-full" disabled={submitting}>

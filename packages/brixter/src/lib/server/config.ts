@@ -23,6 +23,10 @@ export interface BrixterConfig {
 	authSecret?: string;
 	/** Mount path for the CMS routes. Default: `/admin`. Env: `BRIXTER_ADMIN_PATH`. */
 	adminPath?: string;
+	/** SvelteKit app root, relative to the GitHub repo root. Env: `BRIXTER_APP_ROOT`. */
+	appRoot?: string;
+	/** SvelteKit routes directory, relative to the GitHub repo root. Env: `BRIXTER_ROUTES_ROOT`. */
+	routesRoot?: string;
 	/** GitHub App credentials and target repo. */
 	github?: Partial<BrixterGitHubConfig>;
 }
@@ -32,10 +36,33 @@ export interface ResolvedBrixterConfig {
 	origin: string;
 	authSecret: string;
 	adminPath: string;
+	appRoot: string;
+	routesRoot: string;
 	github: BrixterGitHubConfig;
 }
 
+export type ResolvedBrixterCoreConfig = Omit<ResolvedBrixterConfig, 'github'>;
+
+interface BuildRepoInfo {
+	repo: string | undefined;
+	repoOwner: string | undefined;
+	repoName: string | undefined;
+	defaultBranch: string | undefined;
+	commit: string | undefined;
+	appRoot: string | undefined;
+	routesRoot: string | undefined;
+}
+
+declare const __BRIXTER_BUILD_REPO__: string | null | undefined;
+declare const __BRIXTER_BUILD_REPO_OWNER__: string | null | undefined;
+declare const __BRIXTER_BUILD_REPO_NAME__: string | null | undefined;
+declare const __BRIXTER_BUILD_DEFAULT_BRANCH__: string | null | undefined;
+declare const __BRIXTER_BUILD_COMMIT__: string | null | undefined;
+declare const __BRIXTER_BUILD_APP_ROOT__: string | null | undefined;
+declare const __BRIXTER_BUILD_ROUTES_ROOT__: string | null | undefined;
+
 let overrides: BrixterConfig = {};
+let cachedCore: ResolvedBrixterCoreConfig | null = null;
 let cached: ResolvedBrixterConfig | null = null;
 let envFile: Record<string, string> | null = null;
 
@@ -84,6 +111,7 @@ function envValue(key: string): string | undefined {
  */
 export function configureBrixter(config: BrixterConfig): void {
 	overrides = config;
+	cachedCore = null;
 	cached = null;
 }
 
@@ -97,6 +125,102 @@ function required(value: string | undefined, name: string): string {
 	return value;
 }
 
+function present(value: string | undefined): string | undefined {
+	const trimmed = value?.trim();
+	return trimmed ? trimmed : undefined;
+}
+
+function parseRepoFullName(value: string | undefined): { owner: string; name: string } | undefined {
+	const match = value?.match(/^([^/]+)\/([^/]+)$/);
+	if (!match) return undefined;
+	return { owner: match[1], name: match[2] };
+}
+
+function normalizeRepoPath(value: string | undefined): string | undefined {
+	const trimmed = value?.trim().replace(/^\/+|\/+$/g, '');
+	return trimmed ? trimmed : undefined;
+}
+
+function routesRootForApp(appRoot: string): string {
+	return [appRoot, 'src/routes'].filter(Boolean).join('/');
+}
+
+function getBuildRepoInfo(): BuildRepoInfo {
+	const repo =
+		present(typeof __BRIXTER_BUILD_REPO__ === 'string' ? __BRIXTER_BUILD_REPO__ : undefined) ??
+		present(envValue('BRIXTER_SOURCE_REPO'));
+	const parsed = parseRepoFullName(repo);
+
+	return {
+		repo,
+		repoOwner:
+			present(
+				typeof __BRIXTER_BUILD_REPO_OWNER__ === 'string' ? __BRIXTER_BUILD_REPO_OWNER__ : undefined
+			) ?? parsed?.owner,
+		repoName:
+			present(
+				typeof __BRIXTER_BUILD_REPO_NAME__ === 'string' ? __BRIXTER_BUILD_REPO_NAME__ : undefined
+			) ?? parsed?.name,
+		defaultBranch:
+			present(
+				typeof __BRIXTER_BUILD_DEFAULT_BRANCH__ === 'string'
+					? __BRIXTER_BUILD_DEFAULT_BRANCH__
+					: undefined
+			) ?? present(envValue('BRIXTER_SOURCE_DEFAULT_BRANCH')),
+		commit:
+			present(
+				typeof __BRIXTER_BUILD_COMMIT__ === 'string' ? __BRIXTER_BUILD_COMMIT__ : undefined
+			) ?? present(envValue('BRIXTER_SOURCE_COMMIT')),
+		appRoot:
+			normalizeRepoPath(
+				typeof __BRIXTER_BUILD_APP_ROOT__ === 'string' ? __BRIXTER_BUILD_APP_ROOT__ : undefined
+			) ?? normalizeRepoPath(envValue('BRIXTER_APP_ROOT')),
+		routesRoot:
+			normalizeRepoPath(
+				typeof __BRIXTER_BUILD_ROUTES_ROOT__ === 'string'
+					? __BRIXTER_BUILD_ROUTES_ROOT__
+					: undefined
+			) ?? normalizeRepoPath(envValue('BRIXTER_ROUTES_ROOT'))
+	};
+}
+
+function assertRepoMatchesBuild(config: BrixterGitHubConfig, build: BuildRepoInfo): void {
+	if (!build.repo) return;
+
+	const configuredRepo = `${config.repoOwner}/${config.repoName}`;
+	if (configuredRepo.toLowerCase() !== build.repo.toLowerCase()) {
+		throw new Error(
+			`brixter: configured GitHub repo "${configuredRepo}" does not match ` +
+				`the repo that produced this build "${build.repo}".`
+		);
+	}
+}
+
+/**
+ * Resolve and cache configuration that does not require a GitHub repo.
+ */
+export function getCoreConfig(): ResolvedBrixterCoreConfig {
+	if (cachedCore) return cachedCore;
+
+	const build = getBuildRepoInfo();
+	const appRoot = normalizeRepoPath(overrides.appRoot) ?? build.appRoot ?? '';
+	const routesRoot =
+		normalizeRepoPath(overrides.routesRoot) ?? build.routesRoot ?? routesRootForApp(appRoot);
+
+	cachedCore = {
+		databaseUrl: overrides.databaseUrl ?? present(envValue('DATABASE_URL')) ?? 'data/brixter.db',
+		origin: required(overrides.origin ?? present(envValue('ORIGIN')), 'ORIGIN'),
+		authSecret: required(
+			overrides.authSecret ?? present(envValue('BRIXTER_AUTH_SECRET')),
+			'BRIXTER_AUTH_SECRET'
+		),
+		adminPath: overrides.adminPath ?? present(envValue('BRIXTER_ADMIN_PATH')) ?? '/admin',
+		appRoot,
+		routesRoot
+	};
+	return cachedCore;
+}
+
 /**
  * Resolve and cache the merged configuration. First call wins:
  * subsequent calls return the same object. Throws if a required
@@ -105,27 +229,37 @@ function required(value: string | undefined, name: string): string {
 export function getConfig(): ResolvedBrixterConfig {
 	if (cached) return cached;
 
+	const core = getCoreConfig();
 	const gh = overrides.github ?? {};
+	const buildRepo = getBuildRepoInfo();
 
 	cached = {
-		databaseUrl: overrides.databaseUrl ?? envValue('DATABASE_URL') ?? 'data/brixter.db',
-		origin: required(overrides.origin ?? envValue('ORIGIN'), 'ORIGIN'),
-		authSecret: required(
-			overrides.authSecret ?? envValue('BRIXTER_AUTH_SECRET'),
-			'BRIXTER_AUTH_SECRET'
-		),
-		adminPath: overrides.adminPath ?? envValue('BRIXTER_ADMIN_PATH') ?? '/admin',
+		...core,
 		github: {
-			appId: required(gh.appId ?? envValue('GITHUB_APP_ID'), 'GITHUB_APP_ID'),
-			privateKey: required(gh.privateKey ?? envValue('GITHUB_PRIVATE_KEY'), 'GITHUB_PRIVATE_KEY'),
+			appId: required(gh.appId ?? present(envValue('GITHUB_APP_ID')), 'GITHUB_APP_ID'),
+			privateKey: required(
+				gh.privateKey ?? present(envValue('GITHUB_PRIVATE_KEY')),
+				'GITHUB_PRIVATE_KEY'
+			),
 			installationId: required(
-				gh.installationId ?? envValue('GITHUB_INSTALLATION_ID'),
+				gh.installationId ?? present(envValue('GITHUB_INSTALLATION_ID')),
 				'GITHUB_INSTALLATION_ID'
 			),
-			repoOwner: required(gh.repoOwner ?? envValue('GITHUB_REPO_OWNER'), 'GITHUB_REPO_OWNER'),
-			repoName: required(gh.repoName ?? envValue('GITHUB_REPO_NAME'), 'GITHUB_REPO_NAME'),
-			defaultBranch: gh.defaultBranch ?? envValue('GITHUB_DEFAULT_BRANCH') ?? 'main'
+			repoOwner: required(
+				gh.repoOwner ?? present(envValue('GITHUB_REPO_OWNER')) ?? buildRepo.repoOwner,
+				'GITHUB_REPO_OWNER'
+			),
+			repoName: required(
+				gh.repoName ?? present(envValue('GITHUB_REPO_NAME')) ?? buildRepo.repoName,
+				'GITHUB_REPO_NAME'
+			),
+			defaultBranch:
+				gh.defaultBranch ??
+				present(envValue('GITHUB_DEFAULT_BRANCH')) ??
+				buildRepo.defaultBranch ??
+				'main'
 		}
 	};
+	assertRepoMatchesBuild(cached.github, buildRepo);
 	return cached;
 }

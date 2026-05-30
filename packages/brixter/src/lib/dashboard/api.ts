@@ -1,6 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { getOctokit, getRepo } from '../server/github.ts';
 import { getRepoConfig } from '../server/repo-config.ts';
+import { isWithinRepoRoot, normalizeRepoPath } from '../server/sveltekit-routes.ts';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 
@@ -16,29 +17,13 @@ async function mediaPicker({ locals, url }: RequestEvent) {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
 
 	const branch = url.searchParams.get('branch');
-	const path = url.searchParams.get('path') ?? '';
+	const { mediaPath } = getRepoConfig();
+	const mediaRoot = normalizeRepoPath(mediaPath);
+	const path = normalizeRepoPath(url.searchParams.get('path') ?? mediaRoot);
 	if (!branch) return json({ error: 'Missing required parameters' }, { status: 400 });
 
-	const { allowedPaths } = getRepoConfig();
-	if (allowedPaths.length > 0 && path) {
-		const isAllowedOrParent = allowedPaths.some((ap) => ap === path || ap.startsWith(path + '/'));
-		const isChildOfAllowed = allowedPaths.some((ap) => path.startsWith(ap + '/'));
-		if (!isAllowedOrParent && !isChildOfAllowed) {
-			return json({ error: 'Access denied' }, { status: 403 });
-		}
-	}
-
-	if (!path && allowedPaths.length > 0) {
-		const entries = allowedPaths
-			.map((ap) => ({
-				name: ap.split('/').pop()!,
-				path: ap,
-				type: 'dir' as const,
-				downloadUrl: null
-			}))
-			.sort((a, b) => a.name.localeCompare(b.name));
-
-		return json({ path, entries });
+	if (mediaRoot && !isWithinRepoRoot(path, mediaRoot)) {
+		return json({ error: 'Access denied' }, { status: 403 });
 	}
 
 	const octokit = getOctokit();
@@ -63,16 +48,12 @@ async function mediaPicker({ locals, url }: RequestEvent) {
 			}))
 			.filter((item) => {
 				if (item.type === 'dir') {
-					if (allowedPaths.length === 0) return true;
-					const isInsideAllowed = allowedPaths.some((ap) => item.path.startsWith(ap + '/'));
-					if (isInsideAllowed) return true;
-					return allowedPaths.some((ap) => ap === item.path || ap.startsWith(item.path + '/'));
+					return !mediaRoot || isWithinRepoRoot(item.path, mediaRoot);
 				}
 
 				const ext = '.' + item.name.split('.').pop()?.toLowerCase();
 				if (!IMAGE_EXTENSIONS.includes(ext)) return false;
-				if (allowedPaths.length === 0) return true;
-				return allowedPaths.some((ap) => item.path.startsWith(ap + '/'));
+				return !mediaRoot || isWithinRepoRoot(item.path, mediaRoot);
 			})
 			.sort((a, b) => {
 				if (a.type === b.type) return a.name.localeCompare(b.name);
@@ -135,7 +116,8 @@ async function repoImage({ locals, url }: RequestEvent) {
 }
 
 export async function handleDashboardApi(event: RequestEvent) {
-	if (event.url.pathname.startsWith('/__brixter')) return new Response('Not found', { status: 404 });
+	if (event.url.pathname.startsWith('/__brixter'))
+		return new Response('Not found', { status: 404 });
 
 	switch (apiPath(event.url.pathname)) {
 		case 'media-picker':

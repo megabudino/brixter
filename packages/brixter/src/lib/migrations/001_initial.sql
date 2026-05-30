@@ -6,7 +6,7 @@
 -- for the GitHub repo configured via env (GITHUB_REPO_OWNER / _NAME / ...).
 CREATE TABLE IF NOT EXISTS repo_config (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    allowed_paths TEXT NOT NULL DEFAULT '["src/routes","src/drafts"]',
+    allowed_paths TEXT NOT NULL DEFAULT '[]',
     allowed_extensions TEXT NOT NULL DEFAULT '[".md",".yaml",".yml",".png",".jpg",".jpeg",".gif",".svg",".webp"]',
     media_path TEXT NOT NULL DEFAULT '',
     updated_at INTEGER NOT NULL DEFAULT (unixepoch())

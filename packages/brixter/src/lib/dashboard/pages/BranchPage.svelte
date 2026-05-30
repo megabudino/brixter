@@ -3,6 +3,7 @@
 	import { navigating } from '$app/stores';
 	import {
 		Folder,
+		FolderPlus,
 		FileText,
 		Image,
 		ChevronRight,
@@ -26,7 +27,32 @@
 
 	let merging = $state(false);
 	let saving = $state(false);
+	let addingDirectory = $state(false);
+	let creatingDirectory = $state(false);
+	let directoryName = $state('');
 	let lightbox = $state<{ name: string; url: string } | null>(null);
+
+	const existingDirNames = $derived(
+		new Set<string>((data.childDirNames ?? []).map((name: string) => name.toLowerCase()))
+	);
+	const trimmedDirectoryName = $derived(directoryName.trim());
+	const duplicateDirectory = $derived(
+		trimmedDirectoryName.length > 0 && existingDirNames.has(trimmedDirectoryName.toLowerCase())
+	);
+
+	function startAddingDirectory() {
+		directoryName = '';
+		addingDirectory = true;
+	}
+
+	function cancelAddingDirectory() {
+		addingDirectory = false;
+		directoryName = '';
+	}
+
+	function focusOnMount(node: HTMLInputElement) {
+		node.focus();
+	}
 	let editorRef: RichTextEditor | null = $state(null);
 	let frontmatterRef: FrontmatterEditor | null = $state(null);
 	let editorInstance: any = $state(null);
@@ -57,9 +83,10 @@
 
 	const base = $derived(`/admin/b/${data.branch}`);
 	const isEditing = $derived(!!data.file?.htmlContent);
-	const backHref = $derived(`${base}/${data.filePath?.split('/').slice(0, -1).join('/') ?? ''}`);
+	const backHref = $derived(data.parentPath ? branchHref(data.branch, data.parentPath) : base);
+	const isUnsupportedFile = $derived(!!data.file && !isEditing);
 
-	const breadcrumbs = $derived(data.filePath ? data.filePath.split('/') : []);
+	const breadcrumbs = $derived(data.breadcrumbs ?? []);
 
 	const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']);
 
@@ -75,13 +102,7 @@
 	}
 
 	const parentPath = $derived.by(() => {
-		if (!data.filePath) return null;
-		const parent = data.filePath.split('/').slice(0, -1).join('/');
-		const ap: string[] = data.allowedPaths ?? [];
-		if (ap.length === 0) return parent || null;
-		const insideAllowed = ap.some((p: string) => parent.startsWith(p + '/') || parent === p);
-		if (insideAllowed) return parent;
-		return '';
+		return data.parentPath ?? null;
 	});
 
 	const turndown = new TurndownService({
@@ -169,12 +190,10 @@
 </script>
 
 {#if $navigating}
-	<div class="fixed top-0 right-0 left-0 z-[60] h-1 overflow-hidden bg-gray-200 dark:bg-gray-800">
+	<div class="fixed top-0 right-0 left-0 z-60 h-1 overflow-hidden bg-gray-200 dark:bg-gray-800">
 		<div class="animate-slide h-full w-1/3 bg-[#2563EB] dark:bg-[#3B82F6]"></div>
 	</div>
-	<div
-		class="fixed inset-0 z-[55] flex items-center justify-center bg-white/50 dark:bg-gray-950/50"
-	>
+	<div class="fixed inset-0 z-55 flex items-center justify-center bg-white/50 dark:bg-gray-950/50">
 		<Spinner />
 	</div>
 {/if}
@@ -190,12 +209,12 @@
 				<button
 					type="button"
 					onclick={handleBack}
-					class="cursor-pointer text-muted transition-colors hover:text-heading"
+					class="text-muted hover:text-heading cursor-pointer transition-colors"
 				>
 					<ArrowLeft size={20} />
 				</button>
 				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
-				<span class="text-xs text-muted">{data.branch}</span>
+				<span class="text-muted text-xs">{data.branch}</span>
 			</div>
 			{#if hasFrontmatter}
 				<div
@@ -334,7 +353,7 @@
 
 		{#if toastMessage}
 			<div
-				class="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2"
+				class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2"
 				transition:fly={{ y: 16, duration: 200 }}
 			>
 				<div
@@ -354,6 +373,19 @@
 				</div>
 			</div>
 		{/if}
+	</div>
+{:else if isUnsupportedFile}
+	<div class="mx-auto max-w-2xl px-6 py-16">
+		<a href={backHref} class="text-secondary hover:text-heading text-sm transition-colors">
+			← Back to routes
+		</a>
+		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
+			{data.file.name}
+		</h1>
+		<p class="text-muted">
+			This SvelteKit page is visible in the explorer, but only Markdown page files are editable
+			right now.
+		</p>
 	</div>
 {:else}
 	{#if data.behindBy > 0}
@@ -397,7 +429,7 @@
 						</form>
 					{/if}
 					{#if form?.mergeError}
-						<span class="text-sm text-error">{form.mergeError}</span>
+						<span class="text-error text-sm">{form.mergeError}</span>
 					{/if}
 				{/if}
 			</div>
@@ -406,43 +438,60 @@
 
 	<!-- File explorer -->
 	<div class="mx-auto max-w-2xl px-6 py-16">
-		<a href="/admin" class="text-sm text-secondary transition-colors hover:text-heading">
+		<a href="/admin" class="text-secondary hover:text-heading text-sm transition-colors">
 			← Back to branches
 		</a>
 
-		<h1 class="mt-4 mb-2 font-display text-3xl text-gray-900 dark:text-gray-50">
+		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
 			{data.repo.name}
 		</h1>
 
-		<div class="mb-8 flex items-center gap-1 text-sm text-muted">
-			<a
-				href={branchHref(data.branch)}
-				class="text-secondary transition-colors hover:text-heading">{data.branch}</a
+		<div class="text-muted mb-8 flex items-center gap-1 text-sm">
+			<a href={branchHref(data.branch)} class="text-secondary hover:text-heading transition-colors"
+				>{data.branch}</a
 			>
-			{#each breadcrumbs as segment, i}
+			{#each breadcrumbs as crumb, i}
 				<ChevronRight size={14} />
 				{#if i < breadcrumbs.length - 1}
 					<a
-						href={branchHref(data.branch, breadcrumbs.slice(0, i + 1).join('/'))}
-						class="text-secondary transition-colors hover:text-heading">{segment}</a
+						href={branchHref(data.branch, crumb.path)}
+						class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
 					>
 				{:else}
-					<span class="text-heading">{segment}</span>
+					<span class="text-heading">{crumb.label}</span>
 				{/if}
 			{/each}
 		</div>
 
+		<div class="mb-4 flex items-center justify-end">
+			<button
+				type="button"
+				onclick={startAddingDirectory}
+				disabled={addingDirectory}
+				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<FolderPlus size={16} />
+				New directory
+			</button>
+		</div>
+
+		{#if addingDirectory && duplicateDirectory}
+			<p class="text-error mb-3 text-sm">A route named “{trimmedDirectoryName}” already exists.</p>
+		{:else if form?.createDirectoryError}
+			<p class="text-error mb-3 text-sm">{form.createDirectoryError}</p>
+		{/if}
+
 		{#if parentPath !== null}
 			<a
 				href={branchHref(data.branch, parentPath)}
-				class="flex cursor-pointer items-center gap-3 border border-b-0 border-gray-300 bg-white px-5 py-4 text-secondary transition-colors hover:bg-gray-100 hover:text-heading dark:border-gray-700 dark:bg-[#1f2937] dark:hover:bg-gray-700"
+				class="text-secondary hover:text-heading flex cursor-pointer items-center gap-3 border border-b-0 border-gray-300 bg-white px-5 py-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:hover:bg-gray-700"
 			>
 				..
 			</a>
 		{/if}
 
 		<div class="border border-gray-300 bg-white dark:border-gray-700 dark:bg-[#1f2937]">
-			{#if data.entries.length > 0}
+			{#if data.entries.length > 0 || addingDirectory}
 				<ul class="divide-y divide-gray-300 dark:divide-gray-700">
 					{#each data.entries as entry}
 						<li>
@@ -470,9 +519,54 @@
 							{/if}
 						</li>
 					{/each}
+					{#if addingDirectory}
+						<li>
+							<form
+								method="post"
+								action="?/createDirectory"
+								class="flex items-center gap-3 px-5 py-4"
+								use:enhance={({ cancel }) => {
+									if (!trimmedDirectoryName || duplicateDirectory) {
+										cancel();
+										return;
+									}
+									creatingDirectory = true;
+									return async ({ result, update }) => {
+										creatingDirectory = false;
+										if (result.type === 'redirect' || result.type === 'success') {
+											addingDirectory = false;
+											directoryName = '';
+										}
+										await update();
+									};
+								}}
+							>
+								<Folder size={18} class="text-muted shrink-0" />
+								<input
+									use:focusOnMount
+									name="directory_name"
+									value={directoryName}
+									placeholder="directory-name"
+									aria-label="New directory name"
+									disabled={creatingDirectory}
+									oninput={(e: Event) => (directoryName = (e.target as HTMLInputElement).value)}
+									onkeydown={(e: KeyboardEvent) => {
+										if (e.key === 'Escape') cancelAddingDirectory();
+									}}
+									onblur={() => {
+										if (!directoryName.trim() && !creatingDirectory) cancelAddingDirectory();
+									}}
+									class="min-w-0 flex-1 bg-transparent text-gray-900 outline-none dark:text-gray-100"
+								/>
+								{#if creatingDirectory}
+									<Spinner />
+								{/if}
+							</form>
+						</li>
+					{/if}
 				</ul>
 			{:else}
-				<p class="py-8 text-center text-sm text-muted">There's nothing here.</p>
+				<p class="text-muted py-8 text-center text-sm">There's nothing here.</p>
 			{/if}
 		</div>
 	</div>
