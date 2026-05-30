@@ -39,6 +39,32 @@ brixter({ appRoot: 'playground' });
 brixter({ routesRoot: 'playground/src/routes' });
 ```
 
+## `.brix.yaml` Pages
+
+Brixter's Vite plugin compiles `.brix.yaml` and `.brix.yml` files into Svelte
+pages. The generated component exports `metadata`, exposes valid metadata keys
+such as `title` and `description` as local variables, renders components from
+`$lib/brixter/brix`, and wraps content in a layout from
+`$lib/brixter/layouts` when `layout` is set.
+
+```yaml
+title: About Us
+description: Learn more about our team
+layout: default
+
+components:
+  - type: hero
+    props:
+      heading: Welcome
+      subtitle: We build great things
+```
+
+For SvelteKit route discovery, make sure the app's `svelte.config` includes:
+
+```js
+extensions: ['.svelte', '.brix.yaml', '.brix.yml'];
+```
+
 ## Developing
 
 Start a development server:

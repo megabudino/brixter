@@ -5,6 +5,7 @@
 		Folder,
 		FolderPlus,
 		FileText,
+		FilePlus,
 		Image,
 		ChevronRight,
 		AlertTriangle,
@@ -30,17 +31,30 @@
 	let addingDirectory = $state(false);
 	let creatingDirectory = $state(false);
 	let directoryName = $state('');
+	let addingPage = $state(false);
+	let creatingPage = $state(false);
+	let pageName = $state('');
 	let lightbox = $state<{ name: string; url: string } | null>(null);
 
 	const existingDirNames = $derived(
 		new Set<string>((data.childDirNames ?? []).map((name: string) => name.toLowerCase()))
 	);
+	const existingPageNames = $derived(
+		new Set<string>((data.childPageNames ?? []).map((name: string) => name.toLowerCase()))
+	);
 	const trimmedDirectoryName = $derived(directoryName.trim());
 	const duplicateDirectory = $derived(
-		trimmedDirectoryName.length > 0 && existingDirNames.has(trimmedDirectoryName.toLowerCase())
+		trimmedDirectoryName.length > 0 &&
+			existingDirNames.has(trimmedDirectoryName.toLowerCase()) &&
+			!existingPageNames.has(trimmedDirectoryName.toLowerCase())
+	);
+	const trimmedPageName = $derived(pageName.trim());
+	const duplicatePage = $derived(
+		trimmedPageName.length > 0 && existingPageNames.has(trimmedPageName.toLowerCase())
 	);
 
 	function startAddingDirectory() {
+		cancelAddingPage();
 		directoryName = '';
 		addingDirectory = true;
 	}
@@ -48,6 +62,17 @@
 	function cancelAddingDirectory() {
 		addingDirectory = false;
 		directoryName = '';
+	}
+
+	function startAddingPage() {
+		cancelAddingDirectory();
+		pageName = '';
+		addingPage = true;
+	}
+
+	function cancelAddingPage() {
+		addingPage = false;
+		pageName = '';
 	}
 
 	function focusOnMount(node: HTMLInputElement) {
@@ -458,16 +483,34 @@
 						class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
 					>
 				{:else}
-					<span class="text-heading">{crumb.label}</span>
+					<span class="text-heading inline-flex items-center gap-2">
+						{crumb.label}
+						{#if crumb.fileTypeLabel}
+							<span
+								class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
+							>
+								{crumb.fileTypeLabel}
+							</span>
+						{/if}
+					</span>
 				{/if}
 			{/each}
 		</div>
 
-		<div class="mb-4 flex items-center justify-end">
+		<div class="mb-4 flex items-center justify-end gap-4">
+			<button
+				type="button"
+				onclick={startAddingPage}
+				disabled={addingPage || addingDirectory}
+				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<FilePlus size={16} />
+				New page
+			</button>
 			<button
 				type="button"
 				onclick={startAddingDirectory}
-				disabled={addingDirectory}
+				disabled={addingDirectory || addingPage}
 				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<FolderPlus size={16} />
@@ -479,6 +522,10 @@
 			<p class="text-error mb-3 text-sm">A route named “{trimmedDirectoryName}” already exists.</p>
 		{:else if form?.createDirectoryError}
 			<p class="text-error mb-3 text-sm">{form.createDirectoryError}</p>
+		{:else if addingPage && duplicatePage}
+			<p class="text-error mb-3 text-sm">A route named “{trimmedPageName}” already exists.</p>
+		{:else if form?.createPageError}
+			<p class="text-error mb-3 text-sm">{form.createPageError}</p>
 		{/if}
 
 		{#if parentPath !== null}
@@ -491,34 +538,102 @@
 		{/if}
 
 		<div class="border border-gray-300 bg-white dark:border-gray-700 dark:bg-[#1f2937]">
-			{#if data.entries.length > 0 || addingDirectory}
+			{#if data.entries.length > 0 || addingPage || addingDirectory}
 				<ul class="divide-y divide-gray-300 dark:divide-gray-700">
 					{#each data.entries as entry}
 						<li>
-							{#if entry.type === 'file' && isImage(entry.name)}
+							{#if entry.kind === 'page' && isImage(entry.label)}
 								<button
 									type="button"
-									onclick={() => (lightbox = { name: entry.name, url: entry.downloadUrl })}
+									onclick={() => (lightbox = { name: entry.label, url: entry.downloadUrl })}
 									class="flex w-full cursor-pointer items-center gap-3 px-5 py-4 text-left text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
 								>
 									<Image size={18} class="text-muted" />
-									{entry.name}
+									{entry.label}
 								</button>
+							{:else if entry.disabled}
+								<div
+									class="text-muted flex cursor-not-allowed items-center gap-3 px-5 py-4 opacity-70"
+									aria-disabled="true"
+								>
+									<FileText size={18} class="text-muted" />
+									<span class="min-w-0 flex-1">{entry.label}</span>
+									{#if entry.fileTypeLabel}
+										<span
+											class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
+										>
+											{entry.fileTypeLabel}
+										</span>
+									{/if}
+								</div>
 							{:else}
 								<a
 									href={branchHref(data.branch, entry.path)}
 									class="flex cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
 								>
-									{#if entry.type === 'dir'}
+									{#if entry.kind === 'route'}
 										<Folder size={18} class="text-muted" />
 									{:else}
 										<FileText size={18} class="text-muted" />
 									{/if}
-									{entry.name}
+									<span class="min-w-0 flex-1">{entry.label}</span>
+									{#if entry.fileTypeLabel}
+										<span
+											class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
+										>
+											{entry.fileTypeLabel}
+										</span>
+									{/if}
 								</a>
 							{/if}
 						</li>
 					{/each}
+					{#if addingPage}
+						<li>
+							<form
+								method="post"
+								action="?/createPage"
+								class="flex items-center gap-3 px-5 py-4"
+								use:enhance={({ cancel }) => {
+									if (!trimmedPageName || duplicatePage) {
+										cancel();
+										return;
+									}
+									creatingPage = true;
+									return async ({ result, update }) => {
+										creatingPage = false;
+										if (result.type === 'redirect' || result.type === 'success') {
+											addingPage = false;
+											pageName = '';
+										}
+										await update();
+									};
+								}}
+							>
+								<FileText size={18} class="text-muted shrink-0" />
+								<input
+									use:focusOnMount
+									name="page_name"
+									value={pageName}
+									placeholder="page-name"
+									aria-label="New page name"
+									disabled={creatingPage}
+									oninput={(e: Event) => (pageName = (e.target as HTMLInputElement).value)}
+									onkeydown={(e: KeyboardEvent) => {
+										if (e.key === 'Escape') cancelAddingPage();
+									}}
+									onblur={() => {
+										if (!pageName.trim() && !creatingPage) cancelAddingPage();
+									}}
+									class="min-w-0 flex-1 bg-transparent text-gray-900 outline-none dark:text-gray-100"
+								/>
+								<span class="text-muted shrink-0">.brix.yaml</span>
+								{#if creatingPage}
+									<Spinner />
+								{/if}
+							</form>
+						</li>
+					{/if}
 					{#if addingDirectory}
 						<li>
 							<form

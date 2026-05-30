@@ -124,6 +124,7 @@
 		"lucide-svelte": "^1.0.1",
 		"marked": "^17.0.4",
 		"monaco-editor": "^0.55.1",
-		"turndown": "^7.2.2"
+		"turndown": "^7.2.2",
+		"yaml": "^1.10.3"
 	}
 }

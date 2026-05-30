@@ -5,11 +5,18 @@ import { getDb } from '../server/db.ts';
 import { getOctokit, getRepo } from '../server/github.ts';
 import { getRepoConfig, updateRepoConfig } from '../server/repo-config.ts';
 import {
-	buildRouteListing,
+	buildSvelteKitRouteTree,
+	childDirNames,
+	childPageNames,
+	childRoute,
+	findPageFile,
+	findRouteNode,
+	getExplorerListing,
 	isPageFilePath,
 	isWithinRepoRoot,
 	normalizeRepoPath,
 	routeBreadcrumbs,
+	type RouteNode,
 	type TreeEntry
 } from '../server/sveltekit-routes.ts';
 import { marked } from 'marked';
@@ -141,10 +148,21 @@ async function loadSettings({ locals }: RequestEvent) {
 	};
 }
 
-function parentPathFor(path: string, routesRoot: string): string | null {
-	if (path === routesRoot) return null;
+function parentPathFor(path: string, routeTree: RouteNode): string | null {
+	if (path === routeTree.dirPath) return null;
 	const parent = path.split('/').slice(0, -1).join('/');
-	return parent && isWithinRepoRoot(parent, routesRoot) ? parent : null;
+	return parent && findRouteNode(routeTree, parent) ? parent : null;
+}
+
+function parentPathForPage(path: string, routeTree: RouteNode): string | null {
+	const routeDir = path.split('/').slice(0, -1).join('/');
+	const routeNode = findRouteNode(routeTree, routeDir);
+	if (!routeNode) return parentPathFor(path, routeTree);
+
+	// Leaf pages are displayed collapsed in the parent listing, so "back"
+	// should return to that mapped parent rather than opening the route dir.
+	if (routeNode.children.length === 0) return parentPathFor(routeDir, routeTree);
+	return routeDir;
 }
 
 function validateDirectoryName(name: string): string | null {
@@ -153,6 +171,14 @@ function validateDirectoryName(name: string): string | null {
 	if (name.includes('/') || name.includes('\\')) return 'Directory name cannot contain slashes.';
 	if (name.startsWith('+')) return 'Directory name cannot start with "+".';
 	return null;
+}
+
+function titleFromRouteName(name: string): string {
+	return name
+		.split(/[-_\s]+/)
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(' ');
 }
 
 function branchHref(branch: string, path = ''): string {
@@ -298,9 +324,10 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		throw error(e.response?.status ?? 500, e.response?.data?.message ?? 'Failed to load contents');
 	}
 
-	const node = tree.find((entry) => entry.path === filePath);
-	const isFile = node?.type === 'blob' || (!node && isPageFilePath(filePath));
-
+	const routeTree = buildSvelteKitRouteTree(tree, routesRoot);
+	const treeNode = tree.find((entry) => entry.path === filePath);
+	const pageFile = findPageFile(routeTree, filePath);
+	const isFile = !!pageFile || treeNode?.type === 'blob' || (!treeNode && isPageFilePath(filePath));
 	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath, routesRoot };
 
 	if (isFile) {
@@ -326,17 +353,18 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 			defaultBranch,
 			filePath,
 			explorerRoot: routesRoot,
-			parentPath: parentPathFor(file.path, routesRoot),
-			breadcrumbs: routeBreadcrumbs(file.path, routesRoot),
+			parentPath: parentPathForPage(file.path, routeTree),
+			breadcrumbs: routeBreadcrumbs(routeTree, file.path),
 			...filePayload,
 			entries: [],
 			childDirNames: [],
+			childPageNames: [],
 			behindBy
 		};
 	}
 
-	const { ownPage, entries: routeEntries, childDirNames } = buildRouteListing(tree, filePath);
-	const entries = ownPage ? [ownPage, ...routeEntries] : routeEntries;
+	const currentNode = findRouteNode(routeTree, filePath);
+	if (!currentNode) throw error(404, 'Not found');
 
 	return {
 		repo: repoMeta,
@@ -344,10 +372,11 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		defaultBranch,
 		filePath,
 		explorerRoot: routesRoot,
-		parentPath: requestedPath ? parentPathFor(filePath, routesRoot) : null,
-		breadcrumbs: routeBreadcrumbs(filePath, routesRoot),
-		entries,
-		childDirNames,
+		parentPath: requestedPath ? parentPathFor(filePath, routeTree) : null,
+		breadcrumbs: routeBreadcrumbs(routeTree, filePath),
+		entries: getExplorerListing(routeTree, filePath),
+		childDirNames: childDirNames(routeTree, filePath),
+		childPageNames: childPageNames(routeTree, filePath),
 		behindBy
 	};
 }
@@ -624,19 +653,24 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 
 	const octokit = getOctokit();
 	const repo = getRepo();
+	let directoryAlreadyExists = false;
 
 	try {
-		await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
 			owner: repo.owner,
 			repo: repo.name,
 			path: directoryPath,
 			ref: match.branch
 		});
 
-		return fail(409, {
-			createDirectoryError: `Directory "${name}" already exists.`,
-			directoryName: name
-		});
+		if (Array.isArray(data)) {
+			directoryAlreadyExists = true;
+		} else {
+			return fail(409, {
+				createDirectoryError: `A file named "${name}" already exists.`,
+				directoryName: name
+			});
+		}
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		if (e.response?.status !== 404) {
@@ -646,6 +680,8 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 			});
 		}
 	}
+
+	if (directoryAlreadyExists) throw redirect(303, branchHref(match.branch, directoryPath));
 
 	try {
 		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
@@ -665,6 +701,87 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 	}
 
 	throw redirect(303, branchHref(match.branch, directoryPath));
+}
+
+async function createPageAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'branch' || !match.branch) return fail(404, { createPageError: 'Not found.' });
+
+	const formData = await request.formData();
+	const name = formData.get('page_name')?.toString().trim() ?? '';
+	const validationError = validateDirectoryName(name);
+	if (validationError) return fail(400, { createPageError: validationError, pageName: name });
+
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
+	const currentPath = normalizeRepoPath(match.path) || routesRoot;
+	if (!isWithinRepoRoot(currentPath, routesRoot)) {
+		return fail(403, { createPageError: 'Access denied.', pageName: name });
+	}
+
+	const directoryPath = `${currentPath}/${name}`;
+	if (!isWithinRepoRoot(directoryPath, routesRoot)) {
+		return fail(403, { createPageError: 'Access denied.', pageName: name });
+	}
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	try {
+		const tree = await fetchRepoTree(match.branch);
+		const routeTree = buildSvelteKitRouteTree(tree, routesRoot);
+		const existingRoute = childRoute(routeTree, currentPath, name);
+		const existingBlob = tree.find(
+			(entry) => entry.type === 'blob' && entry.path === directoryPath
+		);
+
+		if (existingBlob) {
+			return fail(409, {
+				createPageError: `A file named "${name}" already exists.`,
+				pageName: name
+			});
+		}
+
+		if (existingRoute?.page) {
+			return fail(409, {
+				createPageError: `Route "${name}" already has a page.`,
+				pageName: name
+			});
+		}
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			createPageError: e.response?.data?.message ?? 'Failed to check route.',
+			pageName: name
+		});
+	}
+
+	const title = titleFromRouteName(name);
+	const fileContent = `title: ${JSON.stringify(title)}
+description: ''
+
+components: []
+`;
+
+	try {
+		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+			owner: repo.owner,
+			repo: repo.name,
+			path: `${directoryPath}/+page.brix.yaml`,
+			message: `Create ${directoryPath}/+page.brix.yaml`,
+			content: Buffer.from(fileContent).toString('base64'),
+			branch: match.branch
+		});
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			createPageError: e.response?.data?.message ?? 'Failed to create page.',
+			pageName: name
+		});
+	}
+
+	throw redirect(303, branchHref(match.branch, `${directoryPath}/+page.brix.yaml`));
 }
 
 export const dashboardActions: Actions = {
@@ -703,5 +820,9 @@ export const dashboardActions: Actions = {
 	createDirectory: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 		return createDirectoryAction(event);
+	},
+	createPage: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return createPageAction(event);
 	}
 };

@@ -130,6 +130,7 @@ async function init(argv) {
 	ensureRouteShims(context);
 	ensureHooks(context);
 	ensureVitePlugin(context);
+	ensureSvelteExtensions(context);
 	ensureTailwindSources(context);
 	ensureEnvExample(context);
 
@@ -448,6 +449,62 @@ function ensureVitePlugin(context) {
 	);
 	write(context, file, contents);
 	context.changes.push(`${relativePath} added brixter vite plugin`);
+}
+
+function ensureSvelteExtensions(context) {
+	const relativePath = findFirst(context.cwd, ['svelte.config.js', 'svelte.config.ts']);
+	if (!relativePath) {
+		context.manual.push(
+			"svelte config not found; add '.brix.yaml' and '.brix.yml' to config.extensions"
+		);
+		return;
+	}
+
+	const file = path.join(context.cwd, relativePath);
+	let contents = read(file);
+	if (contents.includes("'.brix.yaml'") && contents.includes("'.brix.yml'")) {
+		context.skipped.push(`${relativePath} already enables brix yaml extensions`);
+		return;
+	}
+
+	const extensionsMatch = contents.match(/extensions\s*:\s*\[([^\]]*)\]/s);
+	if (extensionsMatch) {
+		const current = extensionsMatch[1];
+		const additions = [];
+		if (!current.includes("'.brix.yaml'") && !current.includes('".brix.yaml"')) {
+			additions.push("'.brix.yaml'");
+		}
+		if (!current.includes("'.brix.yml'") && !current.includes('".brix.yml"')) {
+			additions.push("'.brix.yml'");
+		}
+		if (additions.length === 0) {
+			context.skipped.push(`${relativePath} already enables brix yaml extensions`);
+			return;
+		}
+
+		const separator = current.trim() ? ', ' : '';
+		contents = contents.replace(
+			extensionsMatch[0],
+			`extensions: [${current}${separator}${additions.join(', ')}]`
+		);
+		write(context, file, contents);
+		context.changes.push(`${relativePath} added brix yaml extensions`);
+		return;
+	}
+
+	if (/const\s+config\s*=\s*\{/.test(contents)) {
+		contents = contents.replace(
+			/const\s+config\s*=\s*\{/,
+			`const config = {\n\textensions: ['.svelte', '.brix.yaml', '.brix.yml'],`
+		);
+		write(context, file, contents);
+		context.changes.push(`${relativePath} added brix yaml extensions`);
+		return;
+	}
+
+	context.manual.push(
+		`${relativePath} has no simple config object; add brix yaml extensions manually`
+	);
 }
 
 function ensureTailwindSources(context) {

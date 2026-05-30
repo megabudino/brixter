@@ -1,18 +1,39 @@
 export interface ExplorerBreadcrumb {
 	label: string;
 	path: string;
+	fileTypeLabel?: string;
 }
 
-export interface RouteEntry {
-	name: string;
-	type: 'file' | 'dir';
+export interface ExplorerEntry {
+	kind: 'page' | 'route';
+	label: string;
 	path: string;
 	downloadUrl: string | null;
+	filePath?: string;
+	routeDirPath?: string;
+	hasPage?: boolean;
+	fileTypeLabel?: string;
+	disabled?: boolean;
 }
 
 export interface TreeEntry {
 	path: string;
 	type: 'tree' | 'blob';
+}
+
+export interface PageFile {
+	filePath: string;
+	kind: 'brix' | 'markdown' | 'svelte' | 'other';
+	extension: string;
+}
+
+export interface RouteNode {
+	dirPath: string;
+	segment: string;
+	label: string;
+	page: PageFile | null;
+	pages: PageFile[];
+	children: RouteNode[];
 }
 
 export function normalizeRepoPath(value: string | null | undefined): string {
@@ -34,6 +55,7 @@ function baseName(path: string): string {
 
 function extension(path: string): string {
 	const name = baseName(path);
+	if (name.startsWith('+page.')) return name.slice('+page'.length);
 	const dot = name.lastIndexOf('.');
 	return dot === -1 ? '' : name.slice(dot);
 }
@@ -42,85 +64,236 @@ export function isPageFilePath(path: string): boolean {
 	return baseName(path).startsWith('+page.');
 }
 
-export function routeLabel(name: string): string {
-	if (name.startsWith('+page.')) return `index${extension(name)}`;
+function routeLabel(name: string): string {
+	if (name.startsWith('+page.')) return 'index';
 	if (name.startsWith('(') && name.endsWith(')')) return name.slice(1, -1);
 	return name;
 }
 
-function pageEntryName(routeSegment: string, pagePath: string): string {
-	return `${routeLabel(routeSegment)}${extension(pagePath)}`;
+function pageKind(path: string): PageFile['kind'] {
+	if (/\.brix\.ya?ml$/i.test(path)) return 'brix';
+	if (/\.md$/i.test(path)) return 'markdown';
+	if (/\.svelte$/i.test(path)) return 'svelte';
+	return 'other';
 }
 
-export function routeBreadcrumbs(path: string, root: string): ExplorerBreadcrumb[] {
+function pagePriority(page: PageFile): number {
+	const name = baseName(page.filePath).toLowerCase();
+	if (name === '+page.brix.yaml') return 0;
+	if (name === '+page.brix.yml') return 1;
+	if (name === '+page.md') return 2;
+	if (name === '+page.svelte') return 3;
+	return 4;
+}
+
+function pageFile(path: string): PageFile {
+	return {
+		filePath: path,
+		kind: pageKind(path),
+		extension: extension(path)
+	};
+}
+
+function pageDisplayName(node: RouteNode, page: PageFile, style: 'index' | 'segment'): string {
+	return style === 'index' ? 'index' : node.label;
+}
+
+function pageTypeLabel(page: PageFile): string {
+	if (page.kind === 'brix') return 'brix';
+	if (page.kind === 'markdown') return 'md';
+	if (page.kind === 'svelte') return 'svelte';
+	return page.extension.replace(/^\./, '') || 'file';
+}
+
+function isEditablePage(page: PageFile): boolean {
+	return page.kind === 'brix' || page.kind === 'markdown';
+}
+
+function hasHiddenSegment(path: string, root: string): boolean {
 	const relativePath = relativeToRepoRoot(path, root);
+	return relativePath.split('/').includes('__brixter');
+}
+
+function ensureChild(parent: RouteNode, segment: string): RouteNode {
+	const existing = parent.children.find((child) => child.segment === segment);
+	if (existing) return existing;
+
+	const child: RouteNode = {
+		dirPath: [parent.dirPath, segment].filter(Boolean).join('/'),
+		segment,
+		label: routeLabel(segment),
+		page: null,
+		pages: [],
+		children: []
+	};
+	parent.children.push(child);
+	return child;
+}
+
+function sortRouteNode(node: RouteNode): void {
+	node.pages.sort((a, b) => pagePriority(a) - pagePriority(b));
+	node.page = node.pages[0] ?? null;
+	node.children.sort((a, b) => a.label.localeCompare(b.label));
+	for (const child of node.children) sortRouteNode(child);
+}
+
+export function buildSvelteKitRouteTree(tree: TreeEntry[], routesRoot: string): RouteNode {
+	const root: RouteNode = {
+		dirPath: routesRoot,
+		segment: '',
+		label: '',
+		page: null,
+		pages: [],
+		children: []
+	};
+
+	const nodes = new Map<string, RouteNode>([[routesRoot, root]]);
+
+	const getNode = (dirPath: string): RouteNode => {
+		const existing = nodes.get(dirPath);
+		if (existing) return existing;
+
+		const parentPath = dirPath.split('/').slice(0, -1).join('/');
+		const segment = baseName(dirPath);
+		const parent = getNode(parentPath);
+		const child = ensureChild(parent, segment);
+		nodes.set(dirPath, child);
+		return child;
+	};
+
+	for (const entry of tree) {
+		if (!isWithinRepoRoot(entry.path, routesRoot)) continue;
+		if (hasHiddenSegment(entry.path, routesRoot)) continue;
+
+		if (entry.type === 'tree') {
+			getNode(entry.path);
+			continue;
+		}
+
+		if (!isPageFilePath(entry.path)) continue;
+		const dirPath = entry.path.split('/').slice(0, -1).join('/');
+		getNode(dirPath).pages.push(pageFile(entry.path));
+	}
+
+	sortRouteNode(root);
+	return root;
+}
+
+export function findRouteNode(root: RouteNode, dirPath: string): RouteNode | null {
+	if (root.dirPath === dirPath) return root;
+	for (const child of root.children) {
+		const match = findRouteNode(child, dirPath);
+		if (match) return match;
+	}
+	return null;
+}
+
+export function findPageFile(root: RouteNode, filePath: string): PageFile | null {
+	for (const page of root.pages) {
+		if (page.filePath === filePath) return page;
+	}
+	for (const child of root.children) {
+		const match = findPageFile(child, filePath);
+		if (match) return match;
+	}
+	return null;
+}
+
+export function childRoute(root: RouteNode, currentDir: string, segment: string): RouteNode | null {
+	const node = findRouteNode(root, currentDir);
+	return (
+		node?.children.find((child) => child.segment.toLowerCase() === segment.toLowerCase()) ?? null
+	);
+}
+
+export function childDirNames(root: RouteNode, currentDir: string): string[] {
+	return findRouteNode(root, currentDir)?.children.map((child) => child.segment) ?? [];
+}
+
+export function childPageNames(root: RouteNode, currentDir: string): string[] {
+	return (
+		findRouteNode(root, currentDir)
+			?.children.filter((child) => child.page)
+			.map((child) => child.segment) ?? []
+	);
+}
+
+export function getExplorerListing(root: RouteNode, currentDir: string): ExplorerEntry[] {
+	const node = findRouteNode(root, currentDir);
+	if (!node) return [];
+
+	const entries: ExplorerEntry[] = [];
+	if (node.page && node.dirPath === root.dirPath) {
+		entries.push({
+			kind: 'page',
+			label: pageDisplayName(node, node.page, 'index'),
+			path: node.page.filePath,
+			filePath: node.page.filePath,
+			routeDirPath: node.dirPath,
+			downloadUrl: null,
+			hasPage: true,
+			fileTypeLabel: pageTypeLabel(node.page),
+			disabled: !isEditablePage(node.page)
+		});
+	}
+
+	for (const child of node.children) {
+		if (child.page) {
+			entries.push({
+				kind: 'page',
+				label: pageDisplayName(child, child.page, 'segment'),
+				path: child.page.filePath,
+				filePath: child.page.filePath,
+				routeDirPath: child.dirPath,
+				downloadUrl: null,
+				hasPage: true,
+				fileTypeLabel: pageTypeLabel(child.page),
+				disabled: !isEditablePage(child.page)
+			});
+		}
+
+		if (child.children.length > 0 || !child.page) {
+			entries.push({
+				kind: 'route',
+				label: child.label,
+				path: child.dirPath,
+				routeDirPath: child.dirPath,
+				downloadUrl: null,
+				hasPage: !!child.page
+			});
+		}
+	}
+
+	return entries;
+}
+
+function routeBreadcrumbsForDir(root: RouteNode, dirPath: string): ExplorerBreadcrumb[] {
+	const relativePath = relativeToRepoRoot(dirPath, root.dirPath);
 	if (!relativePath) return [];
 
 	const parts = relativePath.split('/');
 	return parts.map((part, index) => ({
 		label: routeLabel(part),
-		path: [root, ...parts.slice(0, index + 1)].join('/')
+		path: [root.dirPath, ...parts.slice(0, index + 1)].join('/')
 	}));
 }
 
-export interface RouteListing {
-	/** The `+page.*` that backs the current route, if any. */
-	ownPage: RouteEntry | null;
-	/** Child routes that lead to at least one page. */
-	entries: RouteEntry[];
-	/** Raw segment names of every immediate subdirectory (used for collision checks). */
-	childDirNames: string[];
-}
+export function routeBreadcrumbs(root: RouteNode, path: string): ExplorerBreadcrumb[] {
+	const page = findPageFile(root, path);
+	if (!page) return routeBreadcrumbsForDir(root, path);
 
-/**
- * Turn a recursive git tree into a route-centric listing for a single
- * directory level. Routes without any `+page.*` in their subtree are pruned,
- * and a child route that is a leaf page collapses to its page file so a single
- * click opens the editor.
- */
-export function buildRouteListing(tree: TreeEntry[], currentDir: string): RouteListing {
-	const pagePaths = tree
-		.filter((entry) => entry.type === 'blob' && isPageFilePath(entry.path))
-		.map((entry) => entry.path);
-	const dirPaths = tree.filter((entry) => entry.type === 'tree').map((entry) => entry.path);
-
-	const subtreeHasPage = (dir: string) => pagePaths.some((p) => p.startsWith(dir + '/'));
-	const ownPageOf = (dir: string) =>
-		pagePaths.find((p) => p.startsWith(dir + '/') && !p.slice(dir.length + 1).includes('/')) ??
-		null;
-
-	const ownPagePath = ownPageOf(currentDir);
-	const ownPage: RouteEntry | null = ownPagePath
-		? { name: `index${extension(ownPagePath)}`, type: 'file', path: ownPagePath, downloadUrl: null }
-		: null;
-
-	const childDirNames: string[] = [];
-	const entries: RouteEntry[] = [];
-
-	for (const dir of dirPaths) {
-		if (!dir.startsWith(currentDir + '/')) continue;
-		const rest = dir.slice(currentDir.length + 1);
-		if (rest.includes('/')) continue;
-		if (rest === '__brixter') continue;
-
-		childDirNames.push(rest);
-		if (!subtreeHasPage(dir)) continue;
-
-		const own = ownPageOf(dir);
-		const hasDeeperPage = pagePaths.some(
-			(p) => p.startsWith(dir + '/') && p.slice(dir.length + 1).includes('/')
-		);
-
-		if (own && !hasDeeperPage) {
-			entries.push({ name: pageEntryName(rest, own), type: 'file', path: own, downloadUrl: null });
-		} else {
-			entries.push({ name: routeLabel(rest), type: 'dir', path: dir, downloadUrl: null });
+	const dirPath = page.filePath.split('/').slice(0, -1).join('/');
+	const node = findRouteNode(root, dirPath);
+	return [
+		...routeBreadcrumbsForDir(root, dirPath),
+		{
+			label: pageDisplayName(
+				node ?? root,
+				page,
+				node?.dirPath === root.dirPath ? 'index' : 'segment'
+			),
+			path: page.filePath,
+			fileTypeLabel: pageTypeLabel(page)
 		}
-	}
-
-	entries.sort((a, b) =>
-		a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1
-	);
-
-	return { ownPage, entries, childDirNames };
+	];
 }
