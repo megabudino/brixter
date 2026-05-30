@@ -1,0 +1,519 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { navigating } from '$app/stores';
+	import {
+		Folder,
+		FileText,
+		Image,
+		ChevronRight,
+		AlertTriangle,
+		X,
+		ArrowLeft
+	} from 'lucide-svelte';
+	import { Spinner } from 'brixter/ui';
+	import {
+		RichTextEditor,
+		Toolbar,
+		InlineToolbar,
+		FrontmatterEditor,
+		MediaPicker
+	} from 'brixter/editor';
+	import TurndownService from 'turndown';
+	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
+
+	let { data, form }: { data: any; form: any } = $props();
+
+	let merging = $state(false);
+	let saving = $state(false);
+	let lightbox = $state<{ name: string; url: string } | null>(null);
+	let editorRef: RichTextEditor | null = $state(null);
+	let frontmatterRef: FrontmatterEditor | null = $state(null);
+	let editorInstance: any = $state(null);
+	let mediaPickerOpen = $state(false);
+	let editorFocused = $state(false);
+	let htmlBlockFocused = $state(false);
+	let activeTab: 'body' | 'frontmatter' = $state('body');
+	const initialFrontmatter = data.file?.frontmatter ?? '';
+	let frontmatterValue = $state(initialFrontmatter);
+	const hasFrontmatter = $derived(data.file?.frontmatter !== undefined);
+	let toastMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
+	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	function showToast(text: string, type: 'success' | 'error' = 'success') {
+		clearTimeout(toastTimeout);
+		toastMessage = { text, type };
+		toastTimeout = setTimeout(() => {
+			toastMessage = null;
+		}, 3000);
+	}
+
+	let initialMarkdown = $state('');
+	let currentMarkdown = $state('');
+	let initialFm = $state(initialFrontmatter);
+	const bodyDirty = $derived(initialMarkdown !== '' && currentMarkdown !== initialMarkdown);
+	const frontmatterDirty = $derived(frontmatterValue !== initialFm);
+	const isDirty = $derived(bodyDirty || frontmatterDirty);
+
+	const base = $derived(`/admin/b/${data.branch}`);
+	const isEditing = $derived(!!data.file?.htmlContent);
+	const backHref = $derived(`${base}/${data.filePath?.split('/').slice(0, -1).join('/') ?? ''}`);
+
+	const breadcrumbs = $derived(data.filePath ? data.filePath.split('/') : []);
+
+	const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']);
+
+	function isImage(name: string) {
+		const dot = name.lastIndexOf('.');
+		return dot !== -1 && imageExtensions.has(name.slice(dot).toLowerCase());
+	}
+
+	function branchHref(branch: string, path = '') {
+		const base = `/admin/b/${encodeURIComponent(branch)}`;
+		if (!path) return base;
+		return `${base}/${path.split('/').map(encodeURIComponent).join('/')}`;
+	}
+
+	const parentPath = $derived.by(() => {
+		if (!data.filePath) return null;
+		const parent = data.filePath.split('/').slice(0, -1).join('/');
+		const ap: string[] = data.allowedPaths ?? [];
+		if (ap.length === 0) return parent || null;
+		const insideAllowed = ap.some((p: string) => parent.startsWith(p + '/') || parent === p);
+		if (insideAllowed) return parent;
+		return '';
+	});
+
+	const turndown = new TurndownService({
+		headingStyle: 'atx',
+		hr: '---',
+		bulletListMarker: '-',
+		codeBlockStyle: 'fenced'
+	});
+
+	turndown.addRule('listItem', {
+		filter: 'li',
+		replacement: (content, node) => {
+			const parent = node.parentNode as HTMLElement;
+			const isOrdered = parent?.nodeName === 'OL';
+			const prefix = isOrdered
+				? `${Array.from(parent.children).indexOf(node as Element) + 1}. `
+				: '- ';
+			return prefix + content.trim() + '\n';
+		}
+	});
+
+	turndown.addRule('htmlBlock', {
+		filter: (node) => node.nodeName === 'DIV' && node.hasAttribute('data-html-block'),
+		replacement: (_content, node) => {
+			const html = (node as HTMLElement).getAttribute('data-content') ?? '';
+			return html ? `\n${html}\n` : '';
+		}
+	});
+
+	turndown.addRule('strikethrough', {
+		filter: ['del', 's'] as any,
+		replacement: (content) => `~~${content}~~`
+	});
+
+	const mediaPrefix = data.repo.mediaPath ? data.repo.mediaPath.replace(/\/$/, '') + '/' : '';
+
+	turndown.addRule('repoImage', {
+		filter: (node) => {
+			if (node.nodeName !== 'IMG') return false;
+			const src = node.getAttribute('src') ?? '';
+			return (
+				src.startsWith('/admin/api/repo-image?') ||
+				/^https:\/\/raw\.githubusercontent\.com\//.test(src)
+			);
+		},
+		replacement: (_content, node) => {
+			const src = (node as HTMLElement).getAttribute('src') ?? '';
+			let repoPath: string;
+			if (src.startsWith('/admin/api/repo-image?')) {
+				const params = new URLSearchParams(src.split('?')[1]);
+				repoPath = params.get('path') ?? '';
+			} else {
+				const match = src.match(
+					/^https:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/
+				);
+				repoPath = match ? match[1].split('?')[0] : src;
+			}
+			if (mediaPrefix && repoPath.startsWith(mediaPrefix)) {
+				repoPath = repoPath.slice(mediaPrefix.length);
+			}
+			const alt = (node as HTMLElement).getAttribute('alt') ?? '';
+			return `![${alt}](/${repoPath})`;
+		}
+	});
+
+	function getMarkdown(): string {
+		if (!editorRef) return '';
+		const { html } = editorRef.getContent();
+		return turndown.turndown(html);
+	}
+
+	function handleBack() {
+		window.location.href = backHref;
+	}
+
+	onMount(() => {
+		const handler = (e: BeforeUnloadEvent) => {
+			if (isDirty) {
+				e.preventDefault();
+			}
+		};
+		window.addEventListener('beforeunload', handler);
+		return () => window.removeEventListener('beforeunload', handler);
+	});
+</script>
+
+{#if $navigating}
+	<div class="fixed top-0 right-0 left-0 z-[60] h-1 overflow-hidden bg-gray-200 dark:bg-gray-800">
+		<div class="animate-slide h-full w-1/3 bg-[#2563EB] dark:bg-[#3B82F6]"></div>
+	</div>
+	<div
+		class="fixed inset-0 z-[55] flex items-center justify-center bg-white/50 dark:bg-gray-950/50"
+	>
+		<Spinner />
+	</div>
+{/if}
+
+{#if isEditing}
+	<!-- Full-screen markdown editor -->
+	<div class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-[#111827]">
+		<!-- Editor header -->
+		<div
+			class="relative z-30 flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
+		>
+			<div class="flex items-center gap-3">
+				<button
+					type="button"
+					onclick={handleBack}
+					class="cursor-pointer text-muted transition-colors hover:text-heading"
+				>
+					<ArrowLeft size={20} />
+				</button>
+				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
+				<span class="text-xs text-muted">{data.branch}</span>
+			</div>
+			{#if hasFrontmatter}
+				<div
+					class="absolute left-1/2 flex -translate-x-1/2 items-center rounded-full bg-gray-100 p-0.5 dark:bg-gray-800"
+				>
+					<button
+						type="button"
+						onclick={() => (activeTab = 'body')}
+						class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors {activeTab ===
+						'body'
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
+							: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+					>
+						Body
+					</button>
+					<button
+						type="button"
+						onclick={() => (activeTab = 'frontmatter')}
+						class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors {activeTab ===
+						'frontmatter'
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
+							: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
+					>
+						Frontmatter
+					</button>
+				</div>
+			{/if}
+			<form
+				method="post"
+				action="?/save"
+				use:enhance={({ formData }) => {
+					formData.set('markdown', getMarkdown());
+					formData.set('frontmatter', frontmatterRef?.getValue() ?? frontmatterValue);
+					formData.set('sha', data.file.sha);
+					saving = true;
+					return async ({ result, update }) => {
+						saving = false;
+						if (result.type === 'success') {
+							initialMarkdown = currentMarkdown;
+							initialFm = frontmatterValue;
+							showToast('Saved successfully.');
+						} else if (result.type === 'failure') {
+							showToast((result.data as any)?.saveError ?? 'Save failed.', 'error');
+						}
+						await update({ reset: false });
+					};
+				}}
+			>
+				<button
+					type="submit"
+					disabled={saving || !isDirty}
+					class="inline-flex cursor-pointer items-center gap-2 bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{#if saving}
+						<Spinner /> Committing…
+					{:else}
+						Commit
+					{/if}
+				</button>
+			</form>
+		</div>
+
+		<!-- Body tab -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="relative flex-1 overflow-y-auto"
+			class:hidden={activeTab !== 'body'}
+			onfocusin={(e) => {
+				editorFocused = true;
+				htmlBlockFocused = !!(e.target as HTMLElement).closest?.('.html-block');
+			}}
+			onfocusout={(e) => {
+				if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+					editorFocused = false;
+					htmlBlockFocused = false;
+				}
+			}}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="sticky top-0 z-20 flex justify-center border-b bg-white px-4 py-2 transition-all duration-200 dark:bg-[#111827] {editorFocused
+					? 'translate-y-0 border-gray-200 opacity-100 dark:border-gray-700'
+					: 'pointer-events-none -translate-y-1 border-transparent opacity-0'}"
+				onmousedown={(e) => e.preventDefault()}
+			>
+				<Toolbar
+					editor={editorInstance}
+					onpickImage={() => (mediaPickerOpen = true)}
+					{htmlBlockFocused}
+				/>
+			</div>
+			<div class="mx-auto max-w-3xl py-8">
+				<RichTextEditor
+					bind:this={editorRef}
+					initialContent={data.file.htmlContent}
+					placeholder="Start writing..."
+					onready={({ editor }) => {
+						editorInstance = editor;
+						initialMarkdown = currentMarkdown = getMarkdown();
+					}}
+					oncontentChange={() => {
+						currentMarkdown = getMarkdown();
+					}}
+					onselectionUpdate={({ editor }) => (editorInstance = editor)}
+				/>
+				<InlineToolbar editor={editorInstance} {editorFocused} />
+			</div>
+		</div>
+
+		<!-- Frontmatter tab -->
+		{#if hasFrontmatter}
+			<div class="flex-1 overflow-y-auto" class:hidden={activeTab !== 'frontmatter'}>
+				<FrontmatterEditor
+					bind:this={frontmatterRef}
+					value={data.file.frontmatter}
+					onchange={(v) => {
+						frontmatterValue = v;
+					}}
+					fullscreen
+				/>
+			</div>
+		{/if}
+		<MediaPicker
+			open={mediaPickerOpen}
+			branch={data.branch}
+			mediaPath={data.repo.mediaPath}
+			onselect={({ imageUrl, fileName }) => {
+				editorInstance
+					?.chain()
+					.focus()
+					.insertContent(`<img src="${imageUrl}" alt="${fileName}">`)
+					.run();
+			}}
+			onclose={() => (mediaPickerOpen = false)}
+		/>
+
+		{#if toastMessage}
+			<div
+				class="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2"
+				transition:fly={{ y: 16, duration: 200 }}
+			>
+				<div
+					class="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg {toastMessage.type ===
+					'success'
+						? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+						: 'bg-red-600 text-white'}"
+				>
+					{toastMessage.text}
+					<button
+						type="button"
+						onclick={() => (toastMessage = null)}
+						class="ml-1 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
+					>
+						<X size={14} />
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
+{:else}
+	{#if data.behindBy > 0}
+		<div
+			class="sticky top-0 z-40 border-b border-amber-400 bg-amber-50 px-5 py-3 dark:border-amber-600 dark:bg-amber-950"
+		>
+			<div class="mx-auto flex max-w-2xl items-center gap-3">
+				<AlertTriangle size={16} class="shrink-0 text-amber-600 dark:text-amber-400" />
+				<p class="flex-1 text-sm font-medium text-amber-800 dark:text-amber-200">
+					This branch is {data.behindBy} commit{data.behindBy > 1 ? 's' : ''} behind main.
+					{#if !data.isAdmin}
+						<span class="font-normal">Contact an admin to update this branch.</span>
+					{/if}
+				</p>
+				{#if data.isAdmin}
+					{#if form?.mergeSuccess}
+						<span class="text-sm text-green-700 dark:text-green-400">Merged!</span>
+					{:else}
+						<form
+							method="post"
+							action="?/merge"
+							use:enhance={() => {
+								merging = true;
+								return async ({ update }) => {
+									merging = false;
+									await update({ reset: false });
+								};
+							}}
+						>
+							<button
+								type="submit"
+								disabled={merging}
+								class="inline-flex cursor-pointer items-center gap-2 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
+							>
+								{#if merging}
+									<Spinner /> Merging…
+								{:else}
+									Merge main
+								{/if}
+							</button>
+						</form>
+					{/if}
+					{#if form?.mergeError}
+						<span class="text-sm text-error">{form.mergeError}</span>
+					{/if}
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<!-- File explorer -->
+	<div class="mx-auto max-w-2xl px-6 py-16">
+		<a href="/admin" class="text-sm text-secondary transition-colors hover:text-heading">
+			← Back to branches
+		</a>
+
+		<h1 class="mt-4 mb-2 font-display text-3xl text-gray-900 dark:text-gray-50">
+			{data.repo.name}
+		</h1>
+
+		<div class="mb-8 flex items-center gap-1 text-sm text-muted">
+			<a
+				href={branchHref(data.branch)}
+				class="text-secondary transition-colors hover:text-heading">{data.branch}</a
+			>
+			{#each breadcrumbs as segment, i}
+				<ChevronRight size={14} />
+				{#if i < breadcrumbs.length - 1}
+					<a
+						href={branchHref(data.branch, breadcrumbs.slice(0, i + 1).join('/'))}
+						class="text-secondary transition-colors hover:text-heading">{segment}</a
+					>
+				{:else}
+					<span class="text-heading">{segment}</span>
+				{/if}
+			{/each}
+		</div>
+
+		{#if parentPath !== null}
+			<a
+				href={branchHref(data.branch, parentPath)}
+				class="flex cursor-pointer items-center gap-3 border border-b-0 border-gray-300 bg-white px-5 py-4 text-secondary transition-colors hover:bg-gray-100 hover:text-heading dark:border-gray-700 dark:bg-[#1f2937] dark:hover:bg-gray-700"
+			>
+				..
+			</a>
+		{/if}
+
+		<div class="border border-gray-300 bg-white dark:border-gray-700 dark:bg-[#1f2937]">
+			{#if data.entries.length > 0}
+				<ul class="divide-y divide-gray-300 dark:divide-gray-700">
+					{#each data.entries as entry}
+						<li>
+							{#if entry.type === 'file' && isImage(entry.name)}
+								<button
+									type="button"
+									onclick={() => (lightbox = { name: entry.name, url: entry.downloadUrl })}
+									class="flex w-full cursor-pointer items-center gap-3 px-5 py-4 text-left text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
+								>
+									<Image size={18} class="text-muted" />
+									{entry.name}
+								</button>
+							{:else}
+								<a
+									href={branchHref(data.branch, entry.path)}
+									class="flex cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
+								>
+									{#if entry.type === 'dir'}
+										<Folder size={18} class="text-muted" />
+									{:else}
+										<FileText size={18} class="text-muted" />
+									{/if}
+									{entry.name}
+								</a>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="py-8 text-center text-sm text-muted">There's nothing here.</p>
+			{/if}
+		</div>
+	</div>
+{/if}
+
+{#if lightbox}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-8"
+		onkeydown={(e) => {
+			if (e.key === 'Escape') lightbox = null;
+		}}
+		onclick={(e) => {
+			if (e.target === e.currentTarget) lightbox = null;
+		}}
+	>
+		<button
+			type="button"
+			onclick={() => (lightbox = null)}
+			class="absolute top-4 right-4 cursor-pointer text-white/70 transition-colors hover:text-white"
+			aria-label="Close"
+		>
+			<X size={24} />
+		</button>
+		<div class="flex max-h-full max-w-full flex-col items-center gap-4">
+			<img src={lightbox.url} alt={lightbox.name} class="max-h-[80vh] max-w-full object-contain" />
+			<p class="text-sm text-white/70">{lightbox.name}</p>
+		</div>
+	</div>
+{/if}
+
+<style>
+	@keyframes slide {
+		0% {
+			transform: translateX(-100%);
+		}
+		100% {
+			transform: translateX(400%);
+		}
+	}
+	:global(.animate-slide) {
+		animation: slide 1.2s ease-in-out infinite;
+	}
+</style>

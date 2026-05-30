@@ -8,12 +8,13 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 import svelteConfig from './svelte.config.js';
 
-const rootGitignorePath = path.resolve(import.meta.dirname, '../.gitignore');
+const rootGitignorePath = path.resolve(import.meta.dirname, '../../.gitignore');
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(rootGitignorePath),
 	includeIgnoreFile(gitignorePath),
+	{ ignores: ['_unused/**'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,
