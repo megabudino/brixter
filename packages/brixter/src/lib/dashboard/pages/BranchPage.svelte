@@ -13,6 +13,7 @@
 		ArrowLeft
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
+	import { BrixEditor, createBrixDefinitions } from '@brixter/brix-builder';
 	import {
 		RichTextEditor,
 		Toolbar,
@@ -25,6 +26,15 @@
 	import { fly } from 'svelte/transition';
 
 	let { data, form }: { data: any; form: any } = $props();
+
+	const brixDefinitions = createBrixDefinitions(
+		import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
+		import.meta.glob('$lib/brixter/brix/*.svelte', {
+			query: '?raw',
+			import: 'default',
+			eager: true
+		}) as Record<string, string>
+	);
 
 	let merging = $state(false);
 	let saving = $state(false);
@@ -85,8 +95,7 @@
 	let editorFocused = $state(false);
 	let htmlBlockFocused = $state(false);
 	let activeTab: 'body' | 'frontmatter' = $state('body');
-	const initialFrontmatter = data.file?.frontmatter ?? '';
-	let frontmatterValue = $state(initialFrontmatter);
+	let frontmatterValue = $state('');
 	const hasFrontmatter = $derived(data.file?.frontmatter !== undefined);
 	let toastMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -101,17 +110,40 @@
 
 	let initialMarkdown = $state('');
 	let currentMarkdown = $state('');
-	let initialFm = $state(initialFrontmatter);
+	let initialFm = $state('');
+	let initialBrixYaml = $state('');
+	let currentBrixYaml = $state('');
+	let brixYamlHydrated = $state(false);
+	let loadedFilePath = $state<string | null>(null);
 	const bodyDirty = $derived(initialMarkdown !== '' && currentMarkdown !== initialMarkdown);
 	const frontmatterDirty = $derived(frontmatterValue !== initialFm);
-	const isDirty = $derived(bodyDirty || frontmatterDirty);
+	const brixDirty = $derived(currentBrixYaml !== initialBrixYaml);
+	const isDirty = $derived(bodyDirty || frontmatterDirty || brixDirty);
 
 	const base = $derived(`/admin/b/${data.branch}`);
 	const isEditing = $derived(!!data.file?.htmlContent);
+	const isBrixEditing = $derived(data.file?.brixYaml !== undefined);
 	const backHref = $derived(data.parentPath ? branchHref(data.branch, data.parentPath) : base);
-	const isUnsupportedFile = $derived(!!data.file && !isEditing);
+	const isUnsupportedFile = $derived(!!data.file && !isEditing && !isBrixEditing);
 
 	const breadcrumbs = $derived(data.breadcrumbs ?? []);
+
+	$effect(() => {
+		const file = data.file;
+		const filePath = file?.path ?? null;
+		if (filePath === loadedFilePath) return;
+
+		loadedFilePath = filePath;
+		const nextFrontmatter = file?.frontmatter ?? '';
+		frontmatterValue = nextFrontmatter;
+		initialFm = nextFrontmatter;
+		const nextBrixYaml = file?.brixYaml ?? '';
+		initialBrixYaml = nextBrixYaml;
+		currentBrixYaml = nextBrixYaml;
+		brixYamlHydrated = false;
+		initialMarkdown = '';
+		currentMarkdown = '';
+	});
 
 	const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']);
 
@@ -162,7 +194,7 @@
 		replacement: (content) => `~~${content}~~`
 	});
 
-	const mediaPrefix = data.repo.mediaPath ? data.repo.mediaPath.replace(/\/$/, '') + '/' : '';
+	const mediaPrefix = $derived(data.repo.mediaPath ? data.repo.mediaPath.replace(/\/$/, '') + '/' : '');
 
 	turndown.addRule('repoImage', {
 		filter: (node) => {
@@ -354,7 +386,7 @@
 			<div class="flex-1 overflow-y-auto" class:hidden={activeTab !== 'frontmatter'}>
 				<FrontmatterEditor
 					bind:this={frontmatterRef}
-					value={data.file.frontmatter}
+					value={frontmatterValue}
 					onchange={(v) => {
 						frontmatterValue = v;
 					}}
@@ -399,6 +431,104 @@
 			</div>
 		{/if}
 	</div>
+{:else if isBrixEditing}
+	<div class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-[#111827]">
+		<div
+			class="relative z-30 flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
+		>
+			<div class="flex items-center gap-3">
+				<button
+					type="button"
+					onclick={handleBack}
+					class="text-muted hover:text-heading cursor-pointer transition-colors"
+				>
+					<ArrowLeft size={20} />
+				</button>
+				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
+				<span class="text-muted text-xs">{data.branch}</span>
+			</div>
+			<form
+				method="post"
+				action="?/save"
+				use:enhance={({ formData }) => {
+					formData.set('brixYaml', currentBrixYaml);
+					formData.set('sha', data.file.sha);
+					saving = true;
+					return async ({ result, update }) => {
+						saving = false;
+						if (result.type === 'success') {
+							initialBrixYaml = currentBrixYaml;
+							showToast('Saved successfully.');
+						} else if (result.type === 'failure') {
+							showToast((result.data as any)?.saveError ?? 'Save failed.', 'error');
+						}
+						await update({ reset: false });
+					};
+				}}
+			>
+				<button
+					type="submit"
+					disabled={saving || !brixDirty}
+					class="inline-flex cursor-pointer items-center gap-2 bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{#if saving}
+						<Spinner /> Committing…
+					{:else}
+						Commit
+					{/if}
+				</button>
+			</form>
+		</div>
+
+		<div class="min-h-0 flex-1">
+			{#if brixDefinitions.length > 0}
+				<BrixEditor
+					definitions={brixDefinitions}
+					chrome="embedded"
+					initialBrixYaml={data.file.brixYaml}
+					onBrixYamlChange={(value) => {
+						if (!brixYamlHydrated) {
+							initialBrixYaml = value;
+							brixYamlHydrated = true;
+						}
+						currentBrixYaml = value;
+					}}
+				/>
+			{:else}
+				<div class="mx-auto max-w-2xl px-6 py-16">
+					<h1 class="font-display mb-2 text-3xl text-gray-900 dark:text-gray-50">
+						No brix components found
+					</h1>
+					<p class="text-muted">
+						Add Svelte components under <code>$lib/brixter/brix</code> to edit this brix page.
+					</p>
+				</div>
+			{/if}
+		</div>
+
+		{#if toastMessage}
+			<div
+				class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2"
+				transition:fly={{ y: 16, duration: 200 }}
+			>
+				<div
+					class="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg {toastMessage.type ===
+					'success'
+						? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+						: 'bg-red-600 text-white'}"
+				>
+					{toastMessage.text}
+					<button
+						type="button"
+						onclick={() => (toastMessage = null)}
+						class="ml-1 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
+					>
+						<X size={14} />
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
 {:else if isUnsupportedFile}
 	<div class="mx-auto max-w-2xl px-6 py-16">
 		<a href={backHref} class="text-secondary hover:text-heading text-sm transition-colors">
@@ -408,8 +538,8 @@
 			{data.file.name}
 		</h1>
 		<p class="text-muted">
-			This SvelteKit page is visible in the explorer, but only Markdown page files are editable
-			right now.
+			This SvelteKit page is visible in the explorer, but only Markdown and brix page files are
+			editable right now.
 		</p>
 	</div>
 {:else}
@@ -443,7 +573,7 @@
 							<button
 								type="submit"
 								disabled={merging}
-								class="inline-flex cursor-pointer items-center gap-2 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
+								class="inline-flex cursor-pointer items-center gap-2 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
 							>
 								{#if merging}
 									<Spinner /> Merging…

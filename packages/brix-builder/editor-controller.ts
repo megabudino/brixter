@@ -46,9 +46,10 @@ export interface ActiveReorderContext {
 }
 
 export function createEditorControllerState(
-	definitions: BuilderDefinition[]
+	definitions: BuilderDefinition[],
+	initialDocument?: BuilderDocument
 ): EditorControllerState {
-	const document = createBuilderDocument(definitions);
+	const document = initialDocument ?? createBuilderDocument(definitions);
 	const state: EditorControllerState = {
 		document,
 		draggedBlockId: null,

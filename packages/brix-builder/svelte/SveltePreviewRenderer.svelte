@@ -156,8 +156,8 @@
 						selectorIndex: activeEditor?.selectorIndex ?? activeTextEditor?.selectorIndex ?? 0
 					}}
 					class={activeBlockId === block.id
-						? 'group relative cursor-pointer outline outline-2 outline-[#3858e9] outline-offset-0 transition'
-						: 'group relative cursor-pointer outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#3858e9]'}
+						? 'group relative cursor-pointer outline outline-2 outline-[#2563EB] dark:outline-[#3B82F6] outline-offset-0 transition'
+						: 'group relative cursor-pointer outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
 					role="button"
 					tabindex="0"
 					aria-label={`Modifica elementi del brik ${definition.type}`}
@@ -176,10 +176,10 @@
 								<div
 									class="collection-overlay pointer-events-auto absolute z-10"
 									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
-									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#3858e9] transition"></div>
+									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#2563EB] dark:outline-[#3B82F6] transition"></div>
 									<button
 										type="button"
-										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center rounded-full border border-[#1e1e1e] bg-white text-lg leading-none text-[#1e1e1e] opacity-0 shadow-sm transition hover:bg-[#3858e9] hover:text-white"
+										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] opacity-0 shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
@@ -197,17 +197,17 @@
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#3858e9] transition'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#3858e9] transition'}>
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'}>
 									</div>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
-											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
+											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
+											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
 										<button
 											type="button"
-											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
@@ -216,7 +216,7 @@
 										</button>
 										<button
 											type="button"
-											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
@@ -225,7 +225,7 @@
 										</button>
 										<button
 											type="button"
-											class="h-full px-2.5 text-[#b32d2e] hover:bg-[#fcf0f1]"
+											class="h-full px-2.5 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
 											onclick={(event) => {
 												event.stopPropagation();
 												onRemoveItem(block, overlay.collectionPath, overlay.index);
@@ -281,8 +281,8 @@
 						selectorIndex: activeEditor?.selectorIndex ?? activeTextEditor?.selectorIndex ?? 0
 					}}
 					class={activeBlockId === block.id
-						? 'group relative outline outline-2 outline-[#3858e9] outline-offset-0'
-						: 'group relative outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#3858e9]'}
+						? 'group relative outline outline-2 outline-[#2563EB] dark:outline-[#3B82F6] outline-offset-0'
+						: 'group relative outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
 					role="button"
 					tabindex="0"
 					aria-label={`Seleziona brik ${definition.type}`}
@@ -306,10 +306,10 @@
 								<div
 									class="collection-overlay pointer-events-auto absolute z-10"
 									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
-									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#3858e9] transition"></div>
+									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#2563EB] dark:outline-[#3B82F6] transition"></div>
 									<button
 										type="button"
-										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center rounded-full border border-[#1e1e1e] bg-white text-lg leading-none text-[#1e1e1e] opacity-0 shadow-sm transition hover:bg-[#3858e9] hover:text-white"
+										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] opacity-0 shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
@@ -327,17 +327,17 @@
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#3858e9] transition'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#3858e9] transition'}>
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'}>
 									</div>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
-											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden rounded-sm border border-[#1e1e1e] bg-white text-xs text-[#1e1e1e] opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
+											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
+											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
 										<button
 											type="button"
-											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
@@ -346,7 +346,7 @@
 										</button>
 										<button
 											type="button"
-											class="h-full border-r border-[#ddd] px-2.5 hover:bg-[#f0f6fc]"
+											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
@@ -355,7 +355,7 @@
 										</button>
 										<button
 											type="button"
-											class="h-full px-2.5 text-[#b32d2e] hover:bg-[#fcf0f1]"
+											class="h-full px-2.5 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
 											onclick={(event) => {
 												event.stopPropagation();
 												onRemoveItem(block, overlay.collectionPath, overlay.index);
@@ -405,7 +405,7 @@
 				</div>
 			{/if}
 		{:else}
-			<div class="border border-dashed border-[#b32d2e] bg-[#fcf0f1] px-4 py-3 text-sm text-[#b32d2e]">
+			<div class="border border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
 				Correggi i contenuti di questo brik per vedere di nuovo la preview.
 			</div>
 		{/if}

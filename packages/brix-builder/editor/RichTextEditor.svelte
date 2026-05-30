@@ -50,8 +50,8 @@
 						chrome === 'inline'
 							? 'builder-richtext-inline-editor'
 							: mode === 'inline'
-								? 'builder-richtext-panel-editor min-h-11 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none'
-								: 'builder-richtext-panel-editor min-h-32 rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none',
+								? 'builder-richtext-panel-editor min-h-11 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]'
+								: 'builder-richtext-panel-editor min-h-32 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]',
 					style: editorStyle
 				}
 			},

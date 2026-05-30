@@ -1,3 +1,7 @@
+import yaml from 'yaml';
+
+const { parse: parseYaml, stringify: stringifyYaml } = yaml;
+
 export type BuilderMode = 'component' | 'markdown';
 export type BuilderBindingType = 'image' | 'richtext' | 'text';
 export type BuilderFieldKind =
@@ -43,7 +47,22 @@ export interface BuilderBlock {
 export interface BuilderDocument {
 	title: string;
 	description: string;
+	layout?: string;
+	metadata?: Record<string, unknown>;
 	blocks: BuilderBlock[];
+}
+
+export interface BrixYamlComponent {
+	type: string;
+	props?: Record<string, unknown>;
+}
+
+export interface BrixYamlDocument {
+	title?: string;
+	description?: string;
+	layout?: string;
+	components?: BrixYamlComponent[];
+	[key: string]: unknown;
 }
 
 export interface BuilderPreviewBinding {
@@ -306,6 +325,7 @@ export function createBuilderDocument(definitions: BuilderDefinition[]): Builder
 	return {
 		title: 'Pagina Brixter',
 		description: 'Bozza generata da Brixter.',
+		metadata: {},
 		blocks: initialBlocks.map((definition) => createBlock(definition.type, definitions))
 	};
 }
@@ -583,8 +603,163 @@ export function serializeToMdsvex(
 	return sections.join('\n\n');
 }
 
+export function parseBrixYamlDocument(
+	source: string,
+	definitions: BuilderDefinition[]
+): BuilderDocument {
+	const parsed = parseYaml(source) as unknown;
+	const rawDocument = isRecord(parsed) ? parsed : {};
+	const components = Array.isArray(rawDocument.components) ? rawDocument.components : [];
+	const metadata = getBrixYamlMetadata(rawDocument);
+	const title = typeof rawDocument.title === 'string' ? rawDocument.title : 'Pagina Brixter';
+	const description =
+		typeof rawDocument.description === 'string' ? rawDocument.description : 'Bozza generata da Brixter.';
+	const layout =
+		typeof rawDocument.layout === 'string' && rawDocument.layout.trim()
+			? rawDocument.layout.trim()
+			: undefined;
+	const blocks: BuilderBlock[] = [];
+
+	for (const component of components) {
+		if (!isRecord(component) || typeof component.type !== 'string') {
+			continue;
+		}
+
+		const definition = findDefinitionForBrixType(component.type, definitions);
+		if (!definition || definition.mode !== 'component') {
+			continue;
+		}
+
+		blocks.push({
+			id: createId(),
+			type: definition.type,
+			props: hydrateBuilderProps(
+				isRecord(component.props) ? component.props : {},
+				definition.fields,
+				definition.defaults
+			)
+		});
+	}
+
+	return {
+		title,
+		description,
+		layout,
+		metadata,
+		blocks
+	};
+}
+
+export function serializeToBrixYaml(
+	document: BuilderDocument,
+	definitions: BuilderDefinition[]
+): string {
+	const output: BrixYamlDocument = {
+		title: document.title,
+		description: document.description
+	};
+
+	for (const [key, value] of Object.entries(document.metadata ?? {})) {
+		if (key === 'title' || key === 'description' || key === 'layout' || key === 'components') {
+			continue;
+		}
+		output[key] = cloneValue(value);
+	}
+
+	if (document.layout) {
+		output.layout = document.layout;
+	}
+
+	output.components = document.blocks
+		.map((block) => ({ block, definition: getDefinition(block.type, definitions) }))
+		.filter((entry) => entry.definition.mode === 'component')
+		.map(({ block }) => ({
+			type: block.type,
+			props: normalizeBuilderPropsForRender(block.props) as Record<string, unknown>
+		}));
+
+	return stringifyYaml(output).trimEnd() + '\n';
+}
+
 function cloneValue<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function getBrixYamlMetadata(document: Record<string, unknown>): Record<string, unknown> {
+	return Object.fromEntries(
+		Object.entries(document)
+			.filter(([key]) => key !== 'title' && key !== 'description' && key !== 'layout' && key !== 'components')
+			.map(([key, value]) => [key, cloneValue(value)])
+	);
+}
+
+function findDefinitionForBrixType(
+	type: string,
+	definitions: BuilderDefinition[]
+): BuilderDefinition | undefined {
+	const normalized = toComponentName(type);
+	return definitions.find((definition) => definition.type === type || definition.type === normalized);
+}
+
+function toComponentName(value: string): string {
+	const normalized = value.trim().replace(/\.(svelte|ts|js)$/i, '');
+	if (/^[A-Z][A-Za-z0-9]*$/.test(normalized)) return normalized;
+	return normalized
+		.split(/[-_\s/]+/)
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join('');
+}
+
+function hydrateBuilderProps(
+	props: Record<string, unknown>,
+	fields: BuilderFields,
+	defaults: Record<string, unknown>
+): Record<string, unknown> {
+	const hydrated: Record<string, unknown> = cloneValue(defaults);
+
+	for (const [key, value] of Object.entries(props)) {
+		const field = fields[key];
+		hydrated[key] = field
+			? hydrateBuilderValue(value, field, defaults[key])
+			: cloneValue(value);
+	}
+
+	return hydrated;
+}
+
+function hydrateBuilderValue(value: unknown, field: BuilderField, defaultValue: unknown): unknown {
+	const kind = inferBuilderFieldKind(field);
+
+	if (kind === 'richtext-inline' || kind === 'richtext-block') {
+		if (isRichTextValue(value)) {
+			return cloneValue(value);
+		}
+		return createRichTextValue(kind === 'richtext-inline' ? 'inline' : 'block', asString(value));
+	}
+
+	if (kind === 'object') {
+		const nestedDefaults = isRecord(defaultValue)
+			? defaultValue
+			: field.fields
+				? createBuilderDefaultsFromFields(field.fields)
+				: {};
+		if (!isRecord(value)) {
+			return cloneValue(nestedDefaults);
+		}
+		return field.fields ? hydrateBuilderProps(value, field.fields, nestedDefaults) : cloneValue(value);
+	}
+
+	if (kind === 'array') {
+		if (!Array.isArray(value)) {
+			return [];
+		}
+		return value.map((entry) =>
+			field.item ? hydrateBuilderValue(entry, field.item, undefined) : cloneValue(entry)
+		);
+	}
+
+	return cloneValue(value);
 }
 
 function createBuilderFieldDefault(field: BuilderField, defaultValue = field.default): unknown {

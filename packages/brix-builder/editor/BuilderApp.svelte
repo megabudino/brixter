@@ -24,8 +24,11 @@
 	import {
 		createInspectorFieldsFromFields,
 		getCollectionItemSummary,
+		parseBrixYamlDocument,
+		serializeToBrixYaml,
 		serializeToMdsvex,
 		type BuilderBlock,
+		type BuilderDocument,
 		type BuilderRichTextValue
 	} from '../core.js';
 	import {
@@ -44,7 +47,19 @@
 	import BuilderInspector from './BuilderInspector.svelte';
 	import SveltePreviewRenderer from '../svelte/SveltePreviewRenderer.svelte';
 
-	let { definitions }: { definitions: BuilderRenderDefinition[] } = $props();
+	let {
+		definitions,
+		initialDocument,
+		initialBrixYaml,
+		chrome = 'standalone',
+		onBrixYamlChange
+	}: {
+		definitions: BuilderRenderDefinition[];
+		initialDocument?: BuilderDocument;
+		initialBrixYaml?: string;
+		chrome?: 'standalone' | 'embedded';
+		onBrixYamlChange?: (value: string) => void;
+	} = $props();
 
 	let controller = $state<ReturnType<typeof createEditorControllerState> | null>(null);
 	let previewOverlays = $state<Record<string, PreviewOverlay[]>>({});
@@ -56,7 +71,9 @@
 
 	$effect(() => {
 		if (!controller) {
-			controller = createEditorControllerState(definitions);
+			const hydratedDocument =
+				initialDocument ?? (initialBrixYaml ? parseBrixYamlDocument(initialBrixYaml, definitions) : undefined);
+			controller = createEditorControllerState(definitions, hydratedDocument);
 		}
 	});
 
@@ -73,6 +90,9 @@
 	});
 
 	const mdsvexOutput = $derived(serializeToMdsvex(controller?.document ?? { title: '', description: '', blocks: [] }, definitions));
+	const brixYamlOutput = $derived(
+		serializeToBrixYaml(controller?.document ?? { title: '', description: '', blocks: [] }, definitions)
+	);
 	const activeReorderContext = $derived.by(() =>
 		controller ? getActiveReorderContext(controller, definitions) : null
 	);
@@ -384,6 +404,10 @@
 		controller.document.description = value;
 	}
 
+	$effect(() => {
+		onBrixYamlChange?.(brixYamlOutput);
+	});
+
 	function createPreviewTextStyle(computed: CSSStyleDeclaration): string {
 		return [
 			`font-family:${computed.fontFamily}`,
@@ -504,33 +528,38 @@
 		content="Playground di Brixter con editing visuale dei Brix ed export mdsvex opzionale." />
 </svelte:head>
 
-<div class="flex h-screen flex-col overflow-hidden bg-[#f0f0f0] text-[#1e1e1e]">
-	<header class="flex h-[60px] shrink-0 items-center justify-between border-b border-[#ddd] bg-white px-3">
+<div
+	class={chrome === 'standalone'
+		? 'flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'
+		: 'flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'}>
+	{#if chrome === 'standalone'}
+		<header class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-[#111827]">
 		<div class="flex items-center gap-2">
-			<div class="flex h-9 w-9 items-center justify-center rounded-sm bg-[#1e1e1e] text-sm font-semibold text-white">
+			<div class="flex h-9 w-9 items-center justify-center bg-gray-900 text-sm font-semibold text-white dark:bg-gray-100 dark:text-gray-900">
 				B
 			</div>
 			<button
 				type="button"
-				class="flex h-9 w-9 items-center justify-center rounded-sm border border-[#1e1e1e] bg-[#1e1e1e] text-xl leading-none text-white"
+				class="flex h-9 w-9 items-center justify-center bg-[#2563EB] text-xl leading-none text-white transition-colors hover:bg-[#3B82F6]"
 				onclick={() => definitions[0] && addBlock(definitions[0].type)}
 				aria-label="Aggiungi brik">
 				+
 			</button>
-			<div class="ml-2 h-6 w-px bg-[#ddd]"></div>
+			<div class="ml-2 h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
 			<p class="text-sm font-medium">Brixter Playground</p>
 		</div>
 
 		<div class="flex items-center gap-2">
-			<span class="rounded-sm border border-[#ddd] px-2 py-1 text-xs text-[#757575]">Preview</span>
+			<span class="text-muted border border-gray-200 px-2 py-1 text-xs dark:border-gray-700">Preview</span>
 			<button
 				type="button"
-				class="rounded-sm bg-[#3858e9] px-3 py-1.5 text-xs font-medium text-white"
+				class="bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3B82F6]"
 				onclick={copyMdsvex}>
 				{controller?.copied ? 'Copiato' : 'Copia export'}
 			</button>
 		</div>
-	</header>
+		</header>
+	{/if}
 
 	<div class="flex min-h-0 flex-1 overflow-hidden">
 		<BuilderHierarchySidebar
@@ -545,9 +574,9 @@
 			onAllowDrop={allowDrop}
 			onDrop={handleDrop} />
 
-		<main class="min-w-0 flex-1 overflow-y-auto bg-white">
+		<main class="min-w-0 flex-1 overflow-y-auto bg-white dark:bg-[#0f1623]">
 			<div class="min-h-full w-full">
-				<div class="w-full bg-white">
+				<div class="w-full bg-white dark:bg-[#0f1623]">
 					<SveltePreviewRenderer {...previewProps} />
 				</div>
 			</div>
@@ -581,24 +610,24 @@
 			aria-label="Chiudi modale riordino"
 			onclick={closeReorderModal}></button>
 		<div
-			class="relative w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl"
+			class="relative w-full max-w-3xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-[#111827]"
 			role="dialog"
 			aria-modal="true"
 			aria-label={`Riordina ${activeReorderContext.collection.label}`}
 			tabindex="0">
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<h2 class="text-xl font-semibold text-gray-900">
+					<h2 class="font-display text-heading text-2xl">
 						Riordina {activeReorderContext.collection.label}
 					</h2>
-					<p class="mt-1 text-sm text-gray-500">
+					<p class="text-muted mt-1 text-sm">
 						Trascina gli elementi in una lista lineare per aggiornare l'ordine della collection.
 					</p>
 				</div>
 
 				<button
 					type="button"
-					class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900"
+					class="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
 					onclick={closeReorderModal}>
 					Chiudi
 				</button>
@@ -607,7 +636,7 @@
 			<div class="mt-6 space-y-3" role="list">
 				{#each activeReorderContext.items as item, itemIndex}
 					<div
-						class="flex cursor-move flex-wrap items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3"
+						class="flex cursor-move flex-wrap items-center justify-between gap-4 border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-[#1f2937]"
 						role="listitem"
 						draggable={true}
 						ondragstart={() =>
@@ -619,15 +648,15 @@
 						ondragover={allowDrop}
 						ondrop={() => handleCollectionItemDrop(itemIndex)}>
 						<div class="flex min-w-0 items-center gap-4">
-							<div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xs font-semibold text-gray-500 ring-1 ring-gray-200">
+							<div class="text-muted flex h-12 w-12 items-center justify-center border border-gray-200 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-[#111827]">
 								{itemIndex + 1}
 							</div>
 
 							<div class="min-w-0">
-								<p class="truncate text-sm font-medium text-gray-900">
+								<p class="text-heading truncate text-sm font-medium">
 									{getCollectionItemSummary(item, activeReorderContext.collection, itemIndex)}
 								</p>
-								<p class="truncate text-xs text-gray-500">
+								<p class="text-muted truncate text-xs">
 									{activeReorderContext.collection.path}[{itemIndex}]
 								</p>
 							</div>
@@ -636,7 +665,7 @@
 						<div class="flex flex-wrap items-center gap-2 text-sm">
 							<button
 								type="button"
-								class="rounded-full border border-gray-300 px-3 py-1.5"
+								class="border border-gray-300 px-3 py-1.5 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
 								onclick={() =>
 									moveItem(
 										activeReorderContext.block,
@@ -648,7 +677,7 @@
 							</button>
 							<button
 								type="button"
-								class="rounded-full border border-gray-300 px-3 py-1.5"
+								class="border border-gray-300 px-3 py-1.5 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
 								onclick={() =>
 									moveItem(
 										activeReorderContext.block,

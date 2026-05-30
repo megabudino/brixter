@@ -99,8 +99,8 @@
 </script>
 
 {#if fieldKind === 'object' && field.fields}
-	<div class="space-y-3 border-t border-[#ddd] pt-4">
-		<p class="text-sm font-semibold text-[#1e1e1e]">{label}</p>
+	<div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+		<p class="text-heading text-sm font-semibold">{label}</p>
 
 		{#each objectEntries as [nestedKey, nestedField] (nestedKey)}
 			<BuilderFieldEditor
@@ -116,41 +116,41 @@
 		{/each}
 	</div>
 {:else if fieldKind === 'array' && field.item}
-	<div class="space-y-3 border-t border-[#ddd] pt-4">
+	<div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
 		<div class="flex items-center justify-between gap-3">
-			<p class="text-sm font-semibold text-[#1e1e1e]">{label}</p>
+			<p class="text-heading text-sm font-semibold">{label}</p>
 			<button
 				type="button"
-				class="rounded-sm border border-[#1e1e1e] bg-white px-2 py-1 text-xs font-medium text-[#1e1e1e] hover:bg-[#f6f7f7]"
+				class="border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onAddItem(path)}>
 				+Aggiungi {field.itemLabel ?? 'elemento'}
 			</button>
 		</div>
 
 		{#if arrayItems.length === 0}
-			<p class="text-sm text-[#757575]">Nessun elemento configurato.</p>
+			<p class="text-muted text-sm">Nessun elemento configurato.</p>
 		{/if}
 
 		{#each arrayItems as item, index (`${path}-${index}`)}
-			<div class="space-y-3 border border-[#ddd] bg-white p-3">
+			<div class="space-y-3 border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#1f2937]">
 				<div class="flex items-center justify-between gap-3">
-					<p class="text-sm font-medium text-[#1e1e1e]">{getItemLabel(item, index)}</p>
+					<p class="text-heading text-sm font-medium">{getItemLabel(item, index)}</p>
 					<div class="flex flex-wrap gap-2">
 						<button
 							type="button"
-							class="rounded-sm border border-[#ccc] px-2 py-1 text-xs"
+							class="border border-gray-300 px-2 py-1 text-xs transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
 							onclick={() => onMoveItem(path, index, -1)}>
 							Su
 						</button>
 						<button
 							type="button"
-							class="rounded-sm border border-[#ccc] px-2 py-1 text-xs"
+							class="border border-gray-300 px-2 py-1 text-xs transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
 							onclick={() => onMoveItem(path, index, 1)}>
 							Giu
 						</button>
 						<button
 							type="button"
-							class="rounded-sm border border-[#b32d2e] px-2 py-1 text-xs text-[#b32d2e]"
+							class="border border-red-300 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
 							onclick={() => onRemoveItem(path, index)}>
 							Rimuovi
 						</button>
@@ -187,48 +187,48 @@
 	</div>
 {:else if fieldKind === 'richtext-inline' || fieldKind === 'richtext-block'}
 	<label class="block space-y-2 text-sm">
-		<span class="font-medium text-[#1e1e1e]">{label}</span>
+		<span class="text-heading font-medium">{label}</span>
 		<RichTextEditor
 			value={richTextValue}
 			mode={fieldKind === 'richtext-inline' ? 'inline' : 'block'}
 			onChange={(nextValue) => onChange(path, nextValue)} />
 	</label>
 {:else if fieldKind === 'boolean'}
-	<label class="flex items-center gap-3 border border-[#ddd] bg-[#f6f7f7] px-3 py-2 text-sm">
+	<label class="flex items-center gap-3 border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
 		<input
 			type="checkbox"
 			checked={booleanValue}
-			class="h-4 w-4 rounded border-gray-300"
+			class="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
 			onchange={(event) => updateBoolean(event.currentTarget.checked)} />
-		<span class="font-medium text-[#1e1e1e]">{label}</span>
+		<span class="text-heading font-medium">{label}</span>
 	</label>
 {:else if fieldKind === 'number'}
 	<label class="block space-y-2 text-sm">
-		<span class="font-medium text-[#1e1e1e]">{label}</span>
+		<span class="text-heading font-medium">{label}</span>
 		<input
 			type="number"
 			value={numberValue}
-			class="w-full rounded-sm border border-[#949494] px-2 py-1.5 focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+			class="w-full border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 			oninput={(event) => updateNumber(event.currentTarget.value)} />
 	</label>
 {:else if fieldKind === 'image'}
 	<label class="block space-y-2 text-sm">
-		<span class="font-medium text-[#1e1e1e]">{label}</span>
+		<span class="text-heading font-medium">{label}</span>
 		{#if stringValue}
 			<img
 				src={stringValue}
 				alt={label}
-				class="h-24 w-24 border border-[#ddd] object-cover" />
+				class="h-24 w-24 border border-gray-200 object-cover dark:border-gray-700" />
 		{/if}
 		<div class="flex flex-wrap gap-2">
 			<input
 				type="text"
 				value={stringValue}
-				class="min-w-0 flex-1 rounded-sm border border-[#949494] px-2 py-1.5 focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+				class="min-w-0 flex-1 border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 				oninput={(event) => updateText(event.currentTarget.value)} />
 			<button
 				type="button"
-				class="rounded-sm border border-[#1e1e1e] px-3 py-1.5 font-medium text-[#1e1e1e] hover:bg-[#f6f7f7]"
+				class="border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onQueueFileEdit(path)}>
 				File
 			</button>
@@ -236,17 +236,17 @@
 	</label>
 {:else}
 	<label class="block space-y-2 text-sm">
-		<span class="font-medium text-[#1e1e1e]">{label}</span>
+		<span class="text-heading font-medium">{label}</span>
 		{#if multiline}
 			<textarea
 				value={stringValue}
-				class="min-h-24 w-full rounded-sm border border-[#949494] px-2 py-1.5 font-mono text-sm focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+				class="min-h-24 w-full border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 				oninput={(event) => updateText(event.currentTarget.value)}></textarea>
 		{:else}
 			<input
 				type="text"
 				value={stringValue}
-				class="w-full rounded-sm border border-[#949494] px-2 py-1.5 focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+				class="w-full border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 				oninput={(event) => updateText(event.currentTarget.value)} />
 		{/if}
 	</label>

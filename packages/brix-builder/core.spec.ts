@@ -7,8 +7,10 @@ import {
 	getCollectionItemSummary,
 	getDefinition,
 	moveCollectionItem,
+	parseBrixYamlDocument,
 	removeCollectionItem,
 	reorderCollectionItem,
+	serializeToBrixYaml,
 	serializeToMdsvex,
 	updatePropsAtPath
 } from './core';
@@ -190,5 +192,69 @@ describe('serializeToMdsvex', () => {
 		expect((getCollectionItems(reordered, collection)[2] as Record<string, string>).title).toBe(
 			'Paesaggio Estivo'
 		);
+	});
+});
+
+describe('brix yaml round-trip', () => {
+	it('parses brix yaml into a builder document with metadata and component props', () => {
+		const document = parseBrixYamlDocument(
+			`
+title: Home
+description: Landing page
+seo:
+  robots: index
+layout: marketing
+components:
+  - type: hero
+    props:
+      headline: Benvenuto
+      cta:
+        label: Scopri
+  - type: Missing
+    props:
+      title: Ignored
+`,
+			pageBriks
+		);
+
+		expect(document.title).toBe('Home');
+		expect(document.description).toBe('Landing page');
+		expect(document.layout).toBe('marketing');
+		expect(document.metadata).toEqual({ seo: { robots: 'index' } });
+		expect(document.blocks).toHaveLength(1);
+		expect(document.blocks[0]).toMatchObject({
+			type: 'Hero',
+			props: {
+				headline: 'Benvenuto',
+				cta: {
+					label: 'Scopri',
+					href: '/contatti'
+				}
+			}
+		});
+	});
+
+	it('serializes builder documents to the vite brix yaml format', () => {
+		const block = createBlock('Hero', pageBriks);
+		block.props = updatePropsAtPath(block.props, 'headline', 'Titolo YAML');
+		const output = serializeToBrixYaml(
+			{
+				title: 'Home',
+				description: 'Landing page',
+				layout: 'marketing',
+				metadata: { seo: { robots: 'index' } },
+				blocks: [createBlock('Markdown', pageBriks), block]
+			},
+			pageBriks
+		);
+
+		expect(output).toContain('title: Home');
+		expect(output).toContain('description: Landing page');
+		expect(output).toContain('layout: marketing');
+		expect(output).toContain('seo:');
+		expect(output).toContain('components:');
+		expect(output).toContain('type: Hero');
+		expect(output).toContain('headline: Titolo YAML');
+		expect(output).not.toContain('type: Markdown');
 	});
 });

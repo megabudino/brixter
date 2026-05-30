@@ -1,7 +1,11 @@
 export { default as BrixEditor } from './editor/BuilderApp.svelte';
 export { createBrixDefinitions, type BrikDefinition } from './svelte/adapter.js';
 export { createBrikSchemaFromMarkup } from './svelte/markup-schema.js';
-export { serializeToMdsvex as exportBrixToMdsvex } from './core.js';
+export {
+	parseBrixYamlDocument as importBrixFromYaml,
+	serializeToBrixYaml as exportBrixToYaml,
+	serializeToMdsvex as exportBrixToMdsvex
+} from './core.js';
 
 export type {
 	BuilderBlock as Brik,
@@ -11,5 +15,7 @@ export type {
 	BuilderField as BrikField,
 	BuilderFields as BrikFields,
 	BuilderPreviewBinding as BrikPreviewBinding,
-	BuilderRichTextValue as BrikRichTextValue
+	BuilderRichTextValue as BrikRichTextValue,
+	BrixYamlComponent,
+	BrixYamlDocument
 } from './core.js';

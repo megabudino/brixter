@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source "../../../brix-builder/dist";
 @plugin "@tailwindcss/typography";
 @variant dark (&:where(.dark, .dark *));
 

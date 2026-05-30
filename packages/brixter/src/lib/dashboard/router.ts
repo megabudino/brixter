@@ -181,6 +181,10 @@ function titleFromRouteName(name: string): string {
 		.join(' ');
 }
 
+function isBrixYamlFile(path: string): boolean {
+	return /\.brix\.ya?ml$/i.test(path);
+}
+
 function branchHref(branch: string, path = ''): string {
 	const base = `/admin/b/${encodeURIComponent(branch)}`;
 	if (!path) return base;
@@ -248,24 +252,30 @@ async function loadBranchFile(
 
 	let htmlContent: string | undefined;
 	let frontmatter: string | undefined;
+	let brixYaml: string | undefined;
 
-	if (file.name.endsWith('.md') && file.content && file.encoding === 'base64') {
+	if (file.content && file.encoding === 'base64') {
 		const raw = Buffer.from(file.content, 'base64').toString('utf-8');
-		const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-
-		if (fmMatch) {
-			frontmatter = fmMatch[1];
-			htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
-		} else {
-			htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
+		if (isBrixYamlFile(file.name)) {
+			brixYaml = raw;
 		}
+		if (file.name.endsWith('.md')) {
+			const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
 
-		const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
-		htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
-			const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
-			const proxyParams = new URLSearchParams({ branch, path: repoPath });
-			return `src="/admin/api/repo-image?${proxyParams}"`;
-		});
+			if (fmMatch) {
+				frontmatter = fmMatch[1];
+				htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
+			} else {
+				htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
+			}
+
+			const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
+			htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
+				const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
+				const proxyParams = new URLSearchParams({ branch, path: repoPath });
+				return `src="/admin/api/repo-image?${proxyParams}"`;
+			});
+		}
 	}
 
 	return {
@@ -276,7 +286,8 @@ async function loadBranchFile(
 			downloadUrl: file.download_url,
 			size: file.size,
 			htmlContent,
-			frontmatter
+			frontmatter,
+			brixYaml
 		}
 	};
 }
@@ -594,6 +605,7 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 	const formData = await request.formData();
 	const markdown = formData.get('markdown')?.toString() ?? '';
 	const frontmatterYaml = formData.get('frontmatter')?.toString() ?? '';
+	const brixYaml = formData.get('brixYaml')?.toString() ?? '';
 	const sha = formData.get('sha')?.toString() ?? '';
 	const filePath = normalizeRepoPath(match.path);
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
@@ -601,9 +613,11 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 	if (!filePath || !sha) return fail(400, { saveError: 'Missing file path or sha.' });
 	if (!isWithinRepoRoot(filePath, routesRoot)) return fail(403, { saveError: 'Access denied.' });
 
-	const fileContent = frontmatterYaml.trim()
-		? `---\n${frontmatterYaml.trim()}\n---\n${markdown}`
-		: markdown;
+	const fileContent = isBrixYamlFile(filePath)
+		? brixYaml
+		: frontmatterYaml.trim()
+			? `---\n${frontmatterYaml.trim()}\n---\n${markdown}`
+			: markdown;
 	const octokit = getOctokit();
 	const repo = getRepo();
 

@@ -282,7 +282,7 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 					__BRIXTER_BUILD_ROUTES_ROOT__: defineValue(build.routesRoot)
 				},
 				ssr: {
-					noExternal: ['brixter', 'lucide-svelte']
+					noExternal: ['brixter', '@brixter/brix-builder', 'lucide-svelte']
 				}
 			};
 		},

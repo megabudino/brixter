@@ -34,7 +34,7 @@
 	<div class="pointer-events-auto relative">
 		<button
 			type="button"
-			class="flex h-8 w-8 items-center justify-center rounded-full border border-[#1e1e1e] bg-[#1e1e1e] text-lg leading-none text-white shadow-sm hover:bg-[#3858e9]"
+			class="flex h-8 w-8 items-center justify-center bg-[#2563EB] text-lg leading-none text-white shadow-sm transition-colors hover:bg-[#3B82F6]"
 			aria-label="Aggiungi componente"
 			aria-expanded={open}
 			onclick={(event) => {
@@ -46,7 +46,7 @@
 
 		{#if open}
 			<div
-				class="absolute left-1/2 top-10 z-40 w-72 -translate-x-1/2 border border-[#1e1e1e] bg-white py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+				class="absolute left-1/2 top-10 z-40 w-72 -translate-x-1/2 border border-gray-200 bg-white py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:border-gray-700 dark:bg-[#1f2937]"
 				role="menu"
 				aria-label="Seleziona componente"
 				tabindex="-1"
@@ -60,22 +60,22 @@
 						onClose();
 					}
 				}}>
-				<div class="border-b border-[#ddd] px-3 pb-2">
-					<p class="text-xs font-semibold uppercase tracking-wide text-[#757575]">Aggiungi componente</p>
+				<div class="border-b border-gray-200 px-3 pb-2 dark:border-gray-700">
+					<p class="text-muted text-xs font-semibold uppercase tracking-wide">Aggiungi componente</p>
 				</div>
 
 				<div class="max-h-80 overflow-y-auto py-1">
 					{#each definitions as definition (definition.type)}
 						<button
 							type="button"
-							class="block w-full px-3 py-2 text-left hover:bg-[#f0f6fc]"
+							class="block w-full px-3 py-2 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
 							role="menuitem"
 							onclick={(event) => {
 								event.stopPropagation();
 								onInsert(definition.type);
 							}}>
-							<span class="block text-sm font-medium text-[#1e1e1e]">{definition.type}</span>
-							<span class="mt-0.5 line-clamp-2 block text-xs leading-5 text-[#757575]">
+							<span class="block text-sm font-medium text-gray-900 dark:text-gray-100">{definition.type}</span>
+							<span class="text-muted mt-0.5 line-clamp-2 block text-xs leading-5">
 								{definition.description}
 							</span>
 						</button>

@@ -42,46 +42,46 @@
 	const inspectorEntries = $derived(Object.entries(inspectorFields));
 </script>
 
-<aside class="flex h-full min-h-0 w-[320px] shrink-0 flex-col border-l border-[#ddd] bg-white">
-	<div class="flex h-12 items-center border-b border-[#ddd] px-4">
-		<h2 class="text-sm font-medium text-[#1e1e1e]">Impostazioni</h2>
+<aside class="flex h-full min-h-0 w-[320px] shrink-0 flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]">
+	<div class="flex h-12 items-center border-b border-gray-200 px-4 dark:border-gray-700">
+		<h2 class="text-heading text-sm font-medium">Impostazioni</h2>
 	</div>
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
-		<section class="border-b border-[#ddd] p-4">
-			<h3 class="mb-4 text-[11px] font-semibold uppercase tracking-wide text-[#757575]">Pagina</h3>
+		<section class="border-b border-gray-200 p-4 dark:border-gray-700">
+			<h3 class="text-muted mb-4 text-[11px] font-semibold uppercase tracking-wide">Pagina</h3>
 			<label class="block space-y-2 text-sm">
-				<span class="font-medium text-[#1e1e1e]">Titolo pagina</span>
+				<span class="text-heading font-medium">Titolo pagina</span>
 				<input
 					value={title}
-					class="w-full rounded-sm border border-[#949494] px-2 py-1.5 text-sm focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+					class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 					placeholder="Titolo della pagina"
 					oninput={(event) => onTitleChange(event.currentTarget.value)} />
 			</label>
 			<label class="mt-4 block space-y-2 text-sm">
-				<span class="font-medium text-[#1e1e1e]">Descrizione</span>
+				<span class="text-heading font-medium">Descrizione</span>
 				<input
 					value={description}
-					class="w-full rounded-sm border border-[#949494] px-2 py-1.5 text-sm focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+					class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 					placeholder="Descrizione per il frontmatter"
 					oninput={(event) => onDescriptionChange(event.currentTarget.value)} />
 			</label>
 		</section>
 
 		{#if activeBlock && activeDefinition}
-			<section class="border-b border-[#ddd] p-4">
+			<section class="border-b border-gray-200 p-4 dark:border-gray-700">
 				<div class="mb-4">
-					<p class="text-[11px] font-semibold uppercase tracking-wide text-[#757575]">Brik</p>
-					<h3 class="mt-1 text-sm font-semibold text-[#1e1e1e]">{activeDefinition.type}</h3>
-					<p class="mt-1 text-xs leading-5 text-[#757575]">{activeDefinition.description}</p>
+					<p class="text-muted text-[11px] font-semibold uppercase tracking-wide">Brik</p>
+					<h3 class="text-heading mt-1 text-sm font-semibold">{activeDefinition.type}</h3>
+					<p class="text-muted mt-1 text-xs leading-5">{activeDefinition.description}</p>
 				</div>
 
 				{#if activeDefinition.mode === 'markdown'}
 					<label class="block space-y-2 text-sm">
-						<span class="font-medium text-[#1e1e1e]">Contenuto markdown</span>
+						<span class="text-heading font-medium">Contenuto markdown</span>
 						<textarea
 							value={typeof activeBlock.props.content === 'string' ? activeBlock.props.content : ''}
-							class="min-h-48 w-full rounded-sm border border-[#949494] px-2 py-1.5 font-mono text-sm focus:border-[#3858e9] focus:outline-none focus:ring-1 focus:ring-[#3858e9]"
+							class="min-h-48 w-full border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 							oninput={(event) => onFieldChange(activeBlock, 'content', event.currentTarget.value)}
 							placeholder="Scrivi markdown..."></textarea>
 					</label>
@@ -102,37 +102,37 @@
 						{/each}
 					</div>
 				{:else}
-					<p class="border border-dashed border-[#ccc] bg-[#f6f7f7] px-4 py-6 text-sm text-[#757575]">
+					<p class="text-muted border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm dark:border-gray-600 dark:bg-gray-800">
 						I contenuti di questo brik si modificano direttamente nella preview.
 					</p>
 				{/if}
 
 				{#if propsError}
-					<p class="mt-3 text-sm text-[#b32d2e]">{propsError}</p>
+					<p class="text-error mt-3 text-sm">{propsError}</p>
 				{/if}
 			</section>
 		{:else}
-			<p class="m-4 border border-dashed border-[#ccc] bg-[#f6f7f7] px-4 py-6 text-sm text-[#757575]">
+			<p class="text-muted m-4 border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm dark:border-gray-600 dark:bg-gray-800">
 				Seleziona un brik dalla gerarchia o dalla preview per modificarne le impostazioni.
 			</p>
 		{/if}
 
-		<section class="border-b border-[#ddd] p-4">
+		<section class="border-b border-gray-200 p-4 dark:border-gray-700">
 			<div class="flex items-center justify-between gap-3">
 				<div>
-					<h3 class="text-sm font-semibold text-[#1e1e1e]">Export mdsvex</h3>
-					<p class="mt-1 text-xs text-[#757575]">Export opzionale generato dal documento corrente.</p>
+					<h3 class="text-heading text-sm font-semibold">Export mdsvex</h3>
+					<p class="text-muted mt-1 text-xs">Export opzionale generato dal documento corrente.</p>
 				</div>
 				<button
 					type="button"
-					class="rounded-sm border border-[#1e1e1e] bg-white px-3 py-1.5 text-xs font-medium text-[#1e1e1e] hover:bg-[#f6f7f7]"
+					class="border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
 					onclick={onCopyMdsvex}>
 					{copied ? 'Copiato' : 'Copia export'}
 				</button>
 			</div>
 			<textarea
 				readonly
-				class="mt-3 min-h-64 w-full rounded-sm border border-[#949494] bg-white px-2 py-1.5 font-mono text-xs"
+				class="text-muted mt-3 min-h-64 w-full border border-gray-300 bg-gray-50 px-3 py-2 font-mono text-xs dark:border-gray-600 dark:bg-[#1f2937]"
 			>{mdsvexOutput}</textarea>
 		</section>
 	</div>
