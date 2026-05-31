@@ -15,6 +15,23 @@
 		onInsert: (type: string) => void;
 	} = $props();
 
+	let root = $state<HTMLDivElement | null>(null);
+
+	$effect(() => {
+		const ownerWindow = root?.ownerDocument.defaultView;
+		if (!ownerWindow) {
+			return;
+		}
+
+		ownerWindow.addEventListener('click', handleWindowClick);
+		ownerWindow.addEventListener('keydown', handleWindowKeydown);
+
+		return () => {
+			ownerWindow.removeEventListener('click', handleWindowClick);
+			ownerWindow.removeEventListener('keydown', handleWindowKeydown);
+		};
+	});
+
 	function handleWindowClick(): void {
 		if (open) {
 			onClose();
@@ -28,9 +45,10 @@
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
-
-<div class="pointer-events-none absolute bottom-0 left-1/2 z-30 -translate-x-1/2 translate-y-1/2 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+<div
+	bind:this={root}
+	class="pointer-events-none absolute bottom-0 left-1/2 z-30 -translate-x-1/2 translate-y-1/2 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100"
+>
 	<div class="pointer-events-auto relative">
 		<button
 			type="button"
@@ -40,13 +58,14 @@
 			onclick={(event) => {
 				event.stopPropagation();
 				onToggle();
-			}}>
+			}}
+		>
 			+
 		</button>
 
 		{#if open}
 			<div
-				class="absolute left-1/2 top-10 z-40 w-72 -translate-x-1/2 border border-gray-200 bg-white py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:border-gray-700 dark:bg-[#1f2937]"
+				class="absolute top-10 left-1/2 z-40 w-72 -translate-x-1/2 border border-gray-200 bg-white py-2 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:border-gray-700 dark:bg-[#1f2937]"
 				role="menu"
 				aria-label="Seleziona componente"
 				tabindex="-1"
@@ -59,9 +78,12 @@
 						event.stopPropagation();
 						onClose();
 					}
-				}}>
+				}}
+			>
 				<div class="border-b border-gray-200 px-3 pb-2 dark:border-gray-700">
-					<p class="text-muted text-xs font-semibold uppercase tracking-wide">Aggiungi componente</p>
+					<p class="text-muted text-xs font-semibold tracking-wide uppercase">
+						Aggiungi componente
+					</p>
 				</div>
 
 				<div class="max-h-80 overflow-y-auto py-1">
@@ -73,8 +95,11 @@
 							onclick={(event) => {
 								event.stopPropagation();
 								onInsert(definition.type);
-							}}>
-							<span class="block text-sm font-medium text-gray-900 dark:text-gray-100">{definition.type}</span>
+							}}
+						>
+							<span class="block text-sm font-medium text-gray-900 dark:text-gray-100"
+								>{definition.type}</span
+							>
 							<span class="text-muted mt-0.5 line-clamp-2 block text-xs leading-5">
 								{definition.description}
 							</span>

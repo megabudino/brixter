@@ -64,14 +64,14 @@
 		event: MouseEvent
 	): void {
 		if (
-			event.target instanceof Element &&
+			isElement(event.target) &&
 			event.target.closest('.collection-item-toolbar, .collection-item-add-button')
 		) {
 			return;
 		}
 
 		const container = event.currentTarget;
-		if (!(container instanceof HTMLElement)) {
+		if (!isHTMLElement(container)) {
 			return;
 		}
 
@@ -95,7 +95,10 @@
 	function hidePreviewEditTarget(
 		node: HTMLElement,
 		params: { selector: string | null; selectorIndex: number }
-	): { update: (nextParams: { selector: string | null; selectorIndex: number }) => void; destroy: () => void } {
+	): {
+		update: (nextParams: { selector: string | null; selectorIndex: number }) => void;
+		destroy: () => void;
+	} {
 		let currentParams = params;
 		let hiddenElement: HTMLElement | null = null;
 		let updateToken = 0;
@@ -119,7 +122,7 @@
 			const target = Array.from(node.querySelectorAll(currentParams.selector))[
 				currentParams.selectorIndex
 			];
-			if (target instanceof HTMLElement) {
+			if (isHTMLElement(target)) {
 				hiddenElement = target;
 				hiddenElement.style.visibility = 'hidden';
 			}
@@ -136,6 +139,19 @@
 			}
 		};
 	}
+
+	function isElement(value: unknown): value is Element {
+		return typeof value === 'object' && value !== null && (value as Node).nodeType === 1;
+	}
+
+	function isHTMLElement(value: unknown): value is HTMLElement {
+		if (!isElement(value)) {
+			return false;
+		}
+
+		const view = value.ownerDocument.defaultView;
+		return view ? value instanceof view.HTMLElement : value instanceof HTMLElement;
+	}
 </script>
 
 <div>
@@ -145,9 +161,13 @@
 			{@const BlockComponent = definition.component}
 			{@const renderProps = normalizeBuilderPropsForRender(block.props) as Record<string, unknown>}
 			{@const activeEditor = activeRichTextEdit?.blockId === block.id ? activeRichTextEdit : null}
-			{@const activeEditorValue = activeEditor ? getValueAtPath(block.props, activeEditor.path) : null}
+			{@const activeEditorValue = activeEditor
+				? getValueAtPath(block.props, activeEditor.path)
+				: null}
 			{@const activeTextEditor = activeTextEdit?.blockId === block.id ? activeTextEdit : null}
-			{@const activeTextEditorValue = activeTextEditor ? getValueAtPath(block.props, activeTextEditor.path) : null}
+			{@const activeTextEditorValue = activeTextEditor
+				? getValueAtPath(block.props, activeTextEditor.path)
+				: null}
 			{#if definition.previewBindings.length > 0}
 				<div
 					use:previewContainer={{ block, definition }}
@@ -156,8 +176,8 @@
 						selectorIndex: activeEditor?.selectorIndex ?? activeTextEditor?.selectorIndex ?? 0
 					}}
 					class={activeBlockId === block.id
-						? 'group relative cursor-pointer outline outline-2 outline-[#2563EB] dark:outline-[#3B82F6] outline-offset-0 transition'
-						: 'group relative cursor-pointer outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
+						? 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition'
+						: 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
 					role="button"
 					tabindex="0"
 					aria-label={`Modifica elementi del brik ${definition.type}`}
@@ -167,24 +187,34 @@
 						updateHoveredCollectionItem(block.id, previewOverlays[block.id] ?? [], event)}
 					onmouseleave={() => {
 						hoveredCollectionItem = null;
-					}}>
+					}}
+				>
 					<BlockComponent {...renderProps} />
+					{#if activeBlockId === block.id}
+						<div
+							class="pointer-events-none absolute inset-0 z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
+						></div>
+					{/if}
 
 					{#if definition.collections.length > 0}
 						<div class="pointer-events-none absolute inset-0">
 							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
 								<div
 									class="collection-overlay pointer-events-auto absolute z-10"
-									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
-									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#2563EB] dark:outline-[#3B82F6] transition"></div>
+									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+								>
+									<div
+										class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] transition outline-dashed dark:outline-[#3B82F6]"
+									></div>
 									<button
 										type="button"
-										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] opacity-0 shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
+										class="collection-add-button pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] opacity-0 shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
 											onAddItem(block, overlay.collectionPath);
-										}}>
+										}}
+									>
 										+
 									</button>
 								</div>
@@ -193,25 +223,28 @@
 							{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
 								<div
 									class="collection-item-overlay pointer-events-none absolute z-20"
-									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
+									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+								>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'}>
-									</div>
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'}
+									></div>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
-											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
+											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'
+											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
+									>
 										<button
 											type="button"
 											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
-											}}>
+											}}
+										>
 											↑
 										</button>
 										<button
@@ -220,7 +253,8 @@
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
-											}}>
+											}}
+										>
 											↓
 										</button>
 										<button
@@ -229,7 +263,8 @@
 											onclick={(event) => {
 												event.stopPropagation();
 												onRemoveItem(block, overlay.collectionPath, overlay.index);
-											}}>
+											}}
+										>
 											×
 										</button>
 									</div>
@@ -241,7 +276,8 @@
 					{#if activeEditor && isRichTextValue(activeEditorValue)}
 						<div
 							class="pointer-events-auto absolute z-20"
-							style={`top:${activeEditor.top}px; left:${activeEditor.left}px; width:${activeEditor.width}px; min-height:${activeEditor.minHeight}px; ${activeEditor.textStyle};`}>
+							style={`top:${activeEditor.top}px; left:${activeEditor.left}px; width:${activeEditor.width}px; min-height:${activeEditor.minHeight}px; ${activeEditor.textStyle};`}
+						>
 							<RichTextEditor
 								value={activeEditorValue as BuilderRichTextValue}
 								mode={activeEditor.mode}
@@ -249,20 +285,23 @@
 								autofocus={true}
 								editorStyle={activeEditor.textStyle}
 								onBlur={onCloseRichTextEdit}
-								onChange={(nextValue) => onUpdateRichText(block, activeEditor.path, nextValue)} />
+								onChange={(nextValue) => onUpdateRichText(block, activeEditor.path, nextValue)}
+							/>
 						</div>
 					{/if}
 
 					{#if activeTextEditor && typeof activeTextEditorValue === 'string'}
 						<div
 							class="pointer-events-auto absolute z-20"
-							style={`top:${activeTextEditor.top}px; left:${activeTextEditor.left}px; width:${activeTextEditor.width}px; min-height:${activeTextEditor.minHeight}px; ${activeTextEditor.textStyle};`}>
+							style={`top:${activeTextEditor.top}px; left:${activeTextEditor.left}px; width:${activeTextEditor.width}px; min-height:${activeTextEditor.minHeight}px; ${activeTextEditor.textStyle};`}
+						>
 							<PreviewTextEditor
 								value={activeTextEditorValue}
 								multiline={activeTextEditor.multiline}
 								textStyle={activeTextEditor.textStyle}
 								onBlur={onCloseTextEdit}
-								onChange={(nextValue) => onUpdateText(block, activeTextEditor.path, nextValue)} />
+								onChange={(nextValue) => onUpdateText(block, activeTextEditor.path, nextValue)}
+							/>
 						</div>
 					{/if}
 
@@ -271,7 +310,8 @@
 						open={openInserterBlockId === block.id}
 						onToggle={() => toggleInserter(block.id)}
 						onClose={closeInserter}
-						onInsert={(type) => insertBlockAfter(block.id, type)} />
+						onInsert={(type) => insertBlockAfter(block.id, type)}
+					/>
 				</div>
 			{:else}
 				<div
@@ -281,8 +321,8 @@
 						selectorIndex: activeEditor?.selectorIndex ?? activeTextEditor?.selectorIndex ?? 0
 					}}
 					class={activeBlockId === block.id
-						? 'group relative outline outline-2 outline-[#2563EB] dark:outline-[#3B82F6] outline-offset-0'
-						: 'group relative outline outline-0 outline-transparent transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
+						? 'group relative scroll-mt-0.5 scroll-mb-0.5'
+						: 'group relative scroll-mt-0.5 scroll-mb-0.5 transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
 					role="button"
 					tabindex="0"
 					aria-label={`Seleziona brik ${definition.type}`}
@@ -297,24 +337,34 @@
 						updateHoveredCollectionItem(block.id, previewOverlays[block.id] ?? [], event)}
 					onmouseleave={() => {
 						hoveredCollectionItem = null;
-					}}>
+					}}
+				>
 					<BlockComponent {...renderProps} />
+					{#if activeBlockId === block.id}
+						<div
+							class="pointer-events-none absolute inset-0 z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
+						></div>
+					{/if}
 
 					{#if definition.collections.length > 0}
 						<div class="pointer-events-none absolute inset-0">
 							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
 								<div
 									class="collection-overlay pointer-events-auto absolute z-10"
-									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
-									<div class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-dashed outline-[#2563EB] dark:outline-[#3B82F6] transition"></div>
+									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+								>
+									<div
+										class="collection-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] transition outline-dashed dark:outline-[#3B82F6]"
+									></div>
 									<button
 										type="button"
-										class="collection-add-button pointer-events-auto absolute left-1/2 top-full flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] opacity-0 shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
+										class="collection-add-button pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] opacity-0 shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
 											onAddItem(block, overlay.collectionPath);
-										}}>
+										}}
+									>
 										+
 									</button>
 								</div>
@@ -323,25 +373,28 @@
 							{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
 								<div
 									class="collection-item-overlay pointer-events-none absolute z-20"
-									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}>
+									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+								>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] dark:outline-[#3B82F6] transition'}>
-									</div>
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'}
+									></div>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'
-											: 'collection-item-toolbar pointer-events-auto absolute left-0 top-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition'}>
+											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'
+											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
+									>
 										<button
 											type="button"
 											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
-											}}>
+											}}
+										>
 											↑
 										</button>
 										<button
@@ -350,7 +403,8 @@
 											onclick={(event) => {
 												event.stopPropagation();
 												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
-											}}>
+											}}
+										>
 											↓
 										</button>
 										<button
@@ -359,7 +413,8 @@
 											onclick={(event) => {
 												event.stopPropagation();
 												onRemoveItem(block, overlay.collectionPath, overlay.index);
-											}}>
+											}}
+										>
 											×
 										</button>
 									</div>
@@ -371,7 +426,8 @@
 					{#if activeEditor && isRichTextValue(activeEditorValue)}
 						<div
 							class="pointer-events-auto absolute z-20"
-							style={`top:${activeEditor.top}px; left:${activeEditor.left}px; width:${activeEditor.width}px; min-height:${activeEditor.minHeight}px; ${activeEditor.textStyle};`}>
+							style={`top:${activeEditor.top}px; left:${activeEditor.left}px; width:${activeEditor.width}px; min-height:${activeEditor.minHeight}px; ${activeEditor.textStyle};`}
+						>
 							<RichTextEditor
 								value={activeEditorValue as BuilderRichTextValue}
 								mode={activeEditor.mode}
@@ -379,20 +435,23 @@
 								autofocus={true}
 								editorStyle={activeEditor.textStyle}
 								onBlur={onCloseRichTextEdit}
-								onChange={(nextValue) => onUpdateRichText(block, activeEditor.path, nextValue)} />
+								onChange={(nextValue) => onUpdateRichText(block, activeEditor.path, nextValue)}
+							/>
 						</div>
 					{/if}
 
 					{#if activeTextEditor && typeof activeTextEditorValue === 'string'}
 						<div
 							class="pointer-events-auto absolute z-20"
-							style={`top:${activeTextEditor.top}px; left:${activeTextEditor.left}px; width:${activeTextEditor.width}px; min-height:${activeTextEditor.minHeight}px; ${activeTextEditor.textStyle};`}>
+							style={`top:${activeTextEditor.top}px; left:${activeTextEditor.left}px; width:${activeTextEditor.width}px; min-height:${activeTextEditor.minHeight}px; ${activeTextEditor.textStyle};`}
+						>
 							<PreviewTextEditor
 								value={activeTextEditorValue}
 								multiline={activeTextEditor.multiline}
 								textStyle={activeTextEditor.textStyle}
 								onBlur={onCloseTextEdit}
-								onChange={(nextValue) => onUpdateText(block, activeTextEditor.path, nextValue)} />
+								onChange={(nextValue) => onUpdateText(block, activeTextEditor.path, nextValue)}
+							/>
 						</div>
 					{/if}
 
@@ -401,11 +460,14 @@
 						open={openInserterBlockId === block.id}
 						onToggle={() => toggleInserter(block.id)}
 						onClose={closeInserter}
-						onInsert={(type) => insertBlockAfter(block.id, type)} />
+						onInsert={(type) => insertBlockAfter(block.id, type)}
+					/>
 				</div>
 			{/if}
 		{:else}
-			<div class="border border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+			<div
+				class="border border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
+			>
 				Correggi i contenuti di questo brik per vedere di nuovo la preview.
 			</div>
 		{/if}
@@ -420,4 +482,3 @@
 		opacity: 1;
 	}
 </style>
-

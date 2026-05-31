@@ -29,6 +29,7 @@
 		serializeToMdsvex,
 		type BuilderBlock,
 		type BuilderDocument,
+		type BuilderPreviewBinding,
 		type BuilderRichTextValue
 	} from '../core.js';
 	import {
@@ -43,22 +44,24 @@
 		PreviewRichTextEdit,
 		PreviewTextEdit
 	} from './contracts.js';
-	import BuilderHierarchySidebar from './BuilderHierarchySidebar.svelte';
 	import BuilderInspector from './BuilderInspector.svelte';
-	import SveltePreviewRenderer from '../svelte/SveltePreviewRenderer.svelte';
+	import BuilderPreviewFrame from './BuilderPreviewFrame.svelte';
+	import PageFlowSidebar from './PageFlowSidebar.svelte';
 
 	let {
 		definitions,
 		initialDocument,
 		initialBrixYaml,
 		chrome = 'standalone',
-		onBrixYamlChange
+		onBrixYamlChange,
+		pageFlowOpen = $bindable(true)
 	}: {
 		definitions: BuilderRenderDefinition[];
 		initialDocument?: BuilderDocument;
 		initialBrixYaml?: string;
 		chrome?: 'standalone' | 'embedded';
 		onBrixYamlChange?: (value: string) => void;
+		pageFlowOpen?: boolean;
 	} = $props();
 
 	let controller = $state<ReturnType<typeof createEditorControllerState> | null>(null);
@@ -68,12 +71,23 @@
 	let activeRichTextEdit = $state<PreviewRichTextEdit | null>(null);
 	let activeTextEdit = $state<PreviewTextEdit | null>(null);
 	let activePreviewEditElement: HTMLElement | null = null;
+	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
+	const previewBlockElements = new Map<string, HTMLElement>();
 
 	$effect(() => {
 		if (!controller) {
 			const hydratedDocument =
-				initialDocument ?? (initialBrixYaml ? parseBrixYamlDocument(initialBrixYaml, definitions) : undefined);
+				initialDocument ??
+				(initialBrixYaml ? parseBrixYamlDocument(initialBrixYaml, definitions) : undefined);
 			controller = createEditorControllerState(definitions, hydratedDocument);
+		}
+	});
+
+	$effect(() => {
+		if (typeof navigator !== 'undefined') {
+			pageFlowShortcutModifier = /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+				? 'command'
+				: 'control';
 		}
 	});
 
@@ -89,9 +103,17 @@
 		}
 	});
 
-	const mdsvexOutput = $derived(serializeToMdsvex(controller?.document ?? { title: '', description: '', blocks: [] }, definitions));
+	const mdsvexOutput = $derived(
+		serializeToMdsvex(
+			controller?.document ?? { title: '', description: '', blocks: [] },
+			definitions
+		)
+	);
 	const brixYamlOutput = $derived(
-		serializeToBrixYaml(controller?.document ?? { title: '', description: '', blocks: [] }, definitions)
+		serializeToBrixYaml(
+			controller?.document ?? { title: '', description: '', blocks: [] },
+			definitions
+		)
 	);
 	const activeReorderContext = $derived.by(() =>
 		controller ? getActiveReorderContext(controller, definitions) : null
@@ -99,7 +121,9 @@
 	const activeBlock = $derived(
 		controller?.document.blocks.find((block) => block.id === activeBlockId) ?? null
 	);
-	const activeDefinition = $derived(activeBlock ? getBuilderDefinition(activeBlock.type, definitions) : null);
+	const activeDefinition = $derived(
+		activeBlock ? getBuilderDefinition(activeBlock.type, definitions) : null
+	);
 	const inspectorFields = $derived(
 		activeDefinition ? createInspectorFieldsFromFields(activeDefinition.fields) : {}
 	);
@@ -159,7 +183,22 @@
 
 	function handleDrop(targetBlockId: string): void {
 		if (!controller) return;
+		const droppedBlockId = controller.draggedBlockId;
 		handleBlockDrop(controller, targetBlockId);
+		if (droppedBlockId) {
+			selectBlock(droppedBlockId, { forceScroll: true });
+		}
+	}
+
+	function togglePageFlow(): void {
+		pageFlowOpen = !pageFlowOpen;
+	}
+
+	function handleWindowKeydown(event: KeyboardEvent): void {
+		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
+			event.preventDefault();
+			togglePageFlow();
+		}
 	}
 
 	function updateFieldValue(block: BuilderBlock, path: string, value: unknown): void {
@@ -183,8 +222,21 @@
 		input.click();
 	}
 
-	function selectBlock(blockId: string): void {
+	function scrollPreviewToBlock(blockId: string): void {
+		const element = previewBlockElements.get(blockId);
+		if (!element) return;
+
+		requestAnimationFrame(() => {
+			element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+		});
+	}
+
+	function selectBlock(blockId: string, options: { forceScroll?: boolean } = {}): void {
+		const selectionChanged = activeBlockId !== blockId;
 		activeBlockId = blockId;
+		if (selectionChanged || options.forceScroll) {
+			scrollPreviewToBlock(blockId);
+		}
 	}
 
 	function handlePreviewClick(block: BuilderBlock, event: Event): void {
@@ -194,11 +246,15 @@
 		const definition = getBuilderDefinition(block.type, definitions);
 		const container = event.currentTarget;
 
-		if (!(container instanceof HTMLElement)) {
+		if (!isHTMLElement(container)) {
 			return;
 		}
 
-		const resolvedBinding = resolvePreviewBinding(definition.previewBindings, container, event.target);
+		const resolvedBinding = resolvePreviewBinding<BuilderPreviewBinding>({
+			bindings: definition.previewBindings,
+			container,
+			target: event.target
+		});
 		if (!resolvedBinding) {
 			return;
 		}
@@ -214,7 +270,9 @@
 		if (resolvedBinding.binding.type === 'richtext') {
 			const targetRect = resolvedBinding.matchedElement.getBoundingClientRect();
 			const containerRect = container.getBoundingClientRect();
-			const computed = window.getComputedStyle(resolvedBinding.matchedElement);
+			const computed = getElementWindow(resolvedBinding.matchedElement).getComputedStyle(
+				resolvedBinding.matchedElement
+			);
 			const textStyle = [
 				`font-family:${computed.fontFamily}`,
 				`font-size:${computed.fontSize}`,
@@ -230,7 +288,11 @@
 				blockId: block.id,
 				path: resolvedBinding.path,
 				selector: resolvedBinding.binding.selector,
-				selectorIndex: getSelectorIndex(container, resolvedBinding.binding.selector, resolvedBinding.matchedElement),
+				selectorIndex: getSelectorIndex(
+					container,
+					resolvedBinding.binding.selector,
+					resolvedBinding.matchedElement
+				),
 				mode: resolvedBinding.binding.richTextMode ?? 'block',
 				top: Math.max(8, targetRect.top - containerRect.top),
 				left: Math.max(8, targetRect.left - containerRect.left),
@@ -246,7 +308,9 @@
 		if (resolvedBinding.binding.type === 'text') {
 			const targetRect = resolvedBinding.matchedElement.getBoundingClientRect();
 			const containerRect = container.getBoundingClientRect();
-			const computed = window.getComputedStyle(resolvedBinding.matchedElement);
+			const computed = getElementWindow(resolvedBinding.matchedElement).getComputedStyle(
+				resolvedBinding.matchedElement
+			);
 			const textStyle = createPreviewTextStyle(computed);
 			const lineHeight = Number.parseFloat(computed.lineHeight);
 			const multiline = targetRect.height > (Number.isFinite(lineHeight) ? lineHeight * 1.5 : 32);
@@ -255,7 +319,11 @@
 				blockId: block.id,
 				path: resolvedBinding.path,
 				selector: resolvedBinding.binding.selector,
-				selectorIndex: getSelectorIndex(container, resolvedBinding.binding.selector, resolvedBinding.matchedElement),
+				selectorIndex: getSelectorIndex(
+					container,
+					resolvedBinding.binding.selector,
+					resolvedBinding.matchedElement
+				),
 				top: Math.max(8, targetRect.top - containerRect.top),
 				left: Math.max(8, targetRect.left - containerRect.left),
 				width: Math.max(80, targetRect.width),
@@ -339,7 +407,12 @@
 		removeItemFromState(controller, definitions, block, collectionPath, index);
 	}
 
-	function moveItem(block: BuilderBlock, collectionPath: string, index: number, direction: -1 | 1): void {
+	function moveItem(
+		block: BuilderBlock,
+		collectionPath: string,
+		index: number,
+		direction: -1 | 1
+	): void {
 		if (!controller) return;
 		moveItemInState(controller, definitions, block, collectionPath, index, direction);
 	}
@@ -373,7 +446,7 @@
 	function hidePreviewEditElement(element: Element): void {
 		restorePreviewEditElement();
 
-		if (element instanceof HTMLElement) {
+		if (isHTMLElement(element)) {
 			activePreviewEditElement = element;
 			element.style.visibility = 'hidden';
 		}
@@ -386,7 +459,11 @@
 		}
 	}
 
-	function updatePreviewRichText(block: BuilderBlock, path: string, value: BuilderRichTextValue): void {
+	function updatePreviewRichText(
+		block: BuilderBlock,
+		path: string,
+		value: BuilderRichTextValue
+	): void {
 		updateFieldValue(block, path, value);
 	}
 
@@ -422,8 +499,29 @@
 		].join(';');
 	}
 
-	function getSelectorIndex(container: HTMLElement, selector: string, matchedElement: Element): number {
+	function getSelectorIndex(
+		container: HTMLElement,
+		selector: string,
+		matchedElement: Element
+	): number {
 		return Math.max(0, Array.from(container.querySelectorAll(selector)).indexOf(matchedElement));
+	}
+
+	function isElement(value: unknown): value is Element {
+		return typeof value === 'object' && value !== null && (value as Node).nodeType === 1;
+	}
+
+	function isHTMLElement(value: unknown): value is HTMLElement {
+		if (!isElement(value)) {
+			return false;
+		}
+
+		const view = value.ownerDocument.defaultView;
+		return view ? value instanceof view.HTMLElement : value instanceof HTMLElement;
+	}
+
+	function getElementWindow(element: Element): Window {
+		return element.ownerDocument.defaultView ?? window;
 	}
 
 	function handleCollectionItemDragStart(
@@ -447,6 +545,9 @@
 		update: (nextParams: { block: BuilderBlock; definition: BuilderRenderDefinition }) => void;
 		destroy: () => void;
 	} {
+		let blockId = params.block.id;
+		previewBlockElements.set(blockId, node);
+
 		const onOverlaysChange = (blockId: string, overlays: PreviewOverlay[]) => {
 			if (overlays.length === 0) {
 				delete previewOverlays[blockId];
@@ -471,6 +572,12 @@
 
 		return {
 			update(nextParams) {
+				if (blockId !== nextParams.block.id) {
+					previewBlockElements.delete(blockId);
+					blockId = nextParams.block.id;
+					previewBlockElements.set(blockId, node);
+				}
+
 				action.update({
 					...nextParams,
 					onOverlaysChange,
@@ -478,6 +585,7 @@
 				});
 			},
 			destroy() {
+				previewBlockElements.delete(blockId);
 				action.destroy();
 			}
 		};
@@ -518,67 +626,120 @@
 		onMoveItem: moveItem,
 		onOpenReorderModal: openReorderModal
 	});
-
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <svelte:head>
 	<title>Brixter Builder</title>
 	<meta
 		name="description"
-		content="Brixter visual editor for briks, pages, and optional mdsvex export." />
+		content="Brixter visual editor for briks, pages, and optional mdsvex export."
+	/>
 </svelte:head>
 
 <div
 	class={chrome === 'standalone'
 		? 'flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'
-		: 'flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'}>
+		: 'flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'}
+>
 	{#if chrome === 'standalone'}
-		<header class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-[#111827]">
-		<div class="flex items-center gap-2">
-			<div class="flex h-9 w-9 items-center justify-center bg-gray-900 text-sm font-semibold text-white dark:bg-gray-100 dark:text-gray-900">
-				B
+		<header
+			class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-[#111827]"
+		>
+			<div class="flex items-center gap-2">
+				<div
+					class="flex h-9 w-9 items-center justify-center bg-gray-900 text-sm font-semibold text-white dark:bg-gray-100 dark:text-gray-900"
+				>
+					B
+				</div>
+				<button
+					type="button"
+					class={pageFlowOpen
+					? 'group relative flex h-9 w-9 items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
+					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+					aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
+					aria-pressed={pageFlowOpen}
+					onclick={togglePageFlow}
+				>
+					<svg class="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+						<path
+							d="M3 3.5h10v1.25H3V3.5Zm0 3.875h10v1.25H3v-1.25Zm0 3.875h10v1.25H3v-1.25Z"
+							fill="currentColor"
+						/>
+					</svg>
+					<span
+						class="pointer-events-none absolute top-full left-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+					>
+						<span class="font-semibold">Page flow</span>
+						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+							<span
+								class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+							>
+								{#if pageFlowShortcutModifier === 'command'}
+									<svg class="h-3 w-3" viewBox="0 0 16 16" aria-hidden="true">
+										<path
+											d="M5 2.25A2.75 2.75 0 0 0 2.25 5v.75H5V2.25Zm1.25 3.5h3.5v-3.5h-3.5v3.5Zm4.75 0h2.75V5A2.75 2.75 0 0 0 11 2.25h-.75v3.5ZM9.75 7h-3.5v2h3.5V7ZM5 7H2.25v2H5V7Zm5.25 0v2h3.5V7h-3.5ZM5 10.25H2.25V11A2.75 2.75 0 0 0 5 13.75h.75v-3.5H5Zm1.25 0v3.5h3.5v-3.5h-3.5Zm4 0v3.5H11A2.75 2.75 0 0 0 13.75 11v-.75h-3.5Z"
+											fill="currentColor"
+										/>
+									</svg>
+								{:else}
+									Ctrl
+								{/if}
+							</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span
+								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+							>
+								B
+							</span>
+						</span>
+					</span>
+				</button>
+				<button
+					type="button"
+					class="flex h-9 w-9 items-center justify-center bg-[#2563EB] text-xl leading-none text-white transition-colors hover:bg-[#3B82F6]"
+					onclick={() => definitions[0] && addBlock(definitions[0].type)}
+					aria-label="Aggiungi brik"
+				>
+					+
+				</button>
+				<div class="ml-2 h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+				<p class="text-sm font-medium">Brixter Builder</p>
 			</div>
-			<button
-				type="button"
-				class="flex h-9 w-9 items-center justify-center bg-[#2563EB] text-xl leading-none text-white transition-colors hover:bg-[#3B82F6]"
-				onclick={() => definitions[0] && addBlock(definitions[0].type)}
-				aria-label="Aggiungi brik">
-				+
-			</button>
-			<div class="ml-2 h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-			<p class="text-sm font-medium">Brixter Builder</p>
-		</div>
 
-		<div class="flex items-center gap-2">
-			<span class="text-muted border border-gray-200 px-2 py-1 text-xs dark:border-gray-700">Preview</span>
-			<button
-				type="button"
-				class="bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3B82F6]"
-				onclick={copyMdsvex}>
-				{controller?.copied ? 'Copiato' : 'Copia export'}
-			</button>
-		</div>
+			<div class="flex items-center gap-2">
+				<span class="text-muted border border-gray-200 px-2 py-1 text-xs dark:border-gray-700"
+					>Preview</span
+				>
+				<button
+					type="button"
+					class="bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3B82F6]"
+					onclick={copyMdsvex}
+				>
+					{controller?.copied ? 'Copiato' : 'Copia export'}
+				</button>
+			</div>
 		</header>
 	{/if}
 
 	<div class="flex min-h-0 flex-1 overflow-hidden">
-		<BuilderHierarchySidebar
-			{definitions}
-			blocks={controller?.document.blocks ?? []}
-			{activeBlockId}
-			onAddBlock={addBlock}
-			onSelectBlock={selectBlock}
-			onMoveBlock={moveBlock}
-			onRemoveBlock={removeBlock}
-			onDragStart={handleDragStart}
-			onAllowDrop={allowDrop}
-			onDrop={handleDrop} />
+		{#if pageFlowOpen}
+			<PageFlowSidebar
+				blocks={controller?.document.blocks ?? []}
+				{activeBlockId}
+				onSelectBlock={selectBlock}
+				onMoveBlock={moveBlock}
+				onRemoveBlock={removeBlock}
+				onDragStart={handleDragStart}
+				onAllowDrop={allowDrop}
+				onDrop={handleDrop}
+			/>
+		{/if}
 
-		<main class="min-w-0 flex-1 overflow-y-auto bg-white dark:bg-[#0f1623]">
-			<div class="min-h-full w-full">
-				<div class="w-full bg-white dark:bg-[#0f1623]">
-					<SveltePreviewRenderer {...previewProps} />
-				</div>
+		<main class="min-w-0 flex-1 overflow-hidden bg-white dark:bg-[#0f1623]">
+			<div class="h-full min-h-0 w-full">
+				<BuilderPreviewFrame {...previewProps} onKeydown={handleWindowKeydown} />
 			</div>
 		</main>
 
@@ -598,7 +759,8 @@
 			onAddItem={addItem}
 			onRemoveItem={removeItem}
 			onMoveItem={moveItem}
-			onCopyMdsvex={copyMdsvex} />
+			onCopyMdsvex={copyMdsvex}
+		/>
 	</div>
 </div>
 
@@ -608,13 +770,15 @@
 			type="button"
 			class="absolute inset-0 bg-black/40"
 			aria-label="Chiudi modale riordino"
-			onclick={closeReorderModal}></button>
+			onclick={closeReorderModal}
+		></button>
 		<div
 			class="relative w-full max-w-3xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-[#111827]"
 			role="dialog"
 			aria-modal="true"
 			aria-label={`Riordina ${activeReorderContext.collection.label}`}
-			tabindex="0">
+			tabindex="0"
+		>
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
 					<h2 class="font-display text-heading text-2xl">
@@ -628,7 +792,8 @@
 				<button
 					type="button"
 					class="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
-					onclick={closeReorderModal}>
+					onclick={closeReorderModal}
+				>
 					Chiudi
 				</button>
 			</div>
@@ -646,9 +811,12 @@
 								itemIndex
 							)}
 						ondragover={allowDrop}
-						ondrop={() => handleCollectionItemDrop(itemIndex)}>
+						ondrop={() => handleCollectionItemDrop(itemIndex)}
+					>
 						<div class="flex min-w-0 items-center gap-4">
-							<div class="text-muted flex h-12 w-12 items-center justify-center border border-gray-200 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-[#111827]">
+							<div
+								class="text-muted flex h-12 w-12 items-center justify-center border border-gray-200 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-[#111827]"
+							>
 								{itemIndex + 1}
 							</div>
 
@@ -672,7 +840,8 @@
 										activeReorderContext.collection.path,
 										itemIndex,
 										-1
-									)}>
+									)}
+							>
 								Su
 							</button>
 							<button
@@ -684,7 +853,8 @@
 										activeReorderContext.collection.path,
 										itemIndex,
 										1
-									)}>
+									)}
+							>
 								Giu
 							</button>
 						</div>
