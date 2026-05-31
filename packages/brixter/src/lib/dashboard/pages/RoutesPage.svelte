@@ -554,9 +554,16 @@
 			<div class="mx-auto flex max-w-2xl items-center gap-3">
 				<AlertTriangle size={16} class="shrink-0 text-amber-600 dark:text-amber-400" />
 				<p class="flex-1 text-sm font-medium text-amber-800 dark:text-amber-200">
-					The draft is {data.behindBy} commit{data.behindBy > 1 ? 's' : ''} behind main.
+					Routes could not be updated from main automatically.
+					{#if data.syncError}
+						<span class="font-normal">{data.syncError}</span>
+					{:else}
+						<span class="font-normal">
+							The draft is {data.behindBy} commit{data.behindBy > 1 ? 's' : ''} behind main.
+						</span>
+					{/if}
 					{#if !data.isAdmin}
-						<span class="font-normal">Contact an admin to update it.</span>
+						<span class="font-normal">Contact an admin to resolve it.</span>
 					{/if}
 				</p>
 				{#if data.isAdmin}
@@ -580,9 +587,9 @@
 								class="inline-flex cursor-pointer items-center gap-2 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
 							>
 								{#if merging}
-									<Spinner /> Merging…
+									<Spinner /> Updating…
 								{:else}
-									Merge main
+									Retry update
 								{/if}
 							</button>
 						</form>

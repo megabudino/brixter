@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page as pageStore } from '$app/stores';
-	import { GitBranch, Settings, Sun, Moon, Monitor } from 'lucide-svelte';
+	import { Compass, Settings, Sun, Moon, Monitor } from 'lucide-svelte';
 	import LoginPage from './pages/LoginPage.svelte';
 	import SetupPage from './pages/SetupPage.svelte';
 	import SettingsPage from './pages/SettingsPage.svelte';
@@ -56,7 +56,7 @@
 							? 'font-medium text-heading'
 							: 'text-secondary hover:text-heading'}"
 					>
-						<GitBranch size={16} /> Routes
+						<Compass size={16} /> Routes
 					</a>
 					<a
 						href="/admin/settings"
