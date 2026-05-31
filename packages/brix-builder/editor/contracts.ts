@@ -51,6 +51,7 @@ export interface BuilderAppPreviewProps {
 	onUpdateRichText: (block: BuilderBlock, path: string, value: BuilderRichTextValue) => void;
 	onUpdateText: (block: BuilderBlock, path: string, value: string) => void;
 	onQueueFileEdit: (blockId: string, path: string) => void;
+	onAddBlockBefore: (blockId: string, type: string) => void;
 	onAddBlockAfter: (blockId: string, type: string) => void;
 	onAddItem: (block: BuilderBlock, collectionPath: string) => void;
 	onRemoveItem: (block: BuilderBlock, collectionPath: string, index: number) => void;
