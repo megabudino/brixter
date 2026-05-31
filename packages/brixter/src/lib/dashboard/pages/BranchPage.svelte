@@ -120,7 +120,7 @@
 	const brixDirty = $derived(currentBrixYaml !== initialBrixYaml);
 	const isDirty = $derived(bodyDirty || frontmatterDirty || brixDirty);
 
-	const base = $derived(`/admin/b/${data.branch}`);
+	const base = $derived(branchHref(data.branch));
 	const isEditing = $derived(!!data.file?.htmlContent);
 	const isBrixEditing = $derived(data.file?.brixYaml !== undefined);
 	const backHref = $derived(data.parentPath ? branchHref(data.branch, data.parentPath) : base);
@@ -155,7 +155,10 @@
 	function branchHref(branch: string, path = '') {
 		const base = `/admin/b/${encodeURIComponent(branch)}`;
 		if (!path) return base;
-		return `${base}/${path.split('/').map(encodeURIComponent).join('/')}`;
+		return `${base}/${path
+			.split('/')
+			.map((segment) => (segment === '+page' ? segment : encodeURIComponent(segment)))
+			.join('/')}`;
 	}
 
 	const parentPath = $derived.by(() => {
@@ -194,7 +197,9 @@
 		replacement: (content) => `~~${content}~~`
 	});
 
-	const mediaPrefix = $derived(data.repo.mediaPath ? data.repo.mediaPath.replace(/\/$/, '') + '/' : '');
+	const mediaPrefix = $derived(
+		data.repo.mediaPath ? data.repo.mediaPath.replace(/\/$/, '') + '/' : ''
+	);
 
 	turndown.addRule('repoImage', {
 		filter: (node) => {

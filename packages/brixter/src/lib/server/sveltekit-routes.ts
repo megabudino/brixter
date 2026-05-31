@@ -49,6 +49,41 @@ export function relativeToRepoRoot(path: string, root: string): string {
 	return path.startsWith(root + '/') ? path.slice(root.length + 1) : path;
 }
 
+export interface RouteUrlPath {
+	kind: 'route' | 'page';
+	path: string;
+	dirPath: string;
+}
+
+export function routeDirUrlPath(root: string, dirPath: string): string {
+	return relativeToRepoRoot(dirPath, root);
+}
+
+export function routePageUrlPath(root: string, dirPath: string): string {
+	return [routeDirUrlPath(root, dirPath), '+page'].filter(Boolean).join('/');
+}
+
+export function pageFileUrlPath(root: string, filePath: string): string {
+	const dirPath = filePath.split('/').slice(0, -1).join('/');
+	return routePageUrlPath(root, dirPath);
+}
+
+export function routeUrlPathToDirPath(root: string, routePath: string): RouteUrlPath {
+	const path = normalizeRepoPath(routePath);
+	const parts = path ? path.split('/') : [];
+	const pageMarkerIndex = parts.indexOf('+page');
+
+	if (pageMarkerIndex !== -1 && pageMarkerIndex !== parts.length - 1) {
+		throw new Error('Page marker must be the last route segment.');
+	}
+
+	const kind: RouteUrlPath['kind'] = pageMarkerIndex === -1 ? 'route' : 'page';
+	const dirParts = kind === 'page' ? parts.slice(0, -1) : parts;
+	const dirPath = [root, ...dirParts].filter(Boolean).join('/');
+
+	return { kind, path, dirPath };
+}
+
 function baseName(path: string): string {
 	return path.slice(path.lastIndexOf('/') + 1);
 }
@@ -227,7 +262,7 @@ export function getExplorerListing(root: RouteNode, currentDir: string): Explore
 		entries.push({
 			kind: 'page',
 			label: pageDisplayName(node, node.page, 'index'),
-			path: node.page.filePath,
+			path: pageFileUrlPath(root.dirPath, node.page.filePath),
 			filePath: node.page.filePath,
 			routeDirPath: node.dirPath,
 			downloadUrl: null,
@@ -242,7 +277,7 @@ export function getExplorerListing(root: RouteNode, currentDir: string): Explore
 			entries.push({
 				kind: 'page',
 				label: pageDisplayName(child, child.page, 'segment'),
-				path: child.page.filePath,
+				path: pageFileUrlPath(root.dirPath, child.page.filePath),
 				filePath: child.page.filePath,
 				routeDirPath: child.dirPath,
 				downloadUrl: null,
@@ -256,7 +291,7 @@ export function getExplorerListing(root: RouteNode, currentDir: string): Explore
 			entries.push({
 				kind: 'route',
 				label: child.label,
-				path: child.dirPath,
+				path: routeDirUrlPath(root.dirPath, child.dirPath),
 				routeDirPath: child.dirPath,
 				downloadUrl: null,
 				hasPage: !!child.page
@@ -274,7 +309,7 @@ function routeBreadcrumbsForDir(root: RouteNode, dirPath: string): ExplorerBread
 	const parts = relativePath.split('/');
 	return parts.map((part, index) => ({
 		label: routeLabel(part),
-		path: [root.dirPath, ...parts.slice(0, index + 1)].join('/')
+		path: parts.slice(0, index + 1).join('/')
 	}));
 }
 
@@ -292,7 +327,7 @@ export function routeBreadcrumbs(root: RouteNode, path: string): ExplorerBreadcr
 				page,
 				node?.dirPath === root.dirPath ? 'index' : 'segment'
 			),
-			path: page.filePath,
+			path: pageFileUrlPath(root.dirPath, page.filePath),
 			fileTypeLabel: pageTypeLabel(page)
 		}
 	];
