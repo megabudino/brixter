@@ -5,7 +5,6 @@ import { getDb } from '../server/db.ts';
 import { getOctokit, getRepo } from '../server/github.ts';
 import { getRepoConfig, updateRepoConfig } from '../server/repo-config.ts';
 import {
-	buildSvelteKitRouteTree,
 	childDirNames,
 	childPageNames,
 	childRoute,
@@ -17,9 +16,14 @@ import {
 	routeBreadcrumbs,
 	routePageUrlPath,
 	routeUrlPathToDirPath,
-	type RouteNode,
-	type TreeEntry
+	type RouteNode
 } from '../server/sveltekit-routes.ts';
+import {
+	getBranchBehindBy,
+	getBranchRouteSnapshot,
+	invalidateBranchRouteCache,
+	warmBranchRouteSnapshot
+} from './repo-cache.ts';
 import { marked } from 'marked';
 
 type DashboardPage = 'branches' | 'login' | 'setup' | 'new-branch' | 'settings' | 'branch';
@@ -75,6 +79,7 @@ async function loadBranches({ locals }: RequestEvent) {
 
 	const octokit = getOctokit();
 	const repo = getRepo();
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
 	const branchNames: string[] = [];
 	let page = 1;
 
@@ -93,21 +98,12 @@ async function loadBranches({ locals }: RequestEvent) {
 
 	const branches = await Promise.all(
 		branchNames.map(async (name) => {
-			if (name === repo.defaultBranch) return { name, isDefault: true, behindBy: 0 };
-
-			try {
-				const { data: comparison } = await octokit.request(
-					'GET /repos/{owner}/{repo}/compare/{basehead}',
-					{
-						owner: repo.owner,
-						repo: repo.name,
-						basehead: `${name}...${repo.defaultBranch}`
-					}
-				);
-				return { name, isDefault: false, behindBy: comparison.ahead_by };
-			} catch {
-				return { name, isDefault: false, behindBy: 0 };
-			}
+			const isDefault = name === repo.defaultBranch;
+			return {
+				name,
+				isDefault,
+				behindBy: await getBranchBehindBy(name, repo.defaultBranch)
+			};
 		})
 	);
 
@@ -116,6 +112,10 @@ async function loadBranches({ locals }: RequestEvent) {
 		if (b.isDefault) return 1;
 		return a.name.localeCompare(b.name);
 	});
+
+	for (const branch of branches.filter((branch) => !branch.isDefault).slice(0, 5)) {
+		warmBranchRouteSnapshot(branch.name, routesRoot);
+	}
 
 	return {
 		repo: { name: repo.name, fullName: repo.fullName, defaultBranch: repo.defaultBranch },
@@ -198,40 +198,6 @@ function branchHref(branch: string, path = ''): string {
 	return `${base}/${path.split('/').map(encodeRouteSegment).join('/')}`;
 }
 
-async function fetchRepoTree(branch: string): Promise<TreeEntry[]> {
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-		owner: repo.owner,
-		repo: repo.name,
-		ref: `heads/${branch}`
-	});
-
-	const { data: commit } = await octokit.request(
-		'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
-		{
-			owner: repo.owner,
-			repo: repo.name,
-			commit_sha: ref.object.sha
-		}
-	);
-
-	const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
-		owner: repo.owner,
-		repo: repo.name,
-		tree_sha: commit.tree.sha,
-		recursive: '1'
-	});
-
-	return tree.tree
-		.filter((item: { type?: string }) => item.type === 'tree' || item.type === 'blob')
-		.map((item: { path?: string; type?: string }) => ({
-			path: item.path as string,
-			type: item.type as 'tree' | 'blob'
-		}));
-}
-
 async function loadBranchFile(
 	branch: string,
 	filePath: string,
@@ -305,7 +271,6 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 	const { mediaPath } = getRepoConfig();
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
-	const octokit = getOctokit();
 	const repo = getRepo();
 	const defaultBranch = repo.defaultBranch;
 	let routeRequest: ReturnType<typeof routeUrlPathToDirPath>;
@@ -316,28 +281,15 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	}
 	const currentRouteDir = routeRequest.dirPath;
 
-	let behindBy = 0;
-	if (match.branch !== defaultBranch) {
-		try {
-			const { data: comparison } = await octokit.request(
-				'GET /repos/{owner}/{repo}/compare/{basehead}',
-				{
-					owner: repo.owner,
-					repo: repo.name,
-					basehead: `${match.branch}...${defaultBranch}`
-				}
-			);
-			behindBy = comparison.ahead_by;
-		} catch {
-			// Treat compare failures as up to date.
-		}
-	}
-
 	if (!isWithinRepoRoot(currentRouteDir, routesRoot)) throw error(403, 'Access denied');
 
-	let tree: TreeEntry[];
+	let routeTree: RouteNode;
+	let behindBy = 0;
 	try {
-		tree = await fetchRepoTree(match.branch);
+		[{ routeTree }, behindBy] = await Promise.all([
+			getBranchRouteSnapshot(match.branch, routesRoot),
+			getBranchBehindBy(match.branch, defaultBranch)
+		]);
 	} catch (err: unknown) {
 		const e = err as {
 			status?: number;
@@ -347,7 +299,6 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		throw error(e.response?.status ?? 500, e.response?.data?.message ?? 'Failed to load contents');
 	}
 
-	const routeTree = buildSvelteKitRouteTree(tree, routesRoot);
 	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath, routesRoot };
 
 	if (routeRequest.kind === 'page') {
@@ -552,6 +503,7 @@ async function newBranchAction({ request, locals }: RequestEvent) {
 			ref: `refs/heads/${branchName}`,
 			sha: ref.object.sha
 		});
+		invalidateBranchRouteCache(branchName);
 	} catch (err: unknown) {
 		const message =
 			(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -599,6 +551,7 @@ async function mergeAction({ locals, url }: RequestEvent) {
 			base: match.branch,
 			head: repo.defaultBranch
 		});
+		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {
@@ -638,8 +591,7 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 
 	let filePath: string;
 	try {
-		const tree = await fetchRepoTree(match.branch);
-		const routeTree = buildSvelteKitRouteTree(tree, routesRoot);
+		const { routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot);
 		const pageFile = findRouteNode(routeTree, routeRequest.dirPath)?.page;
 		if (!pageFile) return fail(404, { saveError: 'Not found.' });
 		filePath = pageFile.filePath;
@@ -668,6 +620,7 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 			sha,
 			branch: match.branch
 		});
+		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {
@@ -751,6 +704,7 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 			content: Buffer.from('').toString('base64'),
 			branch: match.branch
 		});
+		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {
@@ -794,8 +748,7 @@ async function createPageAction({ request, locals, url }: RequestEvent) {
 	const repo = getRepo();
 
 	try {
-		const tree = await fetchRepoTree(match.branch);
-		const routeTree = buildSvelteKitRouteTree(tree, routesRoot);
+		const { routeTree, tree } = await getBranchRouteSnapshot(match.branch, routesRoot);
 		const existingRoute = childRoute(routeTree, currentPath, name);
 		const existingBlob = tree.find(
 			(entry) => entry.type === 'blob' && entry.path === directoryPath
@@ -838,6 +791,7 @@ components: []
 			content: Buffer.from(fileContent).toString('base64'),
 			branch: match.branch
 		});
+		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {

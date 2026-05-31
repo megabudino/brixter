@@ -5,14 +5,14 @@
 </script>
 
 <div class="mx-auto max-w-2xl px-6 py-16">
-	<h1 class="mt-4 mb-2 font-display text-3xl text-gray-900 dark:text-gray-50">
+	<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
 		{data.repo.name}
 	</h1>
-	<p class="mb-8 text-secondary">{data.repo.fullName}</p>
+	<p class="text-secondary mb-8">{data.repo.fullName}</p>
 
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-50">Branches</h2>
-		<a href="/admin/b/new" class="text-sm text-secondary transition-colors hover:text-heading">
+		<a href="/admin/b/new" class="text-secondary hover:text-heading text-sm transition-colors">
 			+ New branch
 		</a>
 	</div>
@@ -23,7 +23,7 @@
 			{#if branch.isDefault}
 				<li class="flex items-center justify-between px-5 py-4">
 					<span class="text-gray-900 dark:text-gray-100">{branch.name}</span>
-					<span class="flex items-center gap-1.5 text-xs font-medium text-muted">
+					<span class="text-muted flex items-center gap-1.5 text-xs font-medium">
 						<Lock size={14} /> default
 					</span>
 				</li>
@@ -31,6 +31,7 @@
 				<li>
 					<a
 						href={`/admin/b/${encodeURIComponent(branch.name)}`}
+						data-sveltekit-preload-data="hover"
 						class="flex cursor-pointer items-center justify-between px-5 py-4 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
 					>
 						{branch.name}
