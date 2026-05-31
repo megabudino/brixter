@@ -1,6 +1,6 @@
-# Brixter Playground
+# Brixter Site
 
-Playground locale per sviluppare e verificare `Brixter` dentro una normale app SvelteKit.
+Public site for the Brixter project, built as a SvelteKit app with Brixter-managed pages.
 
 ## Creating a project
 
@@ -15,7 +15,7 @@ To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-bun x sv@0.13.0 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:typography" --install bun playground
+bun x sv@0.13.0 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:typography" --install bun site
 ```
 
 ## Developing

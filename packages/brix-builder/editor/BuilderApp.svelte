@@ -522,10 +522,10 @@
 </script>
 
 <svelte:head>
-	<title>Brixter Playground</title>
+	<title>Brixter Builder</title>
 	<meta
 		name="description"
-		content="Playground di Brixter con editing visuale dei Brix ed export mdsvex opzionale." />
+		content="Brixter visual editor for briks, pages, and optional mdsvex export." />
 </svelte:head>
 
 <div
@@ -546,7 +546,7 @@
 				+
 			</button>
 			<div class="ml-2 h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-			<p class="text-sm font-medium">Brixter Playground</p>
+			<p class="text-sm font-medium">Brixter Builder</p>
 		</div>
 
 		<div class="flex items-center gap-2">
