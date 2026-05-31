@@ -22,6 +22,7 @@ const config = {
 		// Workspace-time aliases mirror brixter's package exports while we run
 		// directly against source instead of a built dist.
 		alias: {
+			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
 			'brixter/server': '../packages/brixter/src/lib/server/index.ts',
 			'brixter/editor': '../packages/brixter/src/lib/editor/index.ts',
 			'brixter/ui': '../packages/brixter/src/lib/ui/index.ts',

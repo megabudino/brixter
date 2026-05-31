@@ -8,6 +8,7 @@ const config = {
 		// Self-dev aliases mirror brixter's package exports while this package
 		// runs directly against source instead of a built dist.
 		alias: {
+			'@brixter/brix-builder': '../brix-builder/index.ts',
 			'brixter/server': 'src/lib/server/index.ts',
 			'brixter/editor': 'src/lib/editor/index.ts',
 			'brixter/ui': 'src/lib/ui/index.ts',
