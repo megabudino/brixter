@@ -29,14 +29,14 @@ The dashboard explorer is SvelteKit-first: it starts from the app's
 `src/routes` directory and shows route pages instead of arbitrary repository
 folders. If the SvelteKit app lives below the repository root, Brixter infers
 that from Vite's `root` and uses a repo-relative routes root such as
-`playground/src/routes`.
+`site/src/routes`.
 
 You can override discovery explicitly:
 
 ```ts
-brixter({ appRoot: 'playground' });
+brixter({ appRoot: 'site' });
 // or
-brixter({ routesRoot: 'playground/src/routes' });
+brixter({ routesRoot: 'site/src/routes' });
 ```
 
 ## `.brix.yaml` Pages

@@ -1,6 +1,6 @@
 /**
- * Dev-only wrapper that runs the packaged migrate() against the local
- * playground DB. End users get the same behavior via `npx brixter migrate`.
+ * Dev-only wrapper that runs the packaged migrate() against the local site DB.
+ * End users get the same behavior via `npx brixter migrate`.
  *
  * Run with `bun scripts/migrate.ts` (bun loads .env automatically).
  */
