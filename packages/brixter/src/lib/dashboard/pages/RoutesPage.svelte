@@ -10,7 +10,8 @@
 		ChevronRight,
 		AlertTriangle,
 		X,
-		ArrowLeft
+		ArrowLeft,
+		Command
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
 	import { BrixEditor, createBrixDefinitions } from '@brixter/brix-builder';
@@ -45,6 +46,8 @@
 	let creatingPage = $state(false);
 	let pageName = $state('');
 	let lightbox = $state<{ name: string; url: string } | null>(null);
+	let pageFlowOpen = $state(true);
+	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 
 	const existingDirNames = $derived(
 		new Set<string>((data.childDirNames ?? []).map((name: string) => name.toLowerCase()))
@@ -242,6 +245,10 @@
 	}
 
 	onMount(() => {
+		pageFlowShortcutModifier = /Mac|iPhone|iPad|iPod/.test(navigator.platform)
+			? 'command'
+			: 'control';
+
 		const handler = (e: BeforeUnloadEvent) => {
 			if (isDirty) {
 				e.preventDefault();
@@ -445,43 +452,76 @@
 				<button
 					type="button"
 					onclick={handleBack}
-					class="text-muted hover:text-heading cursor-pointer transition-colors"
+					class="inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
 				>
 					<ArrowLeft size={20} />
 				</button>
-				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
-			</div>
-			<form
-				method="post"
-				action="?/save"
-				use:enhance={({ formData }) => {
-					formData.set('brixYaml', currentBrixYaml);
-					formData.set('sha', data.file.sha);
-					saving = true;
-					return async ({ result, update }) => {
-						saving = false;
-						if (result.type === 'success') {
-							initialBrixYaml = currentBrixYaml;
-							showToast('Saved successfully.');
-						} else if (result.type === 'failure') {
-							showToast((result.data as any)?.saveError ?? 'Save failed.', 'error');
-						}
-						await update({ reset: false });
-					};
-				}}
-			>
 				<button
-					type="submit"
-					disabled={saving || !brixDirty}
-					class="inline-flex cursor-pointer items-center gap-2 bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
+					type="button"
+					class={pageFlowOpen
+						? 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
+						: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+					aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
+					aria-pressed={pageFlowOpen}
+					onclick={() => (pageFlowOpen = !pageFlowOpen)}
 				>
-					{#if saving}
-						<Spinner /> Committing…
-					{:else}
-						Commit
-					{/if}
+					<svg class="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+						<path
+							d="M3 3.5h10v1.25H3V3.5Zm0 3.875h10v1.25H3v-1.25Zm0 3.875h10v1.25H3v-1.25Z"
+							fill="currentColor"
+						/>
+					</svg>
+					<span class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 whitespace-nowrap border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+						<span class="font-semibold">Page flow</span>
+						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+							<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+								{#if pageFlowShortcutModifier === 'command'}
+									<Command size={12} strokeWidth={2} />
+								{:else}
+									Ctrl
+								{/if}
+							</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+								B
+							</span>
+						</span>
+					</span>
 				</button>
-			</form>
+			</div>
+			<div class="flex items-center gap-2">
+				<form
+					method="post"
+					action="?/save"
+					use:enhance={({ formData }) => {
+						formData.set('brixYaml', currentBrixYaml);
+						formData.set('sha', data.file.sha);
+						saving = true;
+						return async ({ result, update }) => {
+							saving = false;
+							if (result.type === 'success') {
+								initialBrixYaml = currentBrixYaml;
+								showToast('Saved successfully.');
+							} else if (result.type === 'failure') {
+								showToast((result.data as any)?.saveError ?? 'Save failed.', 'error');
+							}
+							await update({ reset: false });
+						};
+					}}
+				>
+					<button
+						type="submit"
+						disabled={saving || !brixDirty}
+						class="inline-flex cursor-pointer items-center gap-2 bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{#if saving}
+							<Spinner /> Committing…
+						{:else}
+							Commit
+						{/if}
+					</button>
+				</form>
+			</div>
 		</div>
 
 		<div class="min-h-0 flex-1">
@@ -489,6 +529,7 @@
 				<BrixEditor
 					definitions={brixDefinitions}
 					chrome="embedded"
+					bind:pageFlowOpen
 					initialBrixYaml={data.file.brixYaml}
 					onBrixYamlChange={(value) => {
 						if (!brixYamlHydrated) {

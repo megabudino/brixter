@@ -37,20 +37,22 @@ export interface PreviewCollectionOverlay {
 	addLeft: number;
 }
 
-export function resolvePreviewBinding<
-	Binding extends { selector: string; path: string }
->(
-	bindings: Binding[],
-	container: HTMLElement,
-	target: EventTarget | null
-): ResolvedPreviewBinding<Binding> | null {
-	if (!(target instanceof Element)) {
+export function resolvePreviewBinding<Binding extends { selector: string; path: string }>({
+	bindings,
+	container,
+	target
+}: {
+	bindings: Binding[];
+	container: HTMLElement;
+	target: EventTarget | null;
+}): ResolvedPreviewBinding<Binding> | null {
+	if (!isElement(target)) {
 		return null;
 	}
 
 	for (const binding of bindings) {
 		const matchedElement = target.closest(binding.selector);
-		if (!(matchedElement instanceof Element) || !container.contains(matchedElement)) {
+		if (!isElement(matchedElement) || !container.contains(matchedElement)) {
 			continue;
 		}
 
@@ -189,4 +191,8 @@ function materializeBindingPath(
 	}
 
 	return path.replace('[]', `[${index}]`);
+}
+
+function isElement(value: unknown): value is Element {
+	return typeof value === 'object' && value !== null && (value as Node).nodeType === 1;
 }
