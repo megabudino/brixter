@@ -20,6 +20,7 @@
 		onUpdateRichText,
 		onUpdateText,
 		onQueueFileEdit,
+		onAddBlockBefore,
 		onAddBlockAfter,
 		onAddItem,
 		onRemoveItem,
@@ -53,6 +54,7 @@
 		rendererProps.onUpdateRichText = onUpdateRichText;
 		rendererProps.onUpdateText = onUpdateText;
 		rendererProps.onQueueFileEdit = onQueueFileEdit;
+		rendererProps.onAddBlockBefore = onAddBlockBefore;
 		rendererProps.onAddBlockAfter = onAddBlockAfter;
 		rendererProps.onAddItem = onAddItem;
 		rendererProps.onRemoveItem = onRemoveItem;
@@ -135,7 +137,8 @@ body {
 body {
 	background: #ffffff;
 	color: #111827;
-	overflow: auto;
+	overflow-x: hidden;
+	overflow-y: auto;
 }
 
 body.dark {
@@ -145,6 +148,51 @@ body.dark {
 
 #builder-preview-root {
 	width: 100%;
+}
+
+* {
+	scrollbar-color: #cbd5e1 transparent;
+	scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+	min-height: 40px;
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background: #cbd5e1;
+	background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: #2563eb;
+	background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+.dark * {
+	scrollbar-color: #475569 transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+	background: #475569;
+	background-clip: padding-box;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+	background: #3b82f6;
+	background-clip: padding-box;
 }
 
 [data-builder-field-enhanced='pending'],
@@ -163,18 +211,39 @@ body.dark {
 .ProseMirror {
 	white-space: inherit;
 }
+
+body[data-builder-preview-page-overflow='true']::before {
+	position: fixed;
+	top: 12px;
+	right: 12px;
+	z-index: 2147483647;
+	border: 1px solid #f59e0b;
+	background: #fffbeb;
+	color: #92400e;
+	content: 'Page overflow';
+	font: 600 12px/1.2 system-ui, sans-serif;
+	padding: 6px 8px;
+	pointer-events: none;
+}
+
+[data-builder-preview-overflow-item='true'] {
+	outline: 2px solid #f59e0b !important;
+	outline-offset: -2px;
+}
 `;
 		frameDocument.head.append(styleElement);
 
 		let cleanupHeadSync: (() => void) | null = syncHeadAssets(frameDocument);
 		const removeKeydownListener = syncFrameKeydown(frameDocument);
 		const removeThemeSync = syncThemeClass(frameDocument);
+		const removeOverflowDiagnostic = syncPreviewOverflow(frameDocument);
 
 		return () => {
 			cleanupHeadSync?.();
 			cleanupHeadSync = null;
 			removeKeydownListener();
 			removeThemeSync();
+			removeOverflowDiagnostic();
 		};
 	}
 
@@ -251,6 +320,111 @@ body.dark {
 		return () => {
 			observer.disconnect();
 		};
+	}
+
+	function syncPreviewOverflow(frameDocument: Document): () => void {
+		let syncQueued = false;
+		let animationFrame = 0;
+		const frameWindow = frameDocument.defaultView ?? window;
+		const FrameResizeObserver = frameWindow.ResizeObserver ?? ResizeObserver;
+
+		function queueSync(): void {
+			if (syncQueued) {
+				return;
+			}
+
+			syncQueued = true;
+			animationFrame = frameWindow.requestAnimationFrame(sync);
+		}
+
+		function sync(): void {
+			syncQueued = false;
+			clearOverflowMarkers(frameDocument);
+
+			const viewportWidth = frameDocument.documentElement.clientWidth;
+			const offenders = findPreviewOverflowElements(frameDocument, viewportWidth);
+			frameDocument.body.toggleAttribute(
+				'data-builder-preview-page-overflow',
+				offenders.length > 0
+			);
+
+			for (const offender of offenders.slice(0, 20)) {
+				offender.setAttribute('data-builder-preview-overflow-item', 'true');
+			}
+		}
+
+		const mutationObserver = new MutationObserver((records) => {
+			if (records.every(isOverflowDiagnosticMutation)) {
+				return;
+			}
+
+			queueSync();
+		});
+		mutationObserver.observe(frameDocument.body, {
+			attributes: true,
+			characterData: true,
+			childList: true,
+			subtree: true
+		});
+
+		const resizeObserver = new FrameResizeObserver(queueSync);
+		resizeObserver.observe(frameDocument.documentElement);
+		queueSync();
+
+		return () => {
+			if (animationFrame) {
+				frameWindow.cancelAnimationFrame(animationFrame);
+			}
+			mutationObserver.disconnect();
+			resizeObserver.disconnect();
+			clearOverflowMarkers(frameDocument);
+			frameDocument.body.removeAttribute('data-builder-preview-page-overflow');
+		};
+	}
+
+	function isOverflowDiagnosticMutation(record: MutationRecord): boolean {
+		return (
+			record.type === 'attributes' &&
+			(record.attributeName === 'data-builder-preview-overflow-item' ||
+				record.attributeName === 'data-builder-preview-page-overflow')
+		);
+	}
+
+	function findPreviewOverflowElements(
+		frameDocument: Document,
+		viewportWidth: number
+	): HTMLElement[] {
+		const offenders = new Set<HTMLElement>();
+		const contentRoots = Array.from(
+			frameDocument.querySelectorAll<HTMLElement>('[data-builder-preview-content]')
+		);
+
+		for (const contentRoot of contentRoots) {
+			if (contentRoot.scrollWidth > contentRoot.clientWidth + 1) {
+				offenders.add(contentRoot);
+			}
+
+			for (const element of Array.from(contentRoot.querySelectorAll<HTMLElement>('*'))) {
+				if (element.getClientRects().length === 0) {
+					continue;
+				}
+
+				const rect = element.getBoundingClientRect();
+				if (rect.left < -1 || rect.right > viewportWidth + 1) {
+					offenders.add(element);
+				}
+			}
+		}
+
+		return Array.from(offenders);
+	}
+
+	function clearOverflowMarkers(frameDocument: Document): void {
+		for (const element of Array.from(
+			frameDocument.querySelectorAll('[data-builder-preview-overflow-item]')
+		)) {
+			element.removeAttribute('data-builder-preview-overflow-item');
+		}
 	}
 
 	function escapeHtml(value: string): string {

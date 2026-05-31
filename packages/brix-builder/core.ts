@@ -146,6 +146,105 @@ export function createBuilderDefaultsFromFields(fields: BuilderFields): Record<s
 	);
 }
 
+export function createBuilderFallbackProps(
+	definition: Pick<BuilderDefinition, 'fields' | 'defaults'>,
+	props: Record<string, unknown> = definition.defaults
+): Record<string, unknown> {
+	return mergeFallbackValues(
+		createBuilderFallbackPropsFromFields(definition.fields),
+		props
+	) as Record<string, unknown>;
+}
+
+function createBuilderFallbackPropsFromFields(fields: BuilderFields): Record<string, unknown> {
+	return Object.fromEntries(
+		Object.entries(fields).map(([key, field]) => [key, createBuilderFallbackValue(field, key)])
+	);
+}
+
+function createBuilderFallbackValue(field: BuilderField, key: string): unknown {
+	const kind = inferBuilderFieldKind(field);
+
+	if (kind === 'richtext-inline') {
+		return createRichTextValue('inline', getFallbackText(key));
+	}
+
+	if (kind === 'richtext-block') {
+		return createRichTextValue('block', `<p>${getFallbackText(key)}</p>`);
+	}
+
+	if (kind === 'object') {
+		return field.fields ? createBuilderFallbackPropsFromFields(field.fields) : {};
+	}
+
+	if (kind === 'array') {
+		const item = field.item ? createBuilderFallbackValue(field.item, field.itemLabel ?? key) : {};
+		return [item, cloneValue(item), cloneValue(item)];
+	}
+
+	if (kind === 'boolean') {
+		return true;
+	}
+
+	if (kind === 'number') {
+		return 3;
+	}
+
+	if (kind === 'image') {
+		return createImageFallback();
+	}
+
+	if (isHrefKey(key)) {
+		return '#';
+	}
+
+	return getFallbackText(key);
+}
+
+function mergeFallbackValues(fallbackValue: unknown, value: unknown): unknown {
+	if (!hasRenderableValue(value)) {
+		return fallbackValue;
+	}
+
+	if (isRichTextValue(value)) {
+		return value.html.trim() ? value : fallbackValue;
+	}
+
+	if (Array.isArray(value)) {
+		return value.length > 0 ? value : fallbackValue;
+	}
+
+	if (isRecord(value) && isRecord(fallbackValue)) {
+		return {
+			...value,
+			...Object.fromEntries(
+				Object.entries(fallbackValue).map(([key, fallbackEntry]) => [
+					key,
+					mergeFallbackValues(fallbackEntry, value[key])
+				])
+			)
+		};
+	}
+
+	return value;
+}
+
+function hasRenderableValue(value: unknown): boolean {
+	if (isRichTextValue(value)) {
+		return value.html.trim().length > 0;
+	}
+
+	if (Array.isArray(value)) {
+		return value.length > 0;
+	}
+
+	if (typeof value === 'string') {
+		return value.trim().length > 0;
+	}
+
+	return value !== null && value !== undefined;
+}
+
 export function createBuilderCollectionsFromFields(
 	fields: BuilderFields,
 	basePath = ''
@@ -200,7 +299,9 @@ export function createBuilderPreviewBindingsFromFields(
 				type: 'image',
 				selector,
 				path,
-				label: field.previewLabel ?? (field.label ? `Sostituisci ${field.label.toLowerCase()}` : undefined)
+				label:
+					field.previewLabel ??
+					(field.label ? `Sostituisci ${field.label.toLowerCase()}` : undefined)
 			});
 			continue;
 		}
@@ -255,7 +356,10 @@ function createInspectorField(field: BuilderField): BuilderField | null {
 	const kind = inferBuilderFieldKind(field);
 	const isPreviewEditable =
 		Boolean(field.previewSelector || field.previewInMarkup) &&
-		(kind === 'text' || kind === 'image' || kind === 'richtext-inline' || kind === 'richtext-block');
+		(kind === 'text' ||
+			kind === 'image' ||
+			kind === 'richtext-inline' ||
+			kind === 'richtext-block');
 
 	if (isPreviewEditable) {
 		return null;
@@ -336,7 +440,7 @@ export function createBlock(type: string, definitions: BuilderDefinition[]): Bui
 	return {
 		id: createId(),
 		type: definition.type,
-		props: cloneValue(definition.defaults)
+		props: cloneValue(createBuilderFallbackProps(definition))
 	};
 }
 
@@ -613,7 +717,9 @@ export function parseBrixYamlDocument(
 	const metadata = getBrixYamlMetadata(rawDocument);
 	const title = typeof rawDocument.title === 'string' ? rawDocument.title : 'Pagina Brixter';
 	const description =
-		typeof rawDocument.description === 'string' ? rawDocument.description : 'Bozza generata da Brixter.';
+		typeof rawDocument.description === 'string'
+			? rawDocument.description
+			: 'Bozza generata da Brixter.';
 	const layout =
 		typeof rawDocument.layout === 'string' && rawDocument.layout.trim()
 			? rawDocument.layout.trim()
@@ -688,7 +794,10 @@ function cloneValue<T>(value: T): T {
 function getBrixYamlMetadata(document: Record<string, unknown>): Record<string, unknown> {
 	return Object.fromEntries(
 		Object.entries(document)
-			.filter(([key]) => key !== 'title' && key !== 'description' && key !== 'layout' && key !== 'components')
+			.filter(
+				([key]) =>
+					key !== 'title' && key !== 'description' && key !== 'layout' && key !== 'components'
+			)
 			.map(([key, value]) => [key, cloneValue(value)])
 	);
 }
@@ -698,7 +807,9 @@ function findDefinitionForBrixType(
 	definitions: BuilderDefinition[]
 ): BuilderDefinition | undefined {
 	const normalized = toComponentName(type);
-	return definitions.find((definition) => definition.type === type || definition.type === normalized);
+	return definitions.find(
+		(definition) => definition.type === type || definition.type === normalized
+	);
 }
 
 function toComponentName(value: string): string {
@@ -720,9 +831,7 @@ function hydrateBuilderProps(
 
 	for (const [key, value] of Object.entries(props)) {
 		const field = fields[key];
-		hydrated[key] = field
-			? hydrateBuilderValue(value, field, defaults[key])
-			: cloneValue(value);
+		hydrated[key] = field ? hydrateBuilderValue(value, field, defaults[key]) : cloneValue(value);
 	}
 
 	return hydrated;
@@ -747,7 +856,9 @@ function hydrateBuilderValue(value: unknown, field: BuilderField, defaultValue: 
 		if (!isRecord(value)) {
 			return cloneValue(nestedDefaults);
 		}
-		return field.fields ? hydrateBuilderProps(value, field.fields, nestedDefaults) : cloneValue(value);
+		return field.fields
+			? hydrateBuilderProps(value, field.fields, nestedDefaults)
+			: cloneValue(value);
 	}
 
 	if (kind === 'array') {
@@ -766,7 +877,10 @@ function createBuilderFieldDefault(field: BuilderField, defaultValue = field.def
 	const kind = inferBuilderFieldKind(field);
 
 	if (kind === 'richtext-inline' || kind === 'richtext-block') {
-		return createRichTextValue(kind === 'richtext-inline' ? 'inline' : 'block', asString(defaultValue));
+		return createRichTextValue(
+			kind === 'richtext-inline' ? 'inline' : 'block',
+			asString(defaultValue)
+		);
 	}
 
 	if (kind === 'object') {
@@ -780,7 +894,9 @@ function createBuilderFieldDefault(field: BuilderField, defaultValue = field.def
 
 		for (const [key, value] of Object.entries(defaultValue)) {
 			const nestedField = field.fields?.[key];
-			mergedDefaults[key] = nestedField ? createBuilderFieldDefault(nestedField, value) : cloneValue(value);
+			mergedDefaults[key] = nestedField
+				? createBuilderFieldDefault(nestedField, value)
+				: cloneValue(value);
 		}
 
 		return mergedDefaults;
@@ -842,6 +958,50 @@ function getPrimitiveDefault(kind: BuilderFieldKind): unknown {
 	return '';
 }
 
+function getFallbackText(key: string): string {
+	const normalized = key.toLowerCase();
+
+	if (normalized.includes('eyebrow')) return 'Launch smarter';
+	if (normalized.includes('headline') || normalized.includes('title')) {
+		return 'Build better pages faster';
+	}
+	if (
+		normalized.includes('subtitle') ||
+		normalized.includes('description') ||
+		normalized.includes('text')
+	) {
+		return 'A focused preview with realistic content so you can recognize this brik.';
+	}
+	if (normalized.includes('label')) return 'Get started';
+	if (normalized.includes('note')) return 'No setup required.';
+	if (normalized.includes('author') || normalized.includes('name')) return 'Alex Morgan';
+	if (normalized.includes('role')) return 'Product lead';
+	if (normalized.includes('quote')) return 'This section gives the page structure immediately.';
+	if (normalized.includes('claim')) return 'Simple pages, edited visually.';
+	if (normalized.includes('brand')) return 'Brixter';
+
+	return humanizeKey(key);
+}
+
+function isHrefKey(key: string): boolean {
+	return key.toLowerCase() === 'href' || key.toLowerCase().endsWith('url');
+}
+
+function createImageFallback(): string {
+	return `data:image/svg+xml,${encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+	<defs>
+		<linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+			<stop stop-color="#2563EB"/>
+			<stop offset="1" stop-color="#93C5FD"/>
+		</linearGradient>
+	</defs>
+	<rect width="960" height="540" fill="url(#g)"/>
+	<circle cx="720" cy="160" r="96" fill="#ffffff" opacity="0.24"/>
+	<path d="M120 410 330 245l150 115 120-80 240 130H120Z" fill="#ffffff" opacity="0.34"/>
+</svg>`)}`;
+}
+
 function parsePath(path: string): Array<string | number> {
 	const segments: Array<string | number> = [];
 
@@ -866,7 +1026,10 @@ function asString(value: unknown): string {
 }
 
 function getFieldPreviewSelector(field: BuilderField, path: string): string | undefined {
-	return field.previewSelector ?? (field.previewInMarkup ? inferFieldPreviewSelector(field, path) : undefined);
+	return (
+		field.previewSelector ??
+		(field.previewInMarkup ? inferFieldPreviewSelector(field, path) : undefined)
+	);
 }
 
 function inferFieldPreviewSelector(field: BuilderField, path: string): string | undefined {

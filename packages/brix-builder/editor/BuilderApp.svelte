@@ -153,6 +153,23 @@
 		activeBlockId = block.id;
 	}
 
+	function addBlockBefore(blockId: string, type: string): void {
+		if (!controller) return;
+
+		const targetIndex = controller.document.blocks.findIndex((block) => block.id === blockId);
+		const block = addBlockToState(controller, definitions, type);
+
+		if (targetIndex !== -1) {
+			controller.document.blocks = [
+				...controller.document.blocks.slice(0, targetIndex),
+				block,
+				...controller.document.blocks.slice(targetIndex).filter((entry) => entry.id !== block.id)
+			];
+		}
+
+		activeBlockId = block.id;
+	}
+
 	function removeBlock(blockId: string): void {
 		if (!controller) return;
 		removeBlockFromState(controller, blockId);
@@ -598,6 +615,7 @@
 		onUpdateRichText: updatePreviewRichText,
 		onUpdateText: updatePreviewText,
 		onQueueFileEdit: queueFileEdit,
+		onAddBlockBefore: addBlockBefore,
 		onAddBlockAfter: addBlockAfter,
 		onAddItem: addItem,
 		onRemoveItem: removeItem,
@@ -618,8 +636,8 @@
 
 <div
 	class={chrome === 'standalone'
-		? 'flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'
-		: 'flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'}
+		? 'builder-app flex h-screen flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'
+		: 'builder-app flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100'}
 >
 	{#if chrome === 'standalone'}
 		<header
@@ -842,3 +860,50 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	:global(.builder-app *) {
+		scrollbar-color: #cbd5e1 transparent;
+		scrollbar-width: thin;
+	}
+
+	:global(.builder-app *::-webkit-scrollbar) {
+		width: 10px;
+		height: 10px;
+	}
+
+	:global(.builder-app *::-webkit-scrollbar-track) {
+		background: transparent;
+	}
+
+	:global(.builder-app *::-webkit-scrollbar-thumb) {
+		min-height: 40px;
+		border: 3px solid transparent;
+		border-radius: 999px;
+		background: #cbd5e1;
+		background-clip: padding-box;
+	}
+
+	:global(.builder-app *::-webkit-scrollbar-thumb:hover) {
+		background: #2563eb;
+		background-clip: padding-box;
+	}
+
+	:global(.builder-app *::-webkit-scrollbar-corner) {
+		background: transparent;
+	}
+
+	:global(.dark .builder-app *) {
+		scrollbar-color: #475569 transparent;
+	}
+
+	:global(.dark .builder-app *::-webkit-scrollbar-thumb) {
+		background: #475569;
+		background-clip: padding-box;
+	}
+
+	:global(.dark .builder-app *::-webkit-scrollbar-thumb:hover) {
+		background: #3b82f6;
+		background-clip: padding-box;
+	}
+</style>

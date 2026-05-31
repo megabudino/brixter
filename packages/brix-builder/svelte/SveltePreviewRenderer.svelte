@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { getBuilderDefinition } from '../editor-controller.js';
-	import { normalizeBuilderPropsForRender } from '../core.js';
+	import {
+		createBuilderFallbackProps,
+		normalizeBuilderPropsForRender
+	} from '../core.js';
 	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
 	import type { BuilderAppPreviewProps } from '../editor/contracts.js';
 	import type { PreviewOverlay } from '../preview-dom.js';
@@ -18,6 +21,7 @@
 		onPreviewClick,
 		onPreviewKeydown,
 		onSelectBlock,
+		onAddBlockBefore,
 		onAddBlockAfter,
 		onAddItem,
 		onRemoveItem,
@@ -45,14 +49,20 @@
 			return;
 		}
 
+		const definition = getBuilderDefinition(block.type, definitions);
 		blockRenderSnapshots = {
 			...blockRenderSnapshots,
-			[edit.blockId]: normalizeBuilderPropsForRender(block.props) as Record<string, unknown>
+			[edit.blockId]: normalizeBuilderPropsForRender(
+				createBuilderFallbackProps(definition, block.props)
+			) as Record<string, unknown>
 		};
 	});
 
 	function getRenderProps(block: (typeof blocks)[number]): Record<string, unknown> {
-		const liveProps = normalizeBuilderPropsForRender(block.props) as Record<string, unknown>;
+		const definition = getBuilderDefinition(block.type, definitions);
+		const liveProps = normalizeBuilderPropsForRender(
+			createBuilderFallbackProps(definition, block.props)
+		) as Record<string, unknown>;
 		if (activeFieldEdit?.blockId === block.id && blockRenderSnapshots[block.id]) {
 			return blockRenderSnapshots[block.id];
 		}
@@ -60,8 +70,18 @@
 		return liveProps;
 	}
 
-	function toggleInserter(blockId: string): void {
-		openInserterBlockId = openInserterBlockId === blockId ? null : blockId;
+	function getInserterKey(blockId: string, placement: 'before' | 'after'): string {
+		return `${blockId}:${placement}`;
+	}
+
+	function toggleInserter(blockId: string, placement: 'before' | 'after'): void {
+		const key = getInserterKey(blockId, placement);
+		openInserterBlockId = openInserterBlockId === key ? null : key;
+	}
+
+	function insertBlockBefore(blockId: string, type: string): void {
+		onAddBlockBefore(blockId, type);
+		openInserterBlockId = null;
 	}
 
 	function insertBlockAfter(blockId: string, type: string): void {
@@ -141,12 +161,14 @@
 </script>
 
 <div>
-	{#each blocks as block (block.id)}
+	{#each blocks as block, blockIndex (block.id)}
 		{@const definition = getBuilderDefinition(block.type, definitions)}
 		{#if !propsErrors[block.id]}
 			{@const BlockComponent = definition.component}
 			{@const renderProps = getRenderProps(block)}
-			{@const liveProps = normalizeBuilderPropsForRender(block.props) as Record<string, unknown>}
+			{@const liveProps = normalizeBuilderPropsForRender(
+				createBuilderFallbackProps(definition, block.props)
+			) as Record<string, unknown>}
 			{@const hasPreviewBindings = definition.previewBindings.length > 0}
 			{#if hasPreviewBindings}
 				<div
@@ -158,7 +180,7 @@
 					}}
 					class={activeBlockId === block.id
 						? 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition'
-						: 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
+						: 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition'}
 					role="button"
 					tabindex="0"
 					aria-label={`Modifica elementi del brik ${definition.type}`}
@@ -170,10 +192,22 @@
 						hoveredCollectionItem = null;
 					}}
 				>
-					<BlockComponent {...renderProps} />
+					<PreviewBlockInserter
+						{definitions}
+						placement="before"
+						lineVisible={activeBlockId !== block.id && blockIndex !== 0}
+						edgeInset={blockIndex === 0}
+						open={openInserterBlockId === getInserterKey(block.id, 'before')}
+						onToggle={() => toggleInserter(block.id, 'before')}
+						onClose={closeInserter}
+						onInsert={(type) => insertBlockBefore(block.id, type)}
+					/>
+					<div data-builder-preview-content>
+						<BlockComponent {...renderProps} />
+					</div>
 					{#if activeBlockId === block.id}
 						<div
-							class="pointer-events-none absolute inset-0 z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
+							class="pointer-events-none absolute inset-px z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
 						></div>
 					{/if}
 
@@ -181,7 +215,7 @@
 						<div class="pointer-events-none absolute inset-0">
 							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
 								<div
-									class="collection-overlay pointer-events-none absolute z-10"
+									class="collection-overlay pointer-events-auto absolute z-10"
 									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 								>
 									<div
@@ -216,7 +250,7 @@
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
 											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'
-											: 'collection-item-toolbar pointer-events-none absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
+											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
 									>
 										<button
 											type="button"
@@ -256,8 +290,11 @@
 
 					<PreviewBlockInserter
 						{definitions}
-						open={openInserterBlockId === block.id}
-						onToggle={() => toggleInserter(block.id)}
+						placement="after"
+						lineVisible={activeBlockId !== block.id && blockIndex !== blocks.length - 1}
+						edgeInset={blockIndex === blocks.length - 1}
+						open={openInserterBlockId === getInserterKey(block.id, 'after')}
+						onToggle={() => toggleInserter(block.id, 'after')}
 						onClose={closeInserter}
 						onInsert={(type) => insertBlockAfter(block.id, type)}
 					/>
@@ -272,7 +309,7 @@
 					}}
 					class={activeBlockId === block.id
 						? 'group relative scroll-mt-0.5 scroll-mb-0.5'
-						: 'group relative scroll-mt-0.5 scroll-mb-0.5 transition hover:outline hover:outline-1 hover:outline-[#2563EB] dark:hover:outline-[#3B82F6]'}
+						: 'group relative scroll-mt-0.5 scroll-mb-0.5 transition'}
 					role="button"
 					tabindex="0"
 					aria-label={`Seleziona brik ${definition.type}`}
@@ -289,10 +326,22 @@
 						hoveredCollectionItem = null;
 					}}
 				>
-					<BlockComponent {...renderProps} />
+					<PreviewBlockInserter
+						{definitions}
+						placement="before"
+						lineVisible={activeBlockId !== block.id && blockIndex !== 0}
+						edgeInset={blockIndex === 0}
+						open={openInserterBlockId === getInserterKey(block.id, 'before')}
+						onToggle={() => toggleInserter(block.id, 'before')}
+						onClose={closeInserter}
+						onInsert={(type) => insertBlockBefore(block.id, type)}
+					/>
+					<div data-builder-preview-content>
+						<BlockComponent {...renderProps} />
+					</div>
 					{#if activeBlockId === block.id}
 						<div
-							class="pointer-events-none absolute inset-0 z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
+							class="pointer-events-none absolute inset-px z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
 						></div>
 					{/if}
 
@@ -300,7 +349,7 @@
 						<div class="pointer-events-none absolute inset-0">
 							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
 								<div
-									class="collection-overlay pointer-events-none absolute z-10"
+									class="collection-overlay pointer-events-auto absolute z-10"
 									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 								>
 									<div
@@ -335,7 +384,7 @@
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
 											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'
-											: 'collection-item-toolbar pointer-events-none absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
+											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
 									>
 										<button
 											type="button"
@@ -375,8 +424,11 @@
 
 					<PreviewBlockInserter
 						{definitions}
-						open={openInserterBlockId === block.id}
-						onToggle={() => toggleInserter(block.id)}
+						placement="after"
+						lineVisible={activeBlockId !== block.id && blockIndex !== blocks.length - 1}
+						edgeInset={blockIndex === blocks.length - 1}
+						open={openInserterBlockId === getInserterKey(block.id, 'after')}
+						onToggle={() => toggleInserter(block.id, 'after')}
 						onClose={closeInserter}
 						onInsert={(type) => insertBlockAfter(block.id, type)}
 					/>
