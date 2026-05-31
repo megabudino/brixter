@@ -24,6 +24,7 @@
 	import {
 		createInspectorFieldsFromFields,
 		getCollectionItemSummary,
+		normalizeBuilderPropsForRender,
 		parseBrixYamlDocument,
 		serializeToBrixYaml,
 		serializeToMdsvex,
@@ -32,8 +33,10 @@
 		type BuilderPreviewBinding,
 		type BuilderRichTextValue
 	} from '../core.js';
+	import { attachPreviewEditableFields } from '../preview/enhance-editable-fields.js';
 	import {
 		attachPreviewContainer,
+		materializeFieldPath,
 		resolvePreviewBinding,
 		type PreviewCollectionOverlay,
 		type PreviewOverlay
@@ -41,8 +44,7 @@
 	import type {
 		BuilderAppPreviewProps,
 		BuilderRenderDefinition,
-		PreviewRichTextEdit,
-		PreviewTextEdit
+		PreviewFieldEdit
 	} from './contracts.js';
 	import BuilderInspector from './BuilderInspector.svelte';
 	import BuilderPreviewFrame from './BuilderPreviewFrame.svelte';
@@ -68,9 +70,7 @@
 	let previewOverlays = $state<Record<string, PreviewOverlay[]>>({});
 	let previewCollectionOverlays = $state<Record<string, PreviewCollectionOverlay[]>>({});
 	let activeBlockId = $state<string | null>(null);
-	let activeRichTextEdit = $state<PreviewRichTextEdit | null>(null);
-	let activeTextEdit = $state<PreviewTextEdit | null>(null);
-	let activePreviewEditElement: HTMLElement | null = null;
+	let activeFieldEdit = $state<PreviewFieldEdit | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	const previewBlockElements = new Map<string, HTMLElement>();
 
@@ -156,11 +156,8 @@
 	function removeBlock(blockId: string): void {
 		if (!controller) return;
 		removeBlockFromState(controller, blockId);
-		if (activeRichTextEdit?.blockId === blockId) {
-			closeRichTextEdit();
-		}
-		if (activeTextEdit?.blockId === blockId) {
-			closeTextEdit();
+		if (activeFieldEdit?.blockId === blockId) {
+			closeFieldEdit();
 		}
 		if (activeBlockId === blockId) {
 			activeBlockId = controller.document.blocks[0]?.id ?? null;
@@ -256,88 +253,40 @@
 			target: event.target
 		});
 		if (!resolvedBinding) {
+			closeFieldEdit();
 			return;
 		}
 
 		event.preventDefault();
 
 		if (resolvedBinding.binding.type === 'image') {
-			closePreviewInlineEdit();
+			closeFieldEdit();
 			queueFileEdit(block.id, resolvedBinding.path);
 			return;
 		}
 
-		if (resolvedBinding.binding.type === 'richtext') {
-			const targetRect = resolvedBinding.matchedElement.getBoundingClientRect();
-			const containerRect = container.getBoundingClientRect();
-			const computed = getElementWindow(resolvedBinding.matchedElement).getComputedStyle(
-				resolvedBinding.matchedElement
-			);
-			const textStyle = [
-				`font-family:${computed.fontFamily}`,
-				`font-size:${computed.fontSize}`,
-				`font-weight:${computed.fontWeight}`,
-				`font-style:${computed.fontStyle}`,
-				`line-height:${computed.lineHeight}`,
-				`letter-spacing:${computed.letterSpacing}`,
-				`text-transform:${computed.textTransform}`,
-				`text-align:${computed.textAlign}`,
-				`color:${computed.color}`
-			].join(';');
-			activeRichTextEdit = {
-				blockId: block.id,
-				path: resolvedBinding.path,
-				selector: resolvedBinding.binding.selector,
-				selectorIndex: getSelectorIndex(
-					container,
-					resolvedBinding.binding.selector,
-					resolvedBinding.matchedElement
-				),
-				mode: resolvedBinding.binding.richTextMode ?? 'block',
-				top: Math.max(8, targetRect.top - containerRect.top),
-				left: Math.max(8, targetRect.left - containerRect.left),
-				width: Math.max(80, targetRect.width),
-				minHeight: Math.max(targetRect.height, 24),
-				textStyle
-			};
-			activeTextEdit = null;
-			hidePreviewEditElement(resolvedBinding.matchedElement);
-			return;
-		}
+		if (resolvedBinding.binding.type === 'richtext' || resolvedBinding.binding.type === 'text') {
+			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
+			const rawPath = matchedElement.getAttribute('data-builder-field');
+			const path =
+				rawPath != null
+					? (materializeFieldPath(rawPath, container, matchedElement) ?? resolvedBinding.path)
+					: resolvedBinding.path;
 
-		if (resolvedBinding.binding.type === 'text') {
-			const targetRect = resolvedBinding.matchedElement.getBoundingClientRect();
-			const containerRect = container.getBoundingClientRect();
-			const computed = getElementWindow(resolvedBinding.matchedElement).getComputedStyle(
-				resolvedBinding.matchedElement
-			);
-			const textStyle = createPreviewTextStyle(computed);
-			const lineHeight = Number.parseFloat(computed.lineHeight);
-			const multiline = targetRect.height > (Number.isFinite(lineHeight) ? lineHeight * 1.5 : 32);
-
-			activeTextEdit = {
+			activeFieldEdit = {
 				blockId: block.id,
-				path: resolvedBinding.path,
-				selector: resolvedBinding.binding.selector,
-				selectorIndex: getSelectorIndex(
-					container,
-					resolvedBinding.binding.selector,
-					resolvedBinding.matchedElement
-				),
-				top: Math.max(8, targetRect.top - containerRect.top),
-				left: Math.max(8, targetRect.left - containerRect.left),
-				width: Math.max(80, targetRect.width),
-				minHeight: Math.max(targetRect.height, 24),
-				textStyle,
-				multiline
+				path,
+				caretOffset: getClickCaretOffset(matchedElement, event)
 			};
-			activeRichTextEdit = null;
-			hidePreviewEditElement(resolvedBinding.matchedElement);
 		}
 	}
 
 	function handlePreviewKeydown(block: BuilderBlock, event: KeyboardEvent): void {
 		if (event.key !== 'Enter' && event.key !== ' ') {
+			return;
+		}
+
+		if (isEditableKeyboardTarget(event.target)) {
 			return;
 		}
 
@@ -427,36 +376,8 @@
 		closeReorderModalInState(controller);
 	}
 
-	function closeRichTextEdit(): void {
-		activeRichTextEdit = null;
-		restorePreviewEditElement();
-	}
-
-	function closeTextEdit(): void {
-		activeTextEdit = null;
-		restorePreviewEditElement();
-	}
-
-	function closePreviewInlineEdit(): void {
-		activeRichTextEdit = null;
-		activeTextEdit = null;
-		restorePreviewEditElement();
-	}
-
-	function hidePreviewEditElement(element: Element): void {
-		restorePreviewEditElement();
-
-		if (isHTMLElement(element)) {
-			activePreviewEditElement = element;
-			element.style.visibility = 'hidden';
-		}
-	}
-
-	function restorePreviewEditElement(): void {
-		if (activePreviewEditElement) {
-			activePreviewEditElement.style.visibility = '';
-			activePreviewEditElement = null;
-		}
+	function closeFieldEdit(): void {
+		activeFieldEdit = null;
 	}
 
 	function updatePreviewRichText(
@@ -485,26 +406,34 @@
 		onBrixYamlChange?.(brixYamlOutput);
 	});
 
-	function createPreviewTextStyle(computed: CSSStyleDeclaration): string {
-		return [
-			`font-family:${computed.fontFamily}`,
-			`font-size:${computed.fontSize}`,
-			`font-weight:${computed.fontWeight}`,
-			`font-style:${computed.fontStyle}`,
-			`line-height:${computed.lineHeight}`,
-			`letter-spacing:${computed.letterSpacing}`,
-			`text-transform:${computed.textTransform}`,
-			`text-align:${computed.textAlign}`,
-			`color:${computed.color}`
-		].join(';');
-	}
+	function getClickCaretOffset(element: Element, event: Event): number | null {
+		if (!(event instanceof MouseEvent) || !isHTMLElement(element)) {
+			return null;
+		}
 
-	function getSelectorIndex(
-		container: HTMLElement,
-		selector: string,
-		matchedElement: Element
-	): number {
-		return Math.max(0, Array.from(container.querySelectorAll(selector)).indexOf(matchedElement));
+		const doc = element.ownerDocument;
+		const range =
+			doc.caretRangeFromPoint?.(event.clientX, event.clientY) ??
+			(() => {
+				const pos = doc.caretPositionFromPoint?.(event.clientX, event.clientY);
+				if (!pos) {
+					return null;
+				}
+
+				const nextRange = doc.createRange();
+				nextRange.setStart(pos.offsetNode, pos.offset);
+				nextRange.collapse(true);
+				return nextRange;
+			})();
+
+		if (!range || !element.contains(range.startContainer)) {
+			return null;
+		}
+
+		const preRange = doc.createRange();
+		preRange.selectNodeContents(element);
+		preRange.setEnd(range.startContainer, range.startOffset);
+		return preRange.toString().length;
 	}
 
 	function isElement(value: unknown): value is Element {
@@ -520,8 +449,16 @@
 		return view ? value instanceof view.HTMLElement : value instanceof HTMLElement;
 	}
 
-	function getElementWindow(element: Element): Window {
-		return element.ownerDocument.defaultView ?? window;
+	function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+		if (!isElement(target)) {
+			return false;
+		}
+
+		return Boolean(
+			target.closest(
+				'.builder-preview-field-editor, .ProseMirror, .builder-preview-text-editor, input, textarea, [contenteditable="true"]'
+			)
+		);
 	}
 
 	function handleCollectionItemDragStart(
@@ -540,9 +477,17 @@
 
 	function previewContainer(
 		node: HTMLElement,
-		params: { block: BuilderBlock; definition: BuilderRenderDefinition }
+		params: {
+			block: BuilderBlock;
+			definition: BuilderRenderDefinition;
+			editing: import('./contracts.js').PreviewEditingContext;
+		}
 	): {
-		update: (nextParams: { block: BuilderBlock; definition: BuilderRenderDefinition }) => void;
+		update: (nextParams: {
+			block: BuilderBlock;
+			definition: BuilderRenderDefinition;
+			editing: import('./contracts.js').PreviewEditingContext;
+		}) => void;
 		destroy: () => void;
 	} {
 		let blockId = params.block.id;
@@ -564,8 +509,25 @@
 
 			previewCollectionOverlays[blockId] = overlays;
 		};
+		const editableFields = attachPreviewEditableFields(node, {
+			block: params.block,
+			definition: params.definition,
+			previewProps: params.editing.previewProps,
+			active: params.editing.active,
+			focusPath: params.editing.focusPath,
+			caretOffset: params.editing.caretOffset,
+			onUpdateRichText: (path, value) => updatePreviewRichText(params.block, path, value),
+			onUpdateText: (path, value) => updatePreviewText(params.block, path, value),
+			onQueueFileEdit: (path) => queueFileEdit(params.block.id, path),
+			onCloseFieldEdit: closeFieldEdit,
+			onFocusField: (path, caretOffset) => {
+				activeFieldEdit = { blockId: params.block.id, path, caretOffset };
+				selectBlock(params.block.id, { forceScroll: false });
+			}
+		});
 		const action = attachPreviewContainer(node, {
-			...params,
+			block: params.block,
+			definition: params.definition,
 			onOverlaysChange,
 			onCollectionOverlaysChange
 		});
@@ -578,14 +540,32 @@
 					previewBlockElements.set(blockId, node);
 				}
 
+				editableFields.update({
+					block: nextParams.block,
+					definition: nextParams.definition,
+					previewProps: nextParams.editing.previewProps,
+					active: nextParams.editing.active,
+					focusPath: nextParams.editing.focusPath,
+					caretOffset: nextParams.editing.caretOffset,
+					onUpdateRichText: (path, value) => updatePreviewRichText(nextParams.block, path, value),
+					onUpdateText: (path, value) => updatePreviewText(nextParams.block, path, value),
+					onQueueFileEdit: (path) => queueFileEdit(nextParams.block.id, path),
+					onCloseFieldEdit: closeFieldEdit,
+					onFocusField: (path, caretOffset) => {
+						activeFieldEdit = { blockId: nextParams.block.id, path, caretOffset };
+						selectBlock(nextParams.block.id, { forceScroll: false });
+					}
+				});
 				action.update({
-					...nextParams,
+					block: nextParams.block,
+					definition: nextParams.definition,
 					onOverlaysChange,
 					onCollectionOverlaysChange
 				});
 			},
 			destroy() {
 				previewBlockElements.delete(blockId);
+				editableFields.destroy();
 				action.destroy();
 			}
 		};
@@ -609,14 +589,12 @@
 		previewOverlays,
 		previewCollectionOverlays,
 		activeBlockId,
-		activeRichTextEdit,
-		activeTextEdit,
+		activeFieldEdit,
 		previewContainer,
 		onPreviewClick: handlePreviewClick,
 		onPreviewKeydown: handlePreviewKeydown,
 		onSelectBlock: selectBlock,
-		onCloseRichTextEdit: closeRichTextEdit,
-		onCloseTextEdit: closeTextEdit,
+		onCloseFieldEdit: closeFieldEdit,
 		onUpdateRichText: updatePreviewRichText,
 		onUpdateText: updatePreviewText,
 		onQueueFileEdit: queueFileEdit,

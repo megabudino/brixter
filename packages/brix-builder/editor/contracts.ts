@@ -6,11 +6,32 @@ export interface BuilderRenderDefinition extends BuilderDefinition {
 	component: Component<Record<string, unknown>>;
 }
 
+export interface PreviewFieldEdit {
+	blockId: string;
+	path: string;
+	caretOffset?: number | null;
+}
+
+export interface PreviewEditingContext {
+	active: boolean;
+	focusPath: string | null;
+	caretOffset: number | null;
+	previewProps: Record<string, unknown>;
+}
+
 export type PreviewContainerAction = (
 	node: HTMLElement,
-	params: { block: BuilderBlock; definition: BuilderRenderDefinition }
+	params: {
+		block: BuilderBlock;
+		definition: BuilderRenderDefinition;
+		editing: PreviewEditingContext;
+	}
 ) => {
-	update: (nextParams: { block: BuilderBlock; definition: BuilderRenderDefinition }) => void;
+	update: (nextParams: {
+		block: BuilderBlock;
+		definition: BuilderRenderDefinition;
+		editing: PreviewEditingContext;
+	}) => void;
 	destroy: () => void;
 };
 
@@ -21,14 +42,12 @@ export interface BuilderAppPreviewProps {
 	previewOverlays: Record<string, PreviewOverlay[]>;
 	previewCollectionOverlays: Record<string, PreviewCollectionOverlay[]>;
 	activeBlockId: string | null;
-	activeRichTextEdit: PreviewRichTextEdit | null;
-	activeTextEdit: PreviewTextEdit | null;
+	activeFieldEdit: PreviewFieldEdit | null;
 	previewContainer: PreviewContainerAction;
 	onPreviewClick: (block: BuilderBlock, event: MouseEvent) => void;
 	onPreviewKeydown: (block: BuilderBlock, event: KeyboardEvent) => void;
 	onSelectBlock: (blockId: string) => void;
-	onCloseRichTextEdit: () => void;
-	onCloseTextEdit: () => void;
+	onCloseFieldEdit: () => void;
 	onUpdateRichText: (block: BuilderBlock, path: string, value: BuilderRichTextValue) => void;
 	onUpdateText: (block: BuilderBlock, path: string, value: string) => void;
 	onQueueFileEdit: (blockId: string, path: string) => void;
@@ -42,30 +61,4 @@ export interface BuilderAppPreviewProps {
 		direction: -1 | 1
 	) => void;
 	onOpenReorderModal: (blockId: string, collectionPath: string) => void;
-}
-
-export interface PreviewRichTextEdit {
-	blockId: string;
-	path: string;
-	selector: string;
-	selectorIndex: number;
-	mode: BuilderRichTextValue['mode'];
-	top: number;
-	left: number;
-	width: number;
-	minHeight: number;
-	textStyle: string;
-}
-
-export interface PreviewTextEdit {
-	blockId: string;
-	path: string;
-	selector: string;
-	selectorIndex: number;
-	top: number;
-	left: number;
-	width: number;
-	minHeight: number;
-	textStyle: string;
-	multiline: boolean;
 }

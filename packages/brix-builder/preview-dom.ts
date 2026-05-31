@@ -173,6 +173,37 @@ export function attachPreviewContainer(
 	};
 }
 
+export function materializeFieldPath(
+	rawPath: string,
+	blockRoot: HTMLElement,
+	element: HTMLElement
+): string | null {
+	if (!rawPath.includes('[]')) {
+		return rawPath;
+	}
+
+	const match = rawPath.match(/^([^[\]]+)\[\](.*)$/);
+	if (!match) {
+		return rawPath.replace('[]', '[0]');
+	}
+
+	const collectionName = match[1];
+	const rest = match[2] ?? '';
+	const collectionItem = element.closest(`[data-builder-collection-item="${collectionName}"]`);
+	if (!isElement(collectionItem) || !blockRoot.contains(collectionItem)) {
+		return null;
+	}
+
+	const selector = `[data-builder-collection-item="${collectionName}"]`;
+	const items = Array.from(blockRoot.querySelectorAll(selector));
+	const index = items.indexOf(collectionItem);
+	if (index === -1) {
+		return null;
+	}
+
+	return `${collectionName}[${index}]${rest}`;
+}
+
 function materializeBindingPath(
 	path: string,
 	container: HTMLElement,
