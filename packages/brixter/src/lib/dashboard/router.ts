@@ -41,7 +41,8 @@ const editorRenderer = {
 	}
 };
 
-const DRAFT_BRANCH = 'drafts';
+const DRAFT_BRANCH = 'brixter-draft';
+const LEGACY_DRAFT_BRANCHES = ['drafts'];
 
 function decodePathPart(value: string | undefined): string {
 	return decodeURIComponent(value ?? '');
@@ -73,7 +74,9 @@ function matchPage(pathname: string): PageMatch {
 
 	if (parts[0] === 'b' && parts[1]) {
 		const branch = decodePathPart(parts[1]);
-		if (branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
+		if (branch !== DRAFT_BRANCH && !LEGACY_DRAFT_BRANCHES.includes(branch)) {
+			throw redirect(302, '/admin/routes');
+		}
 		const routePath = parts
 			.slice(2)
 			.map((segment) => encodeRouteSegment(decodePathPart(segment)))
@@ -158,41 +161,80 @@ function isGithubNotFound(err: unknown): boolean {
 	return (e.status ?? e.response?.status) === 404;
 }
 
+async function getBranchRefSha(branch: string): Promise<string | null> {
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	try {
+		const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+			owner: repo.owner,
+			repo: repo.name,
+			ref: `heads/${branch}`
+		});
+		return ref.object.sha;
+	} catch (err: unknown) {
+		if (isGithubNotFound(err)) return null;
+		throw err;
+	}
+}
+
 async function ensureDraftBranch(): Promise<void> {
 	const octokit = getOctokit();
 	const repo = getRepo();
 
 	if (repo.defaultBranch === DRAFT_BRANCH) return;
 
-	try {
-		await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: `heads/${DRAFT_BRANCH}`
-		});
-		return;
-	} catch (err: unknown) {
-		if (!isGithubNotFound(err)) throw err;
-	}
+	if (await getBranchRefSha(DRAFT_BRANCH)) return;
 
-	const { data: defaultRef } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-		owner: repo.owner,
-		repo: repo.name,
-		ref: `heads/${repo.defaultBranch}`
-	});
+	let sourceSha: string | null = null;
+	for (const legacyBranch of LEGACY_DRAFT_BRANCHES) {
+		sourceSha = await getBranchRefSha(legacyBranch);
+		if (sourceSha) break;
+	}
+	sourceSha ??= await getBranchRefSha(repo.defaultBranch);
+	if (!sourceSha) throw error(500, 'Failed to resolve draft branch source.');
 
 	try {
 		await octokit.request('POST /repos/{owner}/{repo}/git/refs', {
 			owner: repo.owner,
 			repo: repo.name,
 			ref: `refs/heads/${DRAFT_BRANCH}`,
-			sha: defaultRef.object.sha
+			sha: sourceSha
 		});
 		invalidateBranchRouteCache(DRAFT_BRANCH);
 	} catch (err: unknown) {
 		const e = err as { status?: number; response?: { status?: number } };
 		const status = e.status ?? e.response?.status;
 		if (status !== 422) throw err;
+	}
+}
+
+async function syncDraftWithDefaultBranch(defaultBranch: string): Promise<{
+	behindBy: number;
+	syncError?: string;
+}> {
+	if (defaultBranch === DRAFT_BRANCH) return { behindBy: 0 };
+
+	const behindBy = await getBranchBehindBy(DRAFT_BRANCH, defaultBranch);
+	if (behindBy === 0) return { behindBy };
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	try {
+		await octokit.request('POST /repos/{owner}/{repo}/merges', {
+			owner: repo.owner,
+			repo: repo.name,
+			base: DRAFT_BRANCH,
+			head: defaultBranch
+		});
+		invalidateBranchRouteCache(DRAFT_BRANCH);
+		return { behindBy: 0 };
+	} catch (err: unknown) {
+		const message =
+			(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+			'Failed to update draft from main.';
+		return { behindBy, syncError: message };
 	}
 }
 
@@ -284,11 +326,12 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 	let routeTree: RouteNode;
 	let behindBy = 0;
+	let syncError: string | undefined;
 	try {
-		[{ routeTree }, behindBy] = await Promise.all([
-			getBranchRouteSnapshot(match.branch, routesRoot),
-			getBranchBehindBy(match.branch, defaultBranch)
-		]);
+		const sync = await syncDraftWithDefaultBranch(defaultBranch);
+		behindBy = sync.behindBy;
+		syncError = sync.syncError;
+		({ routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot));
 	} catch (err: unknown) {
 		const e = err as {
 			status?: number;
@@ -333,7 +376,8 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 			entries: [],
 			childDirNames: [],
 			childPageNames: [],
-			behindBy
+			behindBy,
+			syncError
 		};
 	}
 
@@ -351,7 +395,8 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		entries: getExplorerListing(routeTree, currentRouteDir),
 		childDirNames: childDirNames(routeTree, currentRouteDir),
 		childPageNames: childPageNames(routeTree, currentRouteDir),
-		behindBy
+		behindBy,
+		syncError
 	};
 }
 
