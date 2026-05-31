@@ -11,14 +11,12 @@
 		previewOverlays,
 		previewCollectionOverlays,
 		activeBlockId,
-		activeRichTextEdit,
-		activeTextEdit,
+		activeFieldEdit,
 		previewContainer,
 		onPreviewClick,
 		onPreviewKeydown,
 		onSelectBlock,
-		onCloseRichTextEdit,
-		onCloseTextEdit,
+		onCloseFieldEdit,
 		onUpdateRichText,
 		onUpdateText,
 		onQueueFileEdit,
@@ -46,14 +44,12 @@
 		rendererProps.previewOverlays = previewOverlays;
 		rendererProps.previewCollectionOverlays = previewCollectionOverlays;
 		rendererProps.activeBlockId = activeBlockId;
-		rendererProps.activeRichTextEdit = activeRichTextEdit;
-		rendererProps.activeTextEdit = activeTextEdit;
+		rendererProps.activeFieldEdit = activeFieldEdit;
 		rendererProps.previewContainer = previewContainer;
 		rendererProps.onPreviewClick = onPreviewClick;
 		rendererProps.onPreviewKeydown = onPreviewKeydown;
 		rendererProps.onSelectBlock = onSelectBlock;
-		rendererProps.onCloseRichTextEdit = onCloseRichTextEdit;
-		rendererProps.onCloseTextEdit = onCloseTextEdit;
+		rendererProps.onCloseFieldEdit = onCloseFieldEdit;
 		rendererProps.onUpdateRichText = onUpdateRichText;
 		rendererProps.onUpdateText = onUpdateText;
 		rendererProps.onQueueFileEdit = onQueueFileEdit;
@@ -149,6 +145,23 @@ body.dark {
 
 #builder-preview-root {
 	width: 100%;
+}
+
+[data-builder-field-enhanced='pending'],
+[data-builder-field-enhanced='true'],
+.builder-preview-field-editor,
+.builder-richtext-inline-editor,
+.builder-preview-text-editor {
+	cursor: text;
+}
+
+.builder-preview-field-editor,
+.builder-richtext-mount {
+	display: contents;
+}
+
+.ProseMirror {
+	white-space: inherit;
 }
 `;
 		frameDocument.head.append(styleElement);

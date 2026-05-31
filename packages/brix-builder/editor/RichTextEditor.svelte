@@ -9,6 +9,8 @@
 		mode,
 		chrome = 'panel',
 		autofocus = false,
+		initialCaretOffset = null,
+		initialClickCoords = null,
 		editorStyle = '',
 		onChange,
 		onBlur = () => {}
@@ -17,6 +19,8 @@
 		mode: BuilderRichTextValue['mode'];
 		chrome?: 'panel' | 'inline';
 		autofocus?: boolean;
+		initialCaretOffset?: number | null;
+		initialClickCoords?: { left: number; top: number } | null;
 		editorStyle?: string;
 		onChange: (nextValue: BuilderRichTextValue) => void;
 		onBlur?: () => void;
@@ -32,7 +36,7 @@
 
 		editor = new Editor({
 			element: element ?? undefined,
-			autofocus,
+			autofocus: false,
 			extensions: [
 				StarterKit.configure({
 					heading: mode === 'inline' ? false : undefined,
@@ -67,6 +71,11 @@
 					html,
 					json: activeEditor.getJSON() as Record<string, unknown>
 				});
+			},
+			onCreate: ({ editor: activeEditor }) => {
+				if (autofocus) {
+					placeInitialSelection(activeEditor);
+				}
 			}
 		});
 
@@ -78,11 +87,30 @@
 
 	$effect(() => {
 		const nextHtml = value.html;
-		if (editor && nextHtml !== lastSyncedHtml) {
+		if (editor && !editor.isFocused && nextHtml !== lastSyncedHtml) {
 			lastSyncedHtml = nextHtml;
 			editor.commands.setContent(getEditorContent(nextHtml, mode), { emitUpdate: false });
 		}
 	});
+
+	function placeInitialSelection(activeEditor: Editor): void {
+		if (initialClickCoords) {
+			const pos = activeEditor.view.posAtCoords(initialClickCoords)?.pos;
+			if (pos != null) {
+				activeEditor.chain().focus().setTextSelection(pos).run();
+				return;
+			}
+		}
+
+		if (initialCaretOffset != null && initialCaretOffset > 0) {
+			const docSize = activeEditor.state.doc.content.size;
+			const pos = Math.min(initialCaretOffset + 1, Math.max(1, docSize - 1));
+			activeEditor.chain().focus().setTextSelection(pos).run();
+			return;
+		}
+
+		activeEditor.commands.focus();
+	}
 
 	function getEditorContent(html: string, currentMode: BuilderRichTextValue['mode']): string {
 		if (!html.trim()) {
@@ -111,7 +139,7 @@
 	}
 </script>
 
-<div bind:this={element}></div>
+<div bind:this={element} class={chrome === 'inline' ? 'builder-richtext-mount' : undefined}></div>
 
 <style>
 	:global(.builder-richtext-panel-editor) {
@@ -124,13 +152,23 @@
 		border: 0;
 		background: transparent;
 		padding: 0;
+		margin: 0;
 		outline: none;
 		box-shadow: none;
 		color: inherit;
 		font: inherit;
+		line-height: inherit;
 		letter-spacing: inherit;
 		text-transform: inherit;
 		text-align: inherit;
+		white-space: inherit;
+		word-wrap: inherit;
+		overflow-wrap: inherit;
+		cursor: text;
+	}
+
+	:global(.builder-richtext-mount) {
+		display: contents;
 	}
 
 	:global(.builder-richtext-inline-editor > *:first-child) {
@@ -143,5 +181,7 @@
 
 	:global(.builder-richtext-inline-editor p) {
 		margin: 0;
+		padding: 0;
+		line-height: inherit;
 	}
 </style>
