@@ -120,13 +120,14 @@
 	const brixDirty = $derived(currentBrixYaml !== initialBrixYaml);
 	const isDirty = $derived(bodyDirty || frontmatterDirty || brixDirty);
 
-	const base = $derived(branchHref(data.branch));
+	const base = '/admin/routes';
 	const isEditing = $derived(!!data.file?.htmlContent);
 	const isBrixEditing = $derived(data.file?.brixYaml !== undefined);
-	const backHref = $derived(data.parentPath ? branchHref(data.branch, data.parentPath) : base);
+	const backHref = $derived(data.parentPath ? routesHref(data.parentPath) : base);
 	const isUnsupportedFile = $derived(!!data.file && !isEditing && !isBrixEditing);
 
 	const breadcrumbs = $derived(data.breadcrumbs ?? []);
+	const isRoutesRoot = $derived(!data.parentPath && breadcrumbs.length === 0);
 
 	$effect(() => {
 		const file = data.file;
@@ -152,8 +153,8 @@
 		return dot !== -1 && imageExtensions.has(name.slice(dot).toLowerCase());
 	}
 
-	function branchHref(branch: string, path = '') {
-		const base = `/admin/b/${encodeURIComponent(branch)}`;
+	function routesHref(path = '') {
+		const base = '/admin/routes';
 		if (!path) return base;
 		return `${base}/${path
 			.split('/')
@@ -276,7 +277,6 @@
 					<ArrowLeft size={20} />
 				</button>
 				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
-				<span class="text-muted text-xs">{data.branch}</span>
 			</div>
 			{#if hasFrontmatter}
 				<div
@@ -450,7 +450,6 @@
 					<ArrowLeft size={20} />
 				</button>
 				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
-				<span class="text-muted text-xs">{data.branch}</span>
 			</div>
 			<form
 				method="post"
@@ -555,9 +554,9 @@
 			<div class="mx-auto flex max-w-2xl items-center gap-3">
 				<AlertTriangle size={16} class="shrink-0 text-amber-600 dark:text-amber-400" />
 				<p class="flex-1 text-sm font-medium text-amber-800 dark:text-amber-200">
-					This branch is {data.behindBy} commit{data.behindBy > 1 ? 's' : ''} behind main.
+					The draft is {data.behindBy} commit{data.behindBy > 1 ? 's' : ''} behind main.
 					{#if !data.isAdmin}
-						<span class="font-normal">Contact an admin to update this branch.</span>
+						<span class="font-normal">Contact an admin to update it.</span>
 					{/if}
 				</p>
 				{#if data.isAdmin}
@@ -598,39 +597,43 @@
 
 	<!-- File explorer -->
 	<div class="mx-auto max-w-2xl px-6 py-16">
-		<a href="/admin" class="text-secondary hover:text-heading text-sm transition-colors">
-			← Back to branches
-		</a>
+		{#if !isRoutesRoot}
+			<a href="/admin/routes" class="text-secondary hover:text-heading text-sm transition-colors">
+				← Back to routes
+			</a>
+		{/if}
 
 		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
-			{data.repo.name}
+			Routes
 		</h1>
+		<p class="text-secondary mb-8">{data.repo.fullName}</p>
 
-		<div class="text-muted mb-8 flex items-center gap-1 text-sm">
-			<a href={branchHref(data.branch)} class="text-secondary hover:text-heading transition-colors"
-				>{data.branch}</a
-			>
-			{#each breadcrumbs as crumb, i}
-				<ChevronRight size={14} />
-				{#if i < breadcrumbs.length - 1}
-					<a
-						href={branchHref(data.branch, crumb.path)}
-						class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
-					>
-				{:else}
-					<span class="text-heading inline-flex items-center gap-2">
-						{crumb.label}
-						{#if crumb.fileTypeLabel}
-							<span
-								class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
-							>
-								{crumb.fileTypeLabel}
-							</span>
-						{/if}
-					</span>
-				{/if}
-			{/each}
-		</div>
+		{#if breadcrumbs.length > 0}
+			<div class="text-muted mb-8 flex items-center gap-1 text-sm">
+				{#each breadcrumbs as crumb, i}
+					{#if i > 0}
+						<ChevronRight size={14} />
+					{/if}
+					{#if i < breadcrumbs.length - 1}
+						<a
+							href={routesHref(crumb.path)}
+							class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
+						>
+					{:else}
+						<span class="text-heading inline-flex items-center gap-2">
+							{crumb.label}
+							{#if crumb.fileTypeLabel}
+								<span
+									class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
+								>
+									{crumb.fileTypeLabel}
+								</span>
+							{/if}
+						</span>
+					{/if}
+				{/each}
+			</div>
+		{/if}
 
 		<div class="mb-4 flex items-center justify-end gap-4">
 			<button
@@ -665,7 +668,7 @@
 
 		{#if parentPath !== null}
 			<a
-				href={branchHref(data.branch, parentPath)}
+				href={routesHref(parentPath)}
 				class="text-secondary hover:text-heading flex cursor-pointer items-center gap-3 border border-b-0 border-gray-300 bg-white px-5 py-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:hover:bg-gray-700"
 			>
 				..
@@ -703,7 +706,7 @@
 								</div>
 							{:else}
 								<a
-									href={branchHref(data.branch, entry.path)}
+									href={routesHref(entry.path)}
 									class="flex cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
 								>
 									{#if entry.kind === 'route'}

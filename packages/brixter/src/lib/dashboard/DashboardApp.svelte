@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { page as pageStore } from '$app/stores';
 	import { GitBranch, Settings, Sun, Moon, Monitor } from 'lucide-svelte';
-	import BranchesPage from './pages/BranchesPage.svelte';
 	import LoginPage from './pages/LoginPage.svelte';
 	import SetupPage from './pages/SetupPage.svelte';
-	import NewBranchPage from './pages/NewBranchPage.svelte';
 	import SettingsPage from './pages/SettingsPage.svelte';
-	import BranchPage from './pages/BranchPage.svelte';
+	import RoutesPage from './pages/RoutesPage.svelte';
 	import ThemeController from '../ThemeController.svelte';
 	import {
 		themePreference,
@@ -19,6 +17,9 @@
 
 	const currentPath = $derived($pageStore.url.pathname);
 	const currentPublicPath = $derived(currentPath as string);
+	const routesActive = $derived(
+		currentPublicPath === '/admin' || currentPublicPath.startsWith('/admin/routes')
+	);
 	const pageData = $derived({ ...(data.pageData ?? {}), isAdmin: data.isAdmin });
 
 	const themeIcons: Record<ThemePreference, typeof Sun> = {
@@ -31,18 +32,14 @@
 <ThemeController />
 
 {#snippet renderPage()}
-	{#if data.page === 'branches'}
-		<BranchesPage data={pageData} />
-	{:else if data.page === 'login'}
+	{#if data.page === 'login'}
 		<LoginPage {form} />
 	{:else if data.page === 'setup'}
 		<SetupPage {form} />
-	{:else if data.page === 'new-branch'}
-		<NewBranchPage data={pageData} {form} />
 	{:else if data.page === 'settings'}
 		<SettingsPage data={pageData} {form} />
 	{:else if data.page === 'branch'}
-		<BranchPage data={pageData} {form} />
+		<RoutesPage data={pageData} {form} />
 	{/if}
 {/snippet}
 
@@ -54,13 +51,12 @@
 			>
 				<nav class="space-y-1">
 					<a
-						href="/admin"
-						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {currentPublicPath ===
-						'/admin'
+						href="/admin/routes"
+						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {routesActive
 							? 'font-medium text-heading'
 							: 'text-secondary hover:text-heading'}"
 					>
-						<GitBranch size={16} /> Branches
+						<GitBranch size={16} /> Routes
 					</a>
 					<a
 						href="/admin/settings"

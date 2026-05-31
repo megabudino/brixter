@@ -21,12 +21,11 @@ import {
 import {
 	getBranchBehindBy,
 	getBranchRouteSnapshot,
-	invalidateBranchRouteCache,
-	warmBranchRouteSnapshot
+	invalidateBranchRouteCache
 } from './repo-cache.ts';
 import { marked } from 'marked';
 
-type DashboardPage = 'branches' | 'login' | 'setup' | 'new-branch' | 'settings' | 'branch';
+type DashboardPage = 'login' | 'setup' | 'settings' | 'branch';
 
 interface PageMatch {
 	page: DashboardPage;
@@ -42,6 +41,8 @@ const editorRenderer = {
 	}
 };
 
+const DRAFT_BRANCH = 'drafts';
+
 function decodePathPart(value: string | undefined): string {
 	return decodeURIComponent(value ?? '');
 }
@@ -56,82 +57,36 @@ function dashboardPath(pathname: string): string {
 
 function matchPage(pathname: string): PageMatch {
 	const path = dashboardPath(pathname).replace(/\/$/, '');
-	if (!path) return { page: 'branches' };
+	if (!path) throw redirect(302, '/admin/routes');
 	if (path === 'login') return { page: 'login' };
 	if (path === 'setup') return { page: 'setup' };
 	if (path === 'settings') return { page: 'settings' };
-	if (path === 'b/new') return { page: 'new-branch' };
 
 	const parts = path.split('/');
-	if (parts[0] === 'b' && parts[1]) {
+	if (parts[0] === 'routes') {
 		return {
 			page: 'branch',
-			branch: decodePathPart(parts[1]),
-			path: decodePathPart(parts.slice(2).join('/'))
+			branch: DRAFT_BRANCH,
+			path: decodePathPart(parts.slice(1).join('/'))
 		};
+	}
+
+	if (parts[0] === 'b' && parts[1]) {
+		const branch = decodePathPart(parts[1]);
+		if (branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
+		const routePath = parts
+			.slice(2)
+			.map((segment) => encodeRouteSegment(decodePathPart(segment)))
+			.join('/');
+		throw redirect(302, routePath ? `/admin/routes/${routePath}` : '/admin/routes');
 	}
 
 	throw error(404, 'Not found');
 }
 
-async function loadBranches({ locals }: RequestEvent) {
-	if (!locals.user) throw redirect(302, '/admin/login');
-
-	const octokit = getOctokit();
-	const repo = getRepo();
-	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
-	const branchNames: string[] = [];
-	let page = 1;
-
-	while (true) {
-		const { data } = await octokit.request('GET /repos/{owner}/{repo}/branches', {
-			owner: repo.owner,
-			repo: repo.name,
-			per_page: 100,
-			page
-		});
-
-		for (const branch of data) branchNames.push(branch.name);
-		if (data.length < 100) break;
-		page++;
-	}
-
-	const branches = await Promise.all(
-		branchNames.map(async (name) => {
-			const isDefault = name === repo.defaultBranch;
-			return {
-				name,
-				isDefault,
-				behindBy: await getBranchBehindBy(name, repo.defaultBranch)
-			};
-		})
-	);
-
-	branches.sort((a, b) => {
-		if (a.isDefault) return -1;
-		if (b.isDefault) return 1;
-		return a.name.localeCompare(b.name);
-	});
-
-	for (const branch of branches.filter((branch) => !branch.isDefault).slice(0, 5)) {
-		warmBranchRouteSnapshot(branch.name, routesRoot);
-	}
-
-	return {
-		repo: { name: repo.name, fullName: repo.fullName, defaultBranch: repo.defaultBranch },
-		branches
-	};
-}
-
 async function loadLogin({ locals }: RequestEvent) {
-	if (locals.user) throw redirect(302, '/admin');
+	if (locals.user) throw redirect(302, '/admin/routes');
 	return {};
-}
-
-async function loadNewBranch({ locals }: RequestEvent) {
-	if (!locals.user) throw redirect(302, '/admin/login');
-	const repo = getRepo();
-	return { repo: { name: repo.name, defaultBranch: repo.defaultBranch } };
 }
 
 async function loadSettings({ locals }: RequestEvent) {
@@ -192,10 +147,53 @@ function encodeRouteSegment(segment: string): string {
 	return segment === '+page' ? segment : encodeURIComponent(segment);
 }
 
-function branchHref(branch: string, path = ''): string {
-	const base = `/admin/b/${encodeURIComponent(branch)}`;
+function routesHref(path = ''): string {
+	const base = '/admin/routes';
 	if (!path) return base;
 	return `${base}/${path.split('/').map(encodeRouteSegment).join('/')}`;
+}
+
+function isGithubNotFound(err: unknown): boolean {
+	const e = err as { status?: number; response?: { status?: number } };
+	return (e.status ?? e.response?.status) === 404;
+}
+
+async function ensureDraftBranch(): Promise<void> {
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	if (repo.defaultBranch === DRAFT_BRANCH) return;
+
+	try {
+		await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+			owner: repo.owner,
+			repo: repo.name,
+			ref: `heads/${DRAFT_BRANCH}`
+		});
+		return;
+	} catch (err: unknown) {
+		if (!isGithubNotFound(err)) throw err;
+	}
+
+	const { data: defaultRef } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+		owner: repo.owner,
+		repo: repo.name,
+		ref: `heads/${repo.defaultBranch}`
+	});
+
+	try {
+		await octokit.request('POST /repos/{owner}/{repo}/git/refs', {
+			owner: repo.owner,
+			repo: repo.name,
+			ref: `refs/heads/${DRAFT_BRANCH}`,
+			sha: defaultRef.object.sha
+		});
+		invalidateBranchRouteCache(DRAFT_BRANCH);
+	} catch (err: unknown) {
+		const e = err as { status?: number; response?: { status?: number } };
+		const status = e.status ?? e.response?.status;
+		if (status !== 422) throw err;
+	}
 }
 
 async function loadBranchFile(
@@ -267,12 +265,13 @@ async function loadBranchFile(
 
 async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (!match.branch) throw error(404, 'Not found');
+	if (match.branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
 
 	const { mediaPath } = getRepoConfig();
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
 	const repo = getRepo();
 	const defaultBranch = repo.defaultBranch;
+	await ensureDraftBranch();
 	let routeRequest: ReturnType<typeof routeUrlPathToDirPath>;
 	try {
 		routeRequest = routeUrlPathToDirPath(routesRoot, match.path ?? '');
@@ -366,17 +365,11 @@ export async function loadDashboard(event: RequestEvent) {
 
 	let pageData: Record<string, unknown>;
 	switch (match.page) {
-		case 'branches':
-			pageData = await loadBranches(event);
-			break;
 		case 'login':
 			pageData = await loadLogin(event);
 			break;
 		case 'setup':
 			pageData = {};
-			break;
-		case 'new-branch':
-			pageData = await loadNewBranch(event);
 			break;
 		case 'settings':
 			pageData = await loadSettings(event);
@@ -444,7 +437,7 @@ async function loginAction({ request, cookies }: RequestEvent) {
 		return fail(400, { message: 'Invalid email or password.', email });
 	}
 
-	throw redirect(302, '/admin');
+	throw redirect(302, '/admin/routes');
 }
 
 async function setupAction({ request, cookies }: RequestEvent) {
@@ -477,41 +470,7 @@ async function setupAction({ request, cookies }: RequestEvent) {
 		return fail(400, { message, name, email });
 	}
 
-	throw redirect(302, '/admin');
-}
-
-async function newBranchAction({ request, locals }: RequestEvent) {
-	if (!locals.user) throw redirect(302, '/admin/login');
-
-	const formData = await request.formData();
-	const branchName = formData.get('branch_name')?.toString().trim() ?? '';
-	if (!branchName) return fail(400, { message: 'Branch name is required.', branchName });
-
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	try {
-		const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: `heads/${repo.defaultBranch}`
-		});
-
-		await octokit.request('POST /repos/{owner}/{repo}/git/refs', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: `refs/heads/${branchName}`,
-			sha: ref.object.sha
-		});
-		invalidateBranchRouteCache(branchName);
-	} catch (err: unknown) {
-		const message =
-			(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-			'Failed to create branch.';
-		return fail(400, { message, branchName });
-	}
-
-	throw redirect(302, '/admin');
+	throw redirect(302, '/admin/routes');
 }
 
 async function settingsAction({ request, locals }: RequestEvent) {
@@ -692,7 +651,7 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 	}
 
 	if (directoryAlreadyExists) {
-		throw redirect(303, branchHref(match.branch, routeDirUrlPath(routesRoot, directoryPath)));
+		throw redirect(303, routesHref(routeDirUrlPath(routesRoot, directoryPath)));
 	}
 
 	try {
@@ -713,7 +672,7 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 		});
 	}
 
-	throw redirect(303, branchHref(match.branch, routeDirUrlPath(routesRoot, directoryPath)));
+	throw redirect(303, routesHref(routeDirUrlPath(routesRoot, directoryPath)));
 }
 
 async function createPageAction({ request, locals, url }: RequestEvent) {
@@ -800,7 +759,7 @@ components: []
 		});
 	}
 
-	throw redirect(303, branchHref(match.branch, routePageUrlPath(routesRoot, directoryPath)));
+	throw redirect(303, routesHref(routePageUrlPath(routesRoot, directoryPath)));
 }
 
 export const dashboardActions: Actions = {
@@ -815,12 +774,6 @@ export const dashboardActions: Actions = {
 		const match = matchPage(event.url.pathname);
 		if (match.page !== 'setup') throw error(405, 'Method not allowed');
 		return setupAction(event);
-	},
-	newBranch: async (event) => {
-		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
-		const match = matchPage(event.url.pathname);
-		if (match.page !== 'new-branch') throw error(405, 'Method not allowed');
-		return newBranchAction(event);
 	},
 	settings: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
