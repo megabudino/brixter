@@ -34,10 +34,11 @@
 		type BuilderRichTextValue
 	} from '../core.js';
 	import { attachPreviewEditableFields } from '../preview/enhance-editable-fields.js';
+	import { describeFieldElement, logFieldEditEvent } from '../preview/field-edit-debug.js';
 	import {
 		attachPreviewContainer,
 		materializeFieldPath,
-		resolvePreviewBinding,
+		resolvePreviewBindingAtPoint,
 		type PreviewCollectionOverlay,
 		type PreviewOverlay
 	} from '../preview-dom.js';
@@ -351,15 +352,33 @@
 			return;
 		}
 
-		const resolvedBinding = resolvePreviewBinding<BuilderPreviewBinding>({
+		logFieldEditEvent('block-click', 'start', {
+			blockId: block.id,
+			eventType: event.type,
+			clientX: event instanceof MouseEvent ? event.clientX : null,
+			clientY: event instanceof MouseEvent ? event.clientY : null,
+			target: describeFieldElement(event.target instanceof Element ? event.target : null)
+		});
+
+		const resolvedBinding = resolvePreviewBindingAtPoint<BuilderPreviewBinding>({
 			bindings: definition.previewBindings,
 			container,
-			target: event.target
+			target: event.target,
+			clientX: event instanceof MouseEvent ? event.clientX : undefined,
+			clientY: event instanceof MouseEvent ? event.clientY : undefined
 		});
 		if (!resolvedBinding) {
+			logFieldEditEvent('block-click', 'no binding — closing field edit', { blockId: block.id });
 			closeFieldEdit();
 			return;
 		}
+
+		logFieldEditEvent('block-click', 'binding resolved', {
+			blockId: block.id,
+			path: resolvedBinding.path,
+			bindingType: resolvedBinding.binding.type,
+			...describeFieldElement(resolvedBinding.matchedElement)
+		});
 
 		event.preventDefault();
 

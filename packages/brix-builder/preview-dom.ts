@@ -4,6 +4,8 @@ import {
 	getCollectionItems,
 	type BuilderCollection
 } from './core.js';
+import { isInteractiveFieldHost } from './preview/interactive-content.js';
+import { describeFieldElement, logFieldEditEvent } from './preview/field-edit-debug.js';
 
 export interface ResolvedPreviewBinding<Binding> {
 	binding: Binding;
@@ -63,6 +65,91 @@ export function resolvePreviewBinding<Binding extends { selector: string; path: 
 
 		return { binding, path, matchedElement };
 	}
+
+	return null;
+}
+
+export function resolvePreviewBindingAtPoint<
+	Binding extends { selector: string; path: string }
+>({
+	bindings,
+	container,
+	target,
+	clientX,
+	clientY
+}: {
+	bindings: Binding[];
+	container: HTMLElement;
+	target: EventTarget | null;
+	clientX?: number;
+	clientY?: number;
+}): ResolvedPreviewBinding<Binding> | null {
+	const direct = resolvePreviewBinding({ bindings, container, target });
+	if (direct) {
+		logFieldEditEvent('resolve-binding', 'direct hit', {
+			path: direct.path,
+			...describeFieldElement(direct.matchedElement)
+		});
+		return direct;
+	}
+
+	if (clientX == null || clientY == null) {
+		logFieldEditEvent('resolve-binding', 'miss — no coords for point fallback', {
+			target: describeFieldElement(target instanceof Element ? target : null)
+		});
+		return null;
+	}
+
+	const pointCandidates: Record<string, unknown>[] = [];
+
+	for (const field of container.querySelectorAll<HTMLElement>('[data-builder-field]')) {
+		if (!isInteractiveFieldHost(field)) {
+			continue;
+		}
+
+		const rect = field.getBoundingClientRect();
+		const inside =
+			clientX >= rect.left &&
+			clientX <= rect.right &&
+			clientY >= rect.top &&
+			clientY <= rect.bottom;
+
+		pointCandidates.push({
+			inside,
+			...describeFieldElement(field)
+		});
+
+		if (!inside) {
+			continue;
+		}
+
+		for (const binding of bindings) {
+			if (!field.matches(binding.selector)) {
+				continue;
+			}
+
+			const path = materializeBindingPath(binding.path, container, binding.selector, field);
+			if (!path) {
+				continue;
+			}
+
+			logFieldEditEvent('resolve-binding', 'point hit', {
+				path,
+				clientX,
+				clientY,
+				...describeFieldElement(field)
+			});
+
+			return { binding, path, matchedElement: field };
+		}
+	}
+
+	logFieldEditEvent('resolve-binding', 'miss', {
+		clientX,
+		clientY,
+		target: describeFieldElement(target instanceof Element ? target : null),
+		pointCandidates
+	});
 
 	return null;
 }
