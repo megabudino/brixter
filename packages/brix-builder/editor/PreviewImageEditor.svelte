@@ -18,12 +18,13 @@
 	let isElementHovered = $state(false);
 	let isToolbarHovered = $state(false);
 	let isHovered = $derived(isElementHovered || isToolbarHovered);
+
+	let currentSrc = $state(element?.src || '');
 	let hasImage = $derived(
-		element &&
-		element.src &&
-		!element.src.startsWith('data:image/svg+xml') &&
-		element.src !== 'about:blank' &&
-		element.src !== ''
+		currentSrc &&
+		!currentSrc.startsWith('data:image/svg+xml') &&
+		currentSrc !== 'about:blank' &&
+		currentSrc !== ''
 	);
 
 	function updateCoords() {
@@ -82,12 +83,20 @@
 
 		win.document.addEventListener('click', handleGlobalClick, true);
 
+		// Observe src attribute mutations to reactively update currentSrc
+		const observer = new MutationObserver(() => {
+			currentSrc = element.src || '';
+			updateCoords();
+		});
+		observer.observe(element, { attributes: true, attributeFilter: ['src'] });
+
 		return () => {
 			win.removeEventListener('scroll', updateCoords);
 			win.removeEventListener('resize', updateCoords);
 			element.removeEventListener('mouseenter', handleMouseEnter);
 			element.removeEventListener('mouseleave', handleMouseLeave);
 			win.document.removeEventListener('click', handleGlobalClick, true);
+			observer.disconnect();
 		};
 	});
 </script>
