@@ -8,7 +8,7 @@ components:
       subtitle: Landing pages, content, and routes editable in preview. Code stays in
         the repo. Marketing stops waiting.
       cta:
-        label: Open the CMS
+        label: Prova contenteditable
         note: Visual editing, clean commits, SvelteKit-first.
         href: /admin
       screenshot: /brix-builder-demo.gif
