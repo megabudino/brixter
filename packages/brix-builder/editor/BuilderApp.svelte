@@ -88,6 +88,7 @@
 	const previewBlockElements = new Map<string, HTMLElement>();
 	const pageFlowShortcutKey = SHORTCUTS.togglePageFlow.key;
 	const inspectorShortcutKey = SHORTCUTS.toggleInspector.key;
+	const previewShortcutKey = SHORTCUTS.togglePreview.key;
 
 	let pageFlowWidth = $state(280);
 	let inspectorWidth = $state(320);
@@ -261,6 +262,13 @@
 		inspectorOpen = !inspectorOpen;
 	}
 
+	function togglePreview(): void {
+		previewMode = !previewMode;
+		if (previewMode) {
+			deselectBlock();
+		}
+	}
+
 	function handleWindowKeydown(event: KeyboardEvent): void {
 		if (matchesShortcut(event, SHORTCUTS.closeModal) && inserterModal) {
 			closeInserterModal();
@@ -273,6 +281,10 @@
 		if (matchesShortcut(event, SHORTCUTS.toggleInspector)) {
 			event.preventDefault();
 			toggleInspector();
+		}
+		if (matchesShortcut(event, SHORTCUTS.togglePreview)) {
+			event.preventDefault();
+			togglePreview();
 		}
 	}
 
@@ -857,7 +869,7 @@
 
 			<div class="flex items-center gap-2">
 				<!-- Mode Selector -->
-				<div class="inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+				<div class="group relative inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
 					<button
 						type="button"
 						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {!previewMode
@@ -879,8 +891,35 @@
 						}}
 					>
 						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/><circle cx="12" cy="12" r="3"/></svg>
-						<span>Anteprima</span>
+						<span>Preview</span>
 					</button>
+					<span
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+					>
+						<span class="font-semibold">Preview</span>
+						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+							<span
+								class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+							>
+								{#if pageFlowShortcutModifier === 'command'}
+									<svg class="h-3 w-3" viewBox="0 0 16 16" aria-hidden="true">
+										<path
+											d="M5 2.25A2.75 2.75 0 0 0 2.25 5v.75H5V2.25Zm1.25 3.5h3.5v-3.5h-3.5v3.5Zm4.75 0h2.75V5A2.75 2.75 0 0 0 11 2.25h-.75v3.5ZM9.75 7h-3.5v2h3.5V7ZM5 7H2.25v2H5V7Zm5.25 0v2h3.5V7h-3.5ZM5 10.25H2.25V11A2.75 2.75 0 0 0 5 13.75h.75v-3.5H5Zm1.25 0v3.5h3.5v-3.5h-3.5Zm4 0v3.5H11A2.75 2.75 0 0 0 13.75 11v-.75h-3.5Z"
+											fill="currentColor"
+										/>
+									</svg>
+								{:else}
+									Ctrl
+								{/if}
+							</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span
+								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium uppercase text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+							>
+								{previewShortcutKey}
+							</span>
+						</span>
+					</span>
 				</div>
 
 				<button
