@@ -5,6 +5,10 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { getAuth } from './auth.ts';
 import { getCoreConfig } from './config.ts';
 import { isSetupComplete } from './setup.ts';
+import { getOctokit, getRepo } from './github.ts';
+import { Buffer } from 'node:buffer';
+
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 
 /**
  * SvelteKit handle that wires brixter's auth + setup-wizard flow.
@@ -22,10 +26,55 @@ import { isSetupComplete } from './setup.ts';
  * - hydrates `event.locals.{session,user}` from the active session
  */
 export const handle: Handle = async ({ event, resolve }) => {
+	const path = event.url.pathname;
+
+	// Serve draft branch images from GitHub if not found locally
+	const ext = '.' + path.split('.').pop()?.toLowerCase();
+	if (IMAGE_EXTENSIONS.includes(ext)) {
+		const { mediaDir } = getCoreConfig();
+		const repoPath = [mediaDir, path]
+			.map((p) => p.replace(/^\/+|\/+$/g, ''))
+			.filter(Boolean)
+			.join('/');
+		const branch = 'brixter-draft';
+
+		try {
+			const octokit = getOctokit();
+			const repo = getRepo();
+			const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+				owner: repo.owner,
+				repo: repo.name,
+				path: repoPath,
+				ref: branch
+			});
+
+			const file = data as { content?: string; encoding?: string };
+			if (file.content && file.encoding === 'base64') {
+				const contentType = path.endsWith('.svg')
+					? 'image/svg+xml'
+					: path.endsWith('.webp')
+						? 'image/webp'
+						: path.endsWith('.png')
+							? 'image/png'
+							: path.endsWith('.gif')
+								? 'image/gif'
+								: 'image/jpeg';
+
+				return new Response(Buffer.from(file.content, 'base64'), {
+					headers: {
+						'Content-Type': contentType,
+						'Cache-Control': 'private, max-age=3600'
+					}
+				});
+			}
+		} catch (err) {
+			// Fall through to normal SvelteKit resolution/404 if not found on GitHub
+		}
+	}
+
 	const { adminPath } = getCoreConfig();
 	const loginPath = `${adminPath}/login`;
 	const setupPath = `${adminPath}/setup`;
-	const path = event.url.pathname;
 	const auth = getAuth();
 
 	if (path.startsWith(`${adminPath}/api/auth`) || path.startsWith(loginPath)) {
