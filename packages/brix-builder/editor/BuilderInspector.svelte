@@ -44,10 +44,10 @@
 	const inspectorEntries = $derived(Object.entries(inspectorFields));
 </script>
 
-<aside class="flex h-full min-h-0 w-[320px] shrink-0 flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]" onclick={(event) => { if (!(event.target as Element).closest('section')) onDeselectBlock(); }}>
+<aside class="flex h-full min-h-0 w-full flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]" onclick={(event) => { if (!(event.target as Element).closest('section')) onDeselectBlock(); }}>
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{#if activeBlock && activeDefinition}
-			<section class="border-b border-gray-200 p-4 dark:border-gray-700">
+			<section class="p-4 dark:border-gray-700">
 				<div class="mb-4">
 					<p class="text-muted text-[11px] font-semibold uppercase tracking-wide">Brik</p>
 					<h3 class="text-heading mt-1 text-sm font-semibold">{activeDefinition.type}</h3>
@@ -55,11 +55,11 @@
 				</div>
 
 				{#if activeDefinition.mode === 'markdown'}
-					<label class="block space-y-2 text-sm">
-						<span class="text-heading font-medium">Contenuto markdown</span>
+					<label class="block">
+						<span class="mb-1 block text-sm font-medium text-label">Contenuto markdown</span>
 						<textarea
 							value={typeof activeBlock.props.content === 'string' ? activeBlock.props.content : ''}
-							class="min-h-48 w-full border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+							class="min-h-48 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 							oninput={(event) => onFieldChange(activeBlock, 'content', event.currentTarget.value)}
 							placeholder="Scrivi markdown..."></textarea>
 					</label>
@@ -80,9 +80,7 @@
 						{/each}
 					</div>
 				{:else}
-					<p class="text-muted border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm dark:border-gray-600 dark:bg-gray-800">
-						I contenuti di questo brik si modificano direttamente nella preview.
-					</p>
+					<p class="text-muted text-sm">Nothing to edit here!</p>
 				{/if}
 
 				{#if propsError}
@@ -90,24 +88,26 @@
 				{/if}
 			</section>
 		{:else}
-			<section class="border-b border-gray-200 p-4 dark:border-gray-700">
+			<section class="p-4 dark:border-gray-700">
 				<h3 class="text-muted mb-4 text-[11px] font-semibold uppercase tracking-wide">Page</h3>
-				<label class="block space-y-2 text-sm">
-					<span class="text-heading font-medium">Titolo pagina</span>
-					<input
-						value={title}
-						class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
-						placeholder="Titolo della pagina"
-						oninput={(event) => onTitleChange(event.currentTarget.value)} />
-				</label>
-				<label class="mt-4 block space-y-2 text-sm">
-					<span class="text-heading font-medium">Descrizione</span>
-					<input
-						value={description}
-						class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
-						placeholder="Descrizione per il frontmatter"
-						oninput={(event) => onDescriptionChange(event.currentTarget.value)} />
-				</label>
+				<div class="space-y-4">
+					<label class="block">
+						<span class="mb-1 block text-sm font-medium text-label">Titolo pagina</span>
+						<input
+							value={title}
+							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+							placeholder="Titolo della pagina"
+							oninput={(event) => onTitleChange(event.currentTarget.value)} />
+					</label>
+					<label class="block">
+						<span class="mb-1 block text-sm font-medium text-label">Descrizione</span>
+						<input
+							value={description}
+							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+							placeholder="Descrizione per il frontmatter"
+							oninput={(event) => onDescriptionChange(event.currentTarget.value)} />
+					</label>
+				</div>
 			</section>
 		{/if}
 	</div>

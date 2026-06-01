@@ -176,7 +176,6 @@
 				>
 					<PreviewBlockInserter
 						placement="before"
-						lineVisible={activeBlockId !== block.id && blockIndex !== 0}
 						edgeInset={blockIndex === 0}
 						onToggle={() => onOpenInserterModal(block.id, 'before')}
 					/>
@@ -268,7 +267,6 @@
 
 					<PreviewBlockInserter
 						placement="after"
-						lineVisible={activeBlockId !== block.id && blockIndex !== blocks.length - 1}
 						edgeInset={blockIndex === blocks.length - 1}
 						onToggle={() => onOpenInserterModal(block.id, 'after')}
 					/>
@@ -302,7 +300,6 @@
 				>
 					<PreviewBlockInserter
 						placement="before"
-						lineVisible={activeBlockId !== block.id && blockIndex !== 0}
 						edgeInset={blockIndex === 0}
 						onToggle={() => onOpenInserterModal(block.id, 'before')}
 					/>
@@ -394,7 +391,6 @@
 
 					<PreviewBlockInserter
 						placement="after"
-						lineVisible={activeBlockId !== block.id && blockIndex !== blocks.length - 1}
 						edgeInset={blockIndex === blocks.length - 1}
 						onToggle={() => onOpenInserterModal(block.id, 'after')}
 					/>

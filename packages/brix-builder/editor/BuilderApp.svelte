@@ -59,6 +59,7 @@
 		chrome = 'standalone',
 		onBrixYamlChange,
 		pageFlowOpen = $bindable(true),
+		inspectorOpen = $bindable(true),
 		activeBlockId = $bindable<string | null>(null)
 	}: {
 		definitions: BuilderRenderDefinition[];
@@ -67,6 +68,7 @@
 		chrome?: 'standalone' | 'embedded';
 		onBrixYamlChange?: (value: string) => void;
 		pageFlowOpen?: boolean;
+		inspectorOpen?: boolean;
 		activeBlockId?: string | null;
 	} = $props();
 
@@ -79,6 +81,34 @@
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	const previewBlockElements = new Map<string, HTMLElement>();
 	const pageFlowShortcutKey = SHORTCUTS.togglePageFlow.key;
+	const inspectorShortcutKey = SHORTCUTS.toggleInspector.key;
+
+	let pageFlowWidth = $state(280);
+	let inspectorWidth = $state(320);
+	let resizing: 'pageFlow' | 'inspector' | null = $state(null);
+	let resizeStartX = 0;
+	let resizeStartWidth = 0;
+
+	function startResize(side: 'pageFlow' | 'inspector', event: MouseEvent): void {
+		resizing = side;
+		resizeStartX = event.clientX;
+		resizeStartWidth = side === 'pageFlow' ? pageFlowWidth : inspectorWidth;
+		event.preventDefault();
+	}
+
+	function handleResizeMove(event: MouseEvent): void {
+		if (!resizing) return;
+		const dx = event.clientX - resizeStartX;
+		if (resizing === 'pageFlow') {
+			pageFlowWidth = Math.max(160, Math.min(480, resizeStartWidth + dx));
+		} else {
+			inspectorWidth = Math.max(200, Math.min(560, resizeStartWidth - dx));
+		}
+	}
+
+	function stopResize(): void {
+		resizing = null;
+	}
 
 	$effect(() => {
 		if (!controller) {
@@ -221,6 +251,10 @@
 		pageFlowOpen = !pageFlowOpen;
 	}
 
+	function toggleInspector(): void {
+		inspectorOpen = !inspectorOpen;
+	}
+
 	function handleWindowKeydown(event: KeyboardEvent): void {
 		if (matchesShortcut(event, SHORTCUTS.closeModal) && inserterModal) {
 			closeInserterModal();
@@ -229,6 +263,10 @@
 		if (matchesShortcut(event, SHORTCUTS.togglePageFlow)) {
 			event.preventDefault();
 			togglePageFlow();
+		}
+		if (matchesShortcut(event, SHORTCUTS.toggleInspector)) {
+			event.preventDefault();
+			toggleInspector();
 		}
 	}
 
@@ -666,7 +704,11 @@
 	});
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
+<svelte:window
+	onkeydown={handleWindowKeydown}
+	onmousemove={handleResizeMove}
+	onmouseup={stopResize}
+/>
 
 <svelte:head>
 	<title>Brixter Builder</title>
@@ -758,23 +800,76 @@
 				>
 					{controller?.copied ? 'Copiato' : 'Copia export'}
 				</button>
+				<button
+					type="button"
+					class={inspectorOpen
+					? 'group relative flex h-9 w-9 items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
+					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+					aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
+					aria-pressed={inspectorOpen}
+					onclick={toggleInspector}
+				>
+					<svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+						<rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+						<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
+					</svg>
+					<span
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+					>
+						<span class="font-semibold">Inspector</span>
+						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+							<span
+								class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+							>
+								{#if pageFlowShortcutModifier === 'command'}
+									<svg class="h-3 w-3" viewBox="0 0 16 16" aria-hidden="true">
+										<path
+											d="M5 2.25A2.75 2.75 0 0 0 2.25 5v.75H5V2.25Zm1.25 3.5h3.5v-3.5h-3.5v3.5Zm4.75 0h2.75V5A2.75 2.75 0 0 0 11 2.25h-.75v3.5ZM9.75 7h-3.5v2h3.5V7ZM5 7H2.25v2H5V7Zm5.25 0v2h3.5V7h-3.5ZM5 10.25H2.25V11A2.75 2.75 0 0 0 5 13.75h.75v-3.5H5Zm1.25 0v3.5h3.5v-3.5h-3.5Zm4 0v3.5H11A2.75 2.75 0 0 0 13.75 11v-.75h-3.5Z"
+											fill="currentColor"
+										/>
+									</svg>
+								{:else}
+									Ctrl
+								{/if}
+							</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Shift</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span
+								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+							>
+								{inspectorShortcutKey}
+							</span>
+						</span>
+					</span>
+				</button>
 			</div>
 		</header>
 	{/if}
 
+	{#if resizing}
+		<div class="fixed inset-0 z-50 cursor-col-resize" />
+	{/if}
+
 	<div class="flex min-h-0 flex-1 overflow-hidden">
 		{#if pageFlowOpen}
-			<PageFlowSidebar
-				blocks={controller?.document.blocks ?? []}
-				{activeBlockId}
-				onSelectBlock={selectBlock}
-				onDeselectBlock={deselectBlock}
-				onMoveBlock={moveBlock}
-				onRemoveBlock={removeBlock}
-				onDragStart={handleDragStart}
-				onAllowDrop={allowDrop}
-				onDrop={handleDrop}
-			/>
+			<div class="relative shrink-0" style="width: {pageFlowWidth}px">
+				<PageFlowSidebar
+					blocks={controller?.document.blocks ?? []}
+					{activeBlockId}
+					onSelectBlock={selectBlock}
+					onDeselectBlock={deselectBlock}
+					onMoveBlock={moveBlock}
+					onRemoveBlock={removeBlock}
+					onDragStart={handleDragStart}
+					onAllowDrop={allowDrop}
+					onDrop={handleDrop}
+				/>
+				<div
+					class="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#2563EB]/30 dark:hover:bg-[#3B82F6]/30"
+					onmousedown={(e) => startResize('pageFlow', e)}
+				/>
+			</div>
 		{/if}
 
 		<main class="min-w-0 flex-1 overflow-hidden bg-white dark:bg-[#0f1623]">
@@ -783,25 +878,33 @@
 			</div>
 		</main>
 
-		<BuilderInspector
-			title={controller?.document.title ?? ''}
-			description={controller?.document.description ?? ''}
-			{activeBlock}
-			{activeDefinition}
-			{inspectorFields}
-			propsError={activeBlock ? (controller?.propsErrors[activeBlock.id] ?? null) : null}
-			{mdsvexOutput}
-			copied={controller?.copied ?? false}
-			onTitleChange={updateDocumentTitle}
-			onDescriptionChange={updateDocumentDescription}
-			onFieldChange={updateFieldValue}
-			onQueueFileEdit={queueFileEdit}
-			onAddItem={addItem}
-			onRemoveItem={removeItem}
-			onMoveItem={moveItem}
-			onCopyMdsvex={copyMdsvex}
-			onDeselectBlock={deselectBlock}
-		/>
+		{#if inspectorOpen}
+			<div class="relative shrink-0" style="width: {inspectorWidth}px">
+				<BuilderInspector
+					title={controller?.document.title ?? ''}
+					description={controller?.document.description ?? ''}
+					{activeBlock}
+					{activeDefinition}
+					{inspectorFields}
+					propsError={activeBlock ? (controller?.propsErrors[activeBlock.id] ?? null) : null}
+					{mdsvexOutput}
+					copied={controller?.copied ?? false}
+					onTitleChange={updateDocumentTitle}
+					onDescriptionChange={updateDocumentDescription}
+					onFieldChange={updateFieldValue}
+					onQueueFileEdit={queueFileEdit}
+					onAddItem={addItem}
+					onRemoveItem={removeItem}
+					onMoveItem={moveItem}
+					onCopyMdsvex={copyMdsvex}
+					onDeselectBlock={deselectBlock}
+				/>
+				<div
+					class="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#2563EB]/30 dark:hover:bg-[#3B82F6]/30"
+					onmousedown={(e) => startResize('inspector', e)}
+				/>
+			</div>
+		{/if}
 	</div>
 </div>
 
