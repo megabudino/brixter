@@ -7,6 +7,7 @@
 	let {
 		value,
 		mode,
+		placeholder = '',
 		chrome = 'panel',
 		autofocus = false,
 		initialCaretOffset = null,
@@ -17,6 +18,7 @@
 	}: {
 		value: BuilderRichTextValue;
 		mode: BuilderRichTextValue['mode'];
+		placeholder?: string;
 		chrome?: 'panel' | 'inline';
 		autofocus?: boolean;
 		initialCaretOffset?: number | null;
@@ -56,7 +58,8 @@
 							: mode === 'inline'
 								? 'builder-richtext-panel-editor min-h-11 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]'
 								: 'builder-richtext-panel-editor min-h-32 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]',
-					style: editorStyle
+					style: editorStyle,
+					'data-placeholder': placeholder
 				}
 			},
 			onBlur: () => {
@@ -71,8 +74,10 @@
 					html,
 					json: activeEditor.getJSON() as Record<string, unknown>
 				});
+				activeEditor.view.dom.classList.toggle('is-editor-empty', activeEditor.isEmpty);
 			},
 			onCreate: ({ editor: activeEditor }) => {
+				activeEditor.view.dom.classList.toggle('is-editor-empty', activeEditor.isEmpty);
 				if (autofocus) {
 					placeInitialSelection(activeEditor);
 				}
@@ -90,6 +95,7 @@
 		if (editor && !editor.isFocused && nextHtml !== lastSyncedHtml) {
 			lastSyncedHtml = nextHtml;
 			editor.commands.setContent(getEditorContent(nextHtml, mode), { emitUpdate: false });
+			editor.view.dom.classList.toggle('is-editor-empty', editor.isEmpty);
 		}
 	});
 

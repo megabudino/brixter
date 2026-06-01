@@ -958,7 +958,7 @@ function getPrimitiveDefault(kind: BuilderFieldKind): unknown {
 	return '';
 }
 
-function getFallbackText(key: string): string {
+export function getFallbackText(key: string): string {
 	const normalized = key.toLowerCase();
 
 	if (normalized.includes('eyebrow')) return 'Launch smarter';

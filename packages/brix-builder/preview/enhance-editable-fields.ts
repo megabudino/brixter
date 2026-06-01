@@ -6,8 +6,11 @@ import {
 	createRichTextValue,
 	getValueAtPath,
 	isRichTextValue,
+	getFallbackText,
 	type BuilderBlock,
-	type BuilderRichTextValue
+	type BuilderRichTextValue,
+	type BuilderField,
+	type BuilderFields
 } from '../core.js';
 import { materializeFieldPath } from '../preview-dom.js';
 
@@ -79,7 +82,6 @@ export function attachPreviewEditableFields(
 
 		if (!currentParams.active) {
 			teardownAll();
-			return;
 		}
 
 		const blockRoot = getBlockRoot(node);
@@ -99,8 +101,35 @@ export function attachPreviewEditableFields(
 		}
 
 		for (const element of fields) {
+			const rawPath = element.getAttribute('data-builder-field');
+			if (!rawPath) {
+				continue;
+			}
 			const path = resolveFieldPath(element, blockRoot);
 			if (!path) {
+				continue;
+			}
+
+			const fieldDef = getFieldByRawPath(currentParams.definition.fields, rawPath);
+			const defaultValue = fieldDef?.default ?? getValueAtPath(currentParams.definition.defaults, path);
+			let defaultString = resolveDefaultText(defaultValue);
+
+			if (!defaultString) {
+				defaultString = element.getAttribute('data-builder-default') || 
+				                (fieldDef ? getFallbackText(rawPath.split('.').at(-1) || '') : '');
+			}
+
+			const plainDefaultString = defaultString.replace(/<[^>]*>/g, '').trim();
+			if (plainDefaultString) {
+				element.setAttribute('data-builder-placeholder', plainDefaultString);
+			}
+
+			const rawValue = getValueAtPath(currentParams.previewProps, path);
+			const isEmpty = rawValue === undefined || rawValue === '' || (isRichTextValue(rawValue) && !rawValue.html.trim());
+			element.toggleAttribute('data-builder-placeholder-active', isEmpty);
+
+
+			if (!currentParams.active) {
 				continue;
 			}
 
@@ -256,7 +285,14 @@ export function attachPreviewEditableFields(
 		}
 
 		const kind = resolveFieldKind(element);
+		const isPlaceholderActive = element.hasAttribute('data-builder-placeholder-active');
+		if (isPlaceholderActive) {
+			element.removeAttribute('data-builder-placeholder-active');
+		}
 		const fieldStyle = captureFieldEditorStyle(element);
+		if (isPlaceholderActive) {
+			element.setAttribute('data-builder-placeholder-active', '');
+		}
 		element.dataset.builderFieldEnhanced = 'true';
 		element.style.cursor = 'text';
 
@@ -267,6 +303,8 @@ export function attachPreviewEditableFields(
 
 		const value = getValueAtPath(currentParams.previewProps, path);
 		const shouldFocus = currentParams.focusPath === path;
+		const placeholder = element.getAttribute('data-builder-placeholder') || '';
+
 
 		let instance: Record<string, unknown>;
 
@@ -276,6 +314,7 @@ export function attachPreviewEditableFields(
 				target: mountHost,
 				props: {
 					value: richValue,
+					placeholder,
 					mode: richValue.mode,
 					chrome: 'inline',
 					autofocus: shouldFocus,
@@ -293,6 +332,7 @@ export function attachPreviewEditableFields(
 				target: mountHost,
 				props: {
 					value: textValue,
+					placeholder,
 					multiline: inferMultiline(element),
 					textStyle: fieldStyle,
 					autofocus: shouldFocus,
@@ -443,7 +483,8 @@ export function attachPreviewEditableFields(
 
 		if (state.instance) {
 			const value = getValueAtPath(currentParams.previewProps, state.path);
-			restoreElementContent(state.element, value, state.kind);
+			const defaultValue = element.getAttribute('data-builder-placeholder') || '';
+			restoreElementContent(state.element, value, state.kind, defaultValue);
 		}
 
 		delete state.element.dataset.builderFieldEnhanced;
@@ -557,15 +598,18 @@ function inferMultiline(element: HTMLElement): boolean {
 function restoreElementContent(
 	element: HTMLElement,
 	value: unknown,
-	kind: Exclude<FieldKind, 'pending'>
+	kind: Exclude<FieldKind, 'pending'>,
+	defaultValue = ''
 ): void {
 	if (kind === 'richtext') {
-		element.innerHTML = isRichTextValue(value) ? value.html : asPlainText(value);
+		const html = isRichTextValue(value) ? value.html : asPlainText(value);
+		element.innerHTML = html.trim() ? html : (defaultValue ? `<p>${defaultValue}</p>` : '');
 		return;
 	}
 
 	if (kind === 'text') {
-		element.textContent = asPlainText(value);
+		const text = asPlainText(value);
+		element.textContent = text.trim() ? text : defaultValue;
 		return;
 	}
 
@@ -649,4 +693,46 @@ function getClickCaretOffset(element: HTMLElement, event: Event): number | null 
 	preRange.selectNodeContents(element);
 	preRange.setEnd(range.startContainer, range.startOffset);
 	return preRange.toString().length;
+}
+
+function getFieldByRawPath(fields: BuilderFields, rawPath: string): BuilderField | null {
+	const segments = rawPath.split('.');
+	let currentFields: BuilderFields | undefined = fields;
+	let currentField: BuilderField | null = null;
+
+	for (const segment of segments) {
+		if (!currentFields) {
+			return null;
+		}
+
+		const isArray = segment.endsWith('[]');
+		const name = isArray ? segment.slice(0, -2) : segment;
+		const field: BuilderField | undefined = currentFields[name];
+
+		if (!field) {
+			return null;
+		}
+
+		currentField = field;
+
+		if (isArray && field.item?.fields) {
+			currentFields = field.item.fields;
+		} else if (field.fields) {
+			currentFields = field.fields;
+		} else {
+			currentFields = undefined;
+		}
+	}
+
+	return currentField;
+}
+
+function resolveDefaultText(defaultValue: unknown): string {
+	if (isRichTextValue(defaultValue)) {
+		return defaultValue.html.trim();
+	}
+	if (typeof defaultValue === 'string') {
+		return defaultValue.trim();
+	}
+	return '';
 }
