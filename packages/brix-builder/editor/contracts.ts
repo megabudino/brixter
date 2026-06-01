@@ -62,4 +62,5 @@ export interface BuilderAppPreviewProps {
 		direction: -1 | 1
 	) => void;
 	onOpenReorderModal: (blockId: string, collectionPath: string) => void;
+	onOpenInserterModal: (blockId: string, placement: 'before' | 'after') => void;
 }
