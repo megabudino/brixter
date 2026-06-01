@@ -5,6 +5,7 @@
 		blocks,
 		activeBlockId,
 		onSelectBlock,
+		onDeselectBlock,
 		onMoveBlock,
 		onRemoveBlock,
 		onDragStart,
@@ -14,6 +15,7 @@
 		blocks: BuilderBlock[];
 		activeBlockId: string | null;
 		onSelectBlock: (blockId: string) => void;
+		onDeselectBlock: () => void;
 		onMoveBlock: (blockId: string, direction: -1 | 1) => void;
 		onRemoveBlock: (blockId: string) => void;
 		onDragStart: (blockId: string) => void;
@@ -93,7 +95,7 @@
 	}
 </script>
 
-<aside class="flex h-full min-h-0 w-[280px] shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]" aria-label="Page flow">
+<aside class="flex h-full min-h-0 w-[280px] shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]" aria-label="Page flow" onclick={(event) => { if (!(event.target as Element).closest('[data-page-flow-block]')) onDeselectBlock(); }}>
 	<div class="min-h-0 flex-1 overflow-y-auto py-2">
 		{#if blocks.length === 0}
 			<p class="text-muted mx-3 border border-dashed border-gray-300 px-4 py-6 text-sm dark:border-gray-600">
@@ -105,6 +107,7 @@
 			{#each blocks as block (block.id)}
 				{@const dropPlacement = getDropPlacement(block.id)}
 				<div
+					data-page-flow-block
 					class={activeBlockId === block.id
 						? 'relative flex items-center gap-2 border-l-4 border-[#2563EB] bg-blue-50 px-3 py-2 text-gray-900 dark:border-[#3B82F6] dark:bg-[#1e293b] dark:text-gray-100'
 						: 'relative flex items-center gap-2 border-l-4 border-transparent px-3 py-2 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700'}

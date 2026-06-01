@@ -21,6 +21,7 @@
 		onPreviewClick,
 		onPreviewKeydown,
 		onSelectBlock,
+		onDeselectBlock,
 		onAddBlockBefore,
 		onAddBlockAfter,
 		onAddItem,
@@ -137,7 +138,11 @@
 	}
 </script>
 
-<div>
+<div onclick={(event) => {
+	if (!(event.target as Element).closest('[data-builder-preview-block]')) {
+		onDeselectBlock();
+	}
+}}>
 	{#each blocks as block, blockIndex (block.id)}
 		{@const definition = getBuilderDefinition(block.type, definitions)}
 		{#if !propsErrors[block.id]}
