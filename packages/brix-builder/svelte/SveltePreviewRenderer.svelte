@@ -124,7 +124,7 @@
 
 	function getEditingContext(
 		blockId: string,
-		liveProps: Record<string, unknown>,
+		rawProps: Record<string, unknown>,
 		hasPreviewBindings: boolean
 	) {
 		return {
@@ -133,7 +133,7 @@
 			focusPath: activeFieldEdit?.blockId === blockId ? activeFieldEdit.path : null,
 			caretOffset:
 				activeFieldEdit?.blockId === blockId ? (activeFieldEdit.caretOffset ?? null) : null,
-			previewProps: liveProps
+			previewProps: rawProps
 		};
 	}
 </script>
@@ -158,7 +158,7 @@
 					use:previewContainer={{
 						block,
 						definition,
-						editing: getEditingContext(block.id, liveProps, hasPreviewBindings)
+						editing: getEditingContext(block.id, block.props, hasPreviewBindings)
 					}}
 					class={activeBlockId === block.id
 						? 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition'
@@ -277,7 +277,7 @@
 					use:previewContainer={{
 						block,
 						definition,
-						editing: getEditingContext(block.id, liveProps, hasPreviewBindings)
+						editing: getEditingContext(block.id, block.props, hasPreviewBindings)
 					}}
 					class={activeBlockId === block.id
 						? 'group relative scroll-mt-0.5 scroll-mb-0.5'

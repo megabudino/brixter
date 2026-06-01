@@ -3,6 +3,7 @@
 
 	let {
 		value,
+		placeholder = '',
 		multiline,
 		textStyle,
 		autofocus = false,
@@ -12,6 +13,7 @@
 		onBlur
 	}: {
 		value: string;
+		placeholder?: string;
 		multiline: boolean;
 		textStyle: string;
 		autofocus?: boolean;
@@ -23,6 +25,10 @@
 
 	let element = $state<HTMLInputElement | HTMLTextAreaElement | null>(null);
 	let draft = $state(value);
+
+	$effect(() => {
+		draft = value;
+	});
 
 	onMount(() => {
 		if (autofocus) {
@@ -81,6 +87,7 @@
 	<textarea
 		bind:this={element}
 		value={draft}
+		placeholder={placeholder}
 		class="builder-preview-text-editor resize-none"
 		style={textStyle}
 		oninput={handleInput}
@@ -90,6 +97,7 @@
 		bind:this={element}
 		type="text"
 		value={draft}
+		placeholder={placeholder}
 		class="builder-preview-text-editor"
 		style={textStyle}
 		oninput={handleInput}

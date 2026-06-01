@@ -3,6 +3,7 @@ import {
 	addCollectionItem,
 	createBlock,
 	createBuilderDocument,
+	createBuilderFallbackProps,
 	getCollectionItems,
 	getCollectionItemSummary,
 	getDefinition,
@@ -256,5 +257,29 @@ components:
 		expect(output).toContain('type: Hero');
 		expect(output).toContain('headline: Titolo YAML');
 		expect(output).not.toContain('type: Markdown');
+	});
+
+	it('preserves empty strings in raw props during update and serialization', () => {
+		const block = createBlock('Hero', pageBriks);
+		const updated = updatePropsAtPath(block.props, 'headline', '');
+		expect(updated.headline).toBe('');
+
+		const output = serializeToBrixYaml(
+			{
+				title: 'Home',
+				description: 'Landing page',
+				layout: 'marketing',
+				metadata: {},
+				blocks: [
+					{
+						id: '1',
+						type: 'Hero',
+						props: updated
+					}
+				]
+			},
+			pageBriks
+		);
+		expect(output).toContain('headline: ""');
 	});
 });

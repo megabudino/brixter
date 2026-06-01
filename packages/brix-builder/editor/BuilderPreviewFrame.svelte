@@ -213,7 +213,47 @@ body.dark {
 }
 
 .ProseMirror {
+	position: relative;
 	white-space: inherit;
+}
+
+.ProseMirror.is-editor-empty::before {
+	content: attr(data-placeholder);
+	color: #9ca3af;
+	opacity: 0.6;
+	pointer-events: none;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	text-align: inherit;
+}
+
+.builder-preview-text-editor::placeholder {
+	color: #9ca3af;
+	opacity: 0.6;
+}
+
+[data-builder-field]:empty::before,
+[data-builder-field] > p:only-child:empty::before,
+[data-builder-field] > p:only-child:has(> br:only-child)::before {
+	content: attr(data-builder-placeholder);
+	color: #9ca3af;
+	opacity: 1;
+	pointer-events: none;
+}
+
+[data-builder-field] > p:only-child:has(> br:only-child) > br {
+	display: none;
+}
+
+[data-builder-placeholder-active]:not([data-builder-field-enhanced="true"]) {
+	opacity: 0.6;
+}
+
+[data-builder-placeholder-active]:not([data-builder-field-enhanced="true"]),
+[data-builder-placeholder-active]:not([data-builder-field-enhanced="true"]) * {
+	color: #9ca3af !important;
 }
 
 body[data-builder-preview-page-overflow='true']::before {
