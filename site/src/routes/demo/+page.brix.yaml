@@ -1,30 +1,74 @@
-title: "Fresh Sicilian Mandarins"
-description: "Order fresh, sweet, hand-picked mandarins direct from the farm."
-
+title: Fresh Sicilian Mandarins
+description: Order fresh, sweet, hand-picked mandarins direct from the farm.
 components:
   - type: MandarinHero
     props:
-      eyebrow: "Premium Citrus Harvest"
-      headline: "Sun-Kissed Premium Mandarins Delivered Fresh"
-      subtitle: "Hand-picked at peak ripeness from Sicilian groves and shipped directly to your door in 48 hours. Experience the real, vibrant taste of natural citrus."
-      cta:
-        href: "/shop"
-        label: "Order a Fresh Box Today"
-        note: "100% money-back freshness guarantee"
-      image: "/fresh-mandarins.png"
+      eyebrow: Premium Citrus Harvest
+      headline: Sun-Kissed Premium Mandarins Delivered Fresh
+      subtitle: Hand-picked at peak ripeness from Sicilian groves and shipped directly
+        to your door in 48 hours. Experience the real, vibrant taste of natural
+        citrus.
       benefits:
-        - text: "100% Organic & Pesticide-Free"
-        - text: "Picked & shipped same day"
-        - text: "Carbon-neutral farm-to-table delivery"
-
+        - text: 100% Organic & Pesticide-Free
+        - text: Picked & shipped same day
+        - text: Carbon-neutral farm-to-table delivery
+      cta:
+        label: Order a Fresh Box Today
+        note: 100% money-back freshness guarantee
+        href: /shop
+      image: /fresh-mandarins.png
+  - type: CoreOffer
+    props:
+      eyebrow: Launch smarter
+      headline: Build better pages faster
+      description: A focused preview with realistic content so you can recognize this brik.
+      cta:
+        label: Get started
+        href: /admin
+      features:
+        - title: Build better pages faster
+          text: A focused preview with realistic content so you can recognize this brik.
+        - title: Build better pages faster
+          text: A focused preview with realistic content so you can recognize this brik.
+        - title: Build better pages faster
+          text: A focused preview with realistic content so you can recognize this brik.
+  - type: Reviews
+    props:
+      eyebrow: Launch smarter
+      headline: Build better pages faster
+      reviews:
+        - quote: This section gives the page structure immediately.
+          author: Alex Morgan
+          role: Product lead
+        - quote: This section gives the page structure immediately.
+          author: Alex Morgan
+          role: Product lead
+        - quote: This section gives the page structure immediately.
+          author: Alex Morgan
+          role: Product lead
+  - type: Team
+    props:
+      eyebrow: Launch smarter
+      headline: Build better pages faster
+      description: A focused preview with realistic content so you can recognize this brik.
+      members:
+        - name: Alex Morgan
+          role: Product lead
+          bio: Bio
+        - name: Alex Morgan
+          role: Product lead
+          bio: Bio
+        - name: Alex Morgan
+          role: Product lead
+          bio: Bio
   - type: Footer
     props:
-      brand: "Mandarins Co."
-      claim: "Organically grown, hand-harvested, shipped fresh daily."
+      brand: Mandarins Co.
+      claim: Organically grown, hand-harvested, shipped fresh daily.
       links:
-        - label: "Home"
-          href: "/"
-        - label: "Shop"
-          href: "/shop"
-        - label: "Admin"
-          href: "/admin"
+        - label: Home
+          href: /
+        - label: Shop
+          href: /shop
+        - label: Admin
+          href: /admin
