@@ -5,7 +5,6 @@
 	let { data, form }: { data: any; form: any } = $props();
 
 	let extensions = $state(data.config.allowedExtensions.join(', '));
-	let mediaPath = $state(data.config.mediaPath ?? '');
 	let submitting = $state(false);
 </script>
 
@@ -35,22 +34,15 @@
 				</code>
 			</section>
 
-			<!-- Media path -->
+			<!-- Media directory -->
 			<section>
 				<h2 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Media directory</h2>
-				<p class="text-muted mb-4 text-sm">
-					Directory that maps to your site root (e.g. <code
-						class="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">public</code
-					>
-					or <code class="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-gray-800">static</code>).
-					Images inside it will use root-relative URLs.
+				<p class="text-muted mb-3 text-sm">
+					Images inside this directory will use root-relative URLs.
 				</p>
-				<Input
-					name="media_path"
-					value={mediaPath}
-					placeholder="e.g. public or static"
-					oninput={(e: Event) => (mediaPath = (e.target as HTMLInputElement).value)}
-				/>
+				<code class="block rounded bg-gray-100 px-3 py-2 text-sm dark:bg-gray-800">
+					{data.mediaDir}
+				</code>
 			</section>
 
 			<!-- Extensions -->

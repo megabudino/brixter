@@ -155,8 +155,7 @@
 		hasPreviewBindings: boolean
 	) {
 		return {
-			active:
-				hasPreviewBindings && (activeBlockId === blockId || activeFieldEdit !== null),
+			active: hasPreviewBindings,
 			focusPath: activeFieldEdit?.blockId === blockId ? activeFieldEdit.path : null,
 			caretOffset:
 				activeFieldEdit?.blockId === blockId ? (activeFieldEdit.caretOffset ?? null) : null,

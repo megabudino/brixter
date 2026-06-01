@@ -103,7 +103,8 @@ async function loadSettings({ locals }: RequestEvent) {
 	return {
 		repo: { name: repo.name, fullName: repo.fullName },
 		config,
-		routesRoot: coreConfig.routesRoot
+		routesRoot: coreConfig.routesRoot,
+		mediaDir: coreConfig.mediaDir
 	};
 }
 
@@ -309,7 +310,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	if (!locals.user) throw redirect(302, '/admin/login');
 	if (match.branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
 
-	const { mediaPath } = getRepoConfig();
+	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
 	const repo = getRepo();
 	const defaultBranch = repo.defaultBranch;
@@ -341,7 +342,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		throw error(e.response?.status ?? 500, e.response?.data?.message ?? 'Failed to load contents');
 	}
 
-	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath, routesRoot };
+	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath: mediaDir, routesRoot };
 
 	if (routeRequest.kind === 'page') {
 		const currentNode = findRouteNode(routeTree, currentRouteDir);
@@ -350,7 +351,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 		let filePayload: Record<string, unknown>;
 		try {
-			filePayload = await loadBranchFile(match.branch, pageFile.filePath, mediaPath);
+			filePayload = await loadBranchFile(match.branch, pageFile.filePath, mediaDir);
 		} catch (err: unknown) {
 			const e = err as {
 				status?: number;
@@ -524,7 +525,6 @@ async function settingsAction({ request, locals }: RequestEvent) {
 
 	const formData = await request.formData();
 	const extensionsRaw = formData.get('extensions')?.toString().trim() ?? '';
-	const mediaPath = formData.get('media_path')?.toString().trim() ?? '';
 	const extensions = extensionsRaw
 		.split(',')
 		.map((e) => e.trim())
@@ -534,7 +534,8 @@ async function settingsAction({ request, locals }: RequestEvent) {
 		return fail(400, { message: 'At least one valid extension is required (e.g. .md).' });
 	}
 
-	updateRepoConfig({ allowedPaths: [], allowedExtensions: extensions, mediaPath });
+	const config = getRepoConfig();
+	updateRepoConfig({ allowedPaths: [], allowedExtensions: extensions, mediaPath: config.mediaPath });
 	return { success: true };
 }
 

@@ -1,6 +1,7 @@
 import { mount, unmount } from 'svelte';
 import PreviewTextEditor from '../editor/PreviewTextEditor.svelte';
 import RichTextEditor from '../editor/RichTextEditor.svelte';
+import PreviewImageEditor from '../editor/PreviewImageEditor.svelte';
 import type { BuilderRenderDefinition } from '../editor/contracts.js';
 import {
 	createRichTextValue,
@@ -95,7 +96,7 @@ export function attachPreviewEditableFields(
 				continue;
 			}
 
-			if (state.instance && (state.path !== focusPath || !hasEditorHost(element))) {
+			if (state.instance && state.kind !== 'image' && (state.path !== focusPath || !hasEditorHost(element))) {
 				teardownField(element);
 			}
 		}
@@ -136,14 +137,7 @@ export function attachPreviewEditableFields(
 			const kind = resolveFieldKind(element);
 			const existing = mounts.get(element);
 
-			if (kind === 'image') {
-				if (!existing) {
-					setupImageField(element, path);
-				}
-				continue;
-			}
-
-			if (path === focusPath) {
+			if (path === focusPath || kind === 'image') {
 				if (!existing?.instance || !hasEditorHost(element)) {
 					if (existing) {
 						teardownField(element);
@@ -164,6 +158,9 @@ export function attachPreviewEditableFields(
 	}
 
 	function hasEditorHost(element: HTMLElement): boolean {
+		if (resolveFieldKind(element) === 'image') {
+			return Boolean(element.nextElementSibling?.classList.contains('builder-preview-field-editor'));
+		}
 		return Boolean(element.querySelector('.builder-preview-field-editor'));
 	}
 
@@ -177,8 +174,9 @@ export function attachPreviewEditableFields(
 	}
 
 	function setupPendingField(element: HTMLElement, path: string): void {
+		const kind = resolveFieldKind(element);
 		element.dataset.builderFieldEnhanced = 'pending';
-		element.style.cursor = 'text';
+		element.style.cursor = kind === 'image' ? 'pointer' : 'text';
 
 		const handleClick = (event: Event) => {
 			event.stopPropagation();
@@ -294,21 +292,38 @@ export function attachPreviewEditableFields(
 			element.setAttribute('data-builder-placeholder-active', '');
 		}
 		element.dataset.builderFieldEnhanced = 'true';
-		element.style.cursor = 'text';
+		element.style.cursor = kind === 'image' ? 'pointer' : 'text';
 
 		const mountHost = element.ownerDocument.createElement('div');
 		mountHost.className = 'builder-preview-field-editor';
-		mountHost.style.cursor = 'text';
-		element.replaceChildren(mountHost);
+		mountHost.style.cursor = kind === 'image' ? 'default' : 'text';
+
+		if (kind === 'image') {
+			element.parentNode?.insertBefore(mountHost, element.nextSibling);
+		} else {
+			element.replaceChildren(mountHost);
+		}
 
 		const value = getValueAtPath(currentParams.previewProps, path);
 		const shouldFocus = currentParams.focusPath === path;
 		const placeholder = element.getAttribute('data-builder-placeholder') || '';
 
-
 		let instance: Record<string, unknown>;
 
-		if (kind === 'richtext') {
+		if (kind === 'image') {
+			instance = mount(PreviewImageEditor, {
+				target: mountHost,
+				props: {
+					element: element as HTMLImageElement,
+					onPick: () => currentParams.onQueueFileEdit(path),
+					onRemove: () => {
+						currentParams.onUpdateText(path, '');
+						currentParams.onCloseFieldEdit();
+					},
+					onBlur: () => currentParams.onCloseFieldEdit()
+				}
+			}) as Record<string, unknown>;
+		} else if (kind === 'richtext') {
 			const richValue = coerceRichTextValue(value, element);
 			instance = mount(RichTextEditor, {
 				target: mountHost,
@@ -441,31 +456,6 @@ export function attachPreviewEditableFields(
 		}
 	}
 
-	function setupImageField(element: HTMLElement, path: string): void {
-		element.style.cursor = 'pointer';
-		element.dataset.builderFieldEnhanced = 'true';
-
-		const handleClick = (event: Event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			currentParams.onQueueFileEdit(path);
-		};
-
-		element.addEventListener('click', handleClick);
-
-		mounts.set(element, {
-			path,
-			kind: 'image',
-			element,
-			instance: null,
-			cleanup: () => {
-				element.removeEventListener('click', handleClick);
-				element.style.removeProperty('cursor');
-				delete element.dataset.builderFieldEnhanced;
-			}
-		});
-	}
-
 	function teardownField(
 		element: HTMLElement,
 		options: { restorePending?: boolean } = {}
@@ -477,14 +467,22 @@ export function attachPreviewEditableFields(
 
 		if (state.instance) {
 			void unmount(state.instance);
+			if (state.kind === 'image') {
+				const nextSibling = state.element.nextElementSibling;
+				if (nextSibling?.classList.contains('builder-preview-field-editor')) {
+					nextSibling.remove();
+				}
+			}
 		}
 
 		state.cleanup?.();
 
 		if (state.instance) {
-			const value = getValueAtPath(currentParams.previewProps, state.path);
-			const defaultValue = element.getAttribute('data-builder-placeholder') || '';
-			restoreElementContent(state.element, value, state.kind, defaultValue);
+			if (state.kind !== 'image' && state.kind !== 'pending') {
+				const value = getValueAtPath(currentParams.previewProps, state.path);
+				const defaultValue = element.getAttribute('data-builder-placeholder') || '';
+				restoreElementContent(state.element, value, state.kind, defaultValue);
+			}
 		}
 
 		delete state.element.dataset.builderFieldEnhanced;
@@ -497,7 +495,7 @@ export function attachPreviewEditableFields(
 		const blockRoot = getBlockRoot(node);
 		const path = resolveFieldPath(element, blockRoot);
 		const focusPath = currentParams.focusPath ?? null;
-		if (!path || path === focusPath || resolveFieldKind(element) === 'image') {
+		if (!path || path === focusPath) {
 			return;
 		}
 
@@ -647,8 +645,8 @@ function captureFieldEditorStyle(element: HTMLElement): string {
 		.join(';');
 }
 
-function getClickCoords(event: Event): ClickCoords | null {
-	if (!(event instanceof MouseEvent)) {
+function getClickCoords(event?: Event): ClickCoords | null {
+	if (!event || !(event instanceof MouseEvent)) {
 		return null;
 	}
 

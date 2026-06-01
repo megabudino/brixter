@@ -31,6 +31,12 @@ export interface BrixterPluginOptions {
 	 */
 	routesRoot?: string;
 	/**
+	 * SvelteKit static directory, relative to the GitHub repo root.
+	 *
+	 * @default '<appRoot>/static'
+	 */
+	mediaDir?: string;
+	/**
 	 * Directory containing Svelte components referenced by `.brix.yaml` files.
 	 *
 	 * @default '$lib/brixter/brix'
@@ -56,6 +62,7 @@ interface BuildRepoInfo {
 	commit: string | undefined;
 	appRoot: string | undefined;
 	routesRoot: string | undefined;
+	mediaDir: string | undefined;
 }
 
 function git(cwd: string, args: string[]): string | undefined {
@@ -97,7 +104,8 @@ function readBuildRepoInfo(root: string): BuildRepoInfo {
 		defaultBranch,
 		commit: git(root, ['rev-parse', 'HEAD']),
 		appRoot,
-		routesRoot: appRoot === undefined ? undefined : routesRootForApp(appRoot)
+		routesRoot: appRoot === undefined ? undefined : routesRootForApp(appRoot),
+		mediaDir: appRoot === undefined ? undefined : mediaDirForApp(appRoot)
 	};
 }
 
@@ -120,6 +128,10 @@ function normalizeRepoPath(value: string | undefined): string | undefined {
 
 function routesRootForApp(appRoot: string): string {
 	return [appRoot, 'src/routes'].filter(Boolean).join('/');
+}
+
+function mediaDirForApp(appRoot: string): string {
+	return [appRoot, 'static'].filter(Boolean).join('/');
 }
 
 function isBrixYaml(id: string): boolean {
@@ -246,6 +258,7 @@ function setBuildEnv(build: BuildRepoInfo): void {
 	if (build.commit) process.env.BRIXTER_SOURCE_COMMIT ??= build.commit;
 	if (build.appRoot !== undefined) process.env.BRIXTER_APP_ROOT ??= build.appRoot;
 	if (build.routesRoot) process.env.BRIXTER_ROUTES_ROOT ??= build.routesRoot;
+	if (build.mediaDir) process.env.BRIXTER_MEDIA_DIR ??= build.mediaDir;
 }
 
 export function brixter(options: BrixterPluginOptions = {}): Plugin {
@@ -266,7 +279,9 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 			const appRoot = normalizeRepoPath(options.appRoot) ?? buildRepo.appRoot ?? '';
 			const routesRoot =
 				normalizeRepoPath(options.routesRoot) ?? buildRepo.routesRoot ?? routesRootForApp(appRoot);
-			const build = { ...buildRepo, appRoot, routesRoot };
+			const mediaDir =
+				normalizeRepoPath(options.mediaDir) ?? buildRepo.mediaDir ?? mediaDirForApp(appRoot);
+			const build = { ...buildRepo, appRoot, routesRoot, mediaDir };
 			const loadedEnv = loadEnv(env.mode, root, '');
 			assertConfiguredRepoMatchesBuild(configuredRepo(loadedEnv), build);
 			setBuildEnv(build);
@@ -279,7 +294,8 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 					__BRIXTER_BUILD_DEFAULT_BRANCH__: defineValue(build.defaultBranch),
 					__BRIXTER_BUILD_COMMIT__: defineValue(build.commit),
 					__BRIXTER_BUILD_APP_ROOT__: defineValue(build.appRoot),
-					__BRIXTER_BUILD_ROUTES_ROOT__: defineValue(build.routesRoot)
+					__BRIXTER_BUILD_ROUTES_ROOT__: defineValue(build.routesRoot),
+					__BRIXTER_BUILD_MEDIA_DIR__: defineValue(build.mediaDir)
 				},
 				ssr: {
 					noExternal: ['brixter', '@brixter/brix-builder', 'lucide-svelte']

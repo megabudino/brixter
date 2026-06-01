@@ -27,6 +27,8 @@ export interface BrixterConfig {
 	appRoot?: string;
 	/** SvelteKit routes directory, relative to the GitHub repo root. Env: `BRIXTER_ROUTES_ROOT`. */
 	routesRoot?: string;
+	/** SvelteKit static directory, relative to the GitHub repo root. Env: `BRIXTER_MEDIA_DIR`. */
+	mediaDir?: string;
 	/** GitHub App credentials and target repo. */
 	github?: Partial<BrixterGitHubConfig>;
 }
@@ -38,6 +40,7 @@ export interface ResolvedBrixterConfig {
 	adminPath: string;
 	appRoot: string;
 	routesRoot: string;
+	mediaDir: string;
 	github: BrixterGitHubConfig;
 }
 
@@ -51,6 +54,7 @@ interface BuildRepoInfo {
 	commit: string | undefined;
 	appRoot: string | undefined;
 	routesRoot: string | undefined;
+	mediaDir: string | undefined;
 }
 
 declare const __BRIXTER_BUILD_REPO__: string | null | undefined;
@@ -60,6 +64,7 @@ declare const __BRIXTER_BUILD_DEFAULT_BRANCH__: string | null | undefined;
 declare const __BRIXTER_BUILD_COMMIT__: string | null | undefined;
 declare const __BRIXTER_BUILD_APP_ROOT__: string | null | undefined;
 declare const __BRIXTER_BUILD_ROUTES_ROOT__: string | null | undefined;
+declare const __BRIXTER_BUILD_MEDIA_DIR__: string | null | undefined;
 
 let overrides: BrixterConfig = {};
 let cachedCore: ResolvedBrixterCoreConfig | null = null;
@@ -145,6 +150,10 @@ function routesRootForApp(appRoot: string): string {
 	return [appRoot, 'src/routes'].filter(Boolean).join('/');
 }
 
+function mediaDirForApp(appRoot: string): string {
+	return [appRoot, 'static'].filter(Boolean).join('/');
+}
+
 function getBuildRepoInfo(): BuildRepoInfo {
 	const repo =
 		present(typeof __BRIXTER_BUILD_REPO__ === 'string' ? __BRIXTER_BUILD_REPO__ : undefined) ??
@@ -180,7 +189,13 @@ function getBuildRepoInfo(): BuildRepoInfo {
 				typeof __BRIXTER_BUILD_ROUTES_ROOT__ === 'string'
 					? __BRIXTER_BUILD_ROUTES_ROOT__
 					: undefined
-			) ?? normalizeRepoPath(envValue('BRIXTER_ROUTES_ROOT'))
+			) ?? normalizeRepoPath(envValue('BRIXTER_ROUTES_ROOT')),
+		mediaDir:
+			normalizeRepoPath(
+				typeof __BRIXTER_BUILD_MEDIA_DIR__ === 'string'
+					? __BRIXTER_BUILD_MEDIA_DIR__
+					: undefined
+			) ?? normalizeRepoPath(envValue('BRIXTER_MEDIA_DIR'))
 	};
 }
 
@@ -206,6 +221,8 @@ export function getCoreConfig(): ResolvedBrixterCoreConfig {
 	const appRoot = normalizeRepoPath(overrides.appRoot) ?? build.appRoot ?? '';
 	const routesRoot =
 		normalizeRepoPath(overrides.routesRoot) ?? build.routesRoot ?? routesRootForApp(appRoot);
+	const mediaDir =
+		normalizeRepoPath(overrides.mediaDir) ?? build.mediaDir ?? mediaDirForApp(appRoot);
 
 	cachedCore = {
 		databaseUrl: overrides.databaseUrl ?? present(envValue('DATABASE_URL')) ?? 'data/brixter.db',
@@ -216,7 +233,8 @@ export function getCoreConfig(): ResolvedBrixterCoreConfig {
 		),
 		adminPath: overrides.adminPath ?? present(envValue('BRIXTER_ADMIN_PATH')) ?? '/admin',
 		appRoot,
-		routesRoot
+		routesRoot,
+		mediaDir
 	};
 	return cachedCore;
 }

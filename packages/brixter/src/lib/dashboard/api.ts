@@ -1,6 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { getOctokit, getRepo } from '../server/github.ts';
 import { getRepoConfig } from '../server/repo-config.ts';
+import { getConfig } from '../server/config.ts';
 import { isWithinRepoRoot, normalizeRepoPath } from '../server/sveltekit-routes.ts';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
@@ -17,8 +18,8 @@ async function mediaPicker({ locals, url }: RequestEvent) {
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
 
 	const branch = url.searchParams.get('branch');
-	const { mediaPath } = getRepoConfig();
-	const mediaRoot = normalizeRepoPath(mediaPath);
+	const { mediaDir } = getConfig();
+	const mediaRoot = normalizeRepoPath(mediaDir);
 	const path = normalizeRepoPath(url.searchParams.get('path') ?? mediaRoot);
 	if (!branch) return json({ error: 'Missing required parameters' }, { status: 400 });
 

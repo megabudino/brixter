@@ -247,12 +247,12 @@ body.dark {
 	display: none;
 }
 
-[data-builder-placeholder-active]:not([data-builder-field-enhanced="true"]) {
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced="true"]) {
 	opacity: 0.6;
 }
 
-[data-builder-placeholder-active]:not([data-builder-field-enhanced="true"]),
-[data-builder-placeholder-active]:not([data-builder-field-enhanced="true"]) * {
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced="true"]),
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced="true"]) * {
 	color: #9ca3af !important;
 }
 
