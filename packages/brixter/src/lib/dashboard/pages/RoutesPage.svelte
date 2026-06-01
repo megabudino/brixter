@@ -11,7 +11,12 @@
 		AlertTriangle,
 		X,
 		ArrowLeft,
-		Command
+		Command,
+		Monitor,
+		Tablet,
+		Smartphone,
+		Eye,
+		Edit2
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
 	import { BrixEditor, createBrixDefinitions, SHORTCUTS } from '@brixter/brix-builder';
@@ -50,6 +55,8 @@
 	let inspectorOpen = $state(true);
 	let builderActiveBlockId = $state<string | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
+	let builderPreviewMode = $state(false);
+	let builderViewportSize = $state<'desktop' | 'tablet' | 'mobile'>('desktop');
 
 	const existingDirNames = $derived(
 		new Set<string>((data.childDirNames ?? []).map((name: string) => name.toLowerCase()))
@@ -462,74 +469,139 @@
 				>
 					<ArrowLeft size={20} />
 				</button>
-				<button
-					type="button"
-					class={pageFlowOpen
-						? 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
-						: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
-					aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
-					aria-pressed={pageFlowOpen}
-					onclick={() => (pageFlowOpen = !pageFlowOpen)}
-				>
-					<svg class="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
-						<path
-							d="M3 3.5h10v1.25H3V3.5Zm0 3.875h10v1.25H3v-1.25Zm0 3.875h10v1.25H3v-1.25Z"
-							fill="currentColor"
-						/>
-					</svg>
-					<span class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 whitespace-nowrap border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-						<span class="font-semibold">Page flow</span>
-						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-							<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-								{#if pageFlowShortcutModifier === 'command'}
-									<Command size={12} strokeWidth={2} />
-								{:else}
-									Ctrl
-								{/if}
-							</span>
-							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-								{SHORTCUTS.togglePageFlow.key}
+				{#if !builderPreviewMode}
+					<button
+						type="button"
+						class={pageFlowOpen
+							? 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
+							: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+						aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
+						aria-pressed={pageFlowOpen}
+						onclick={() => (pageFlowOpen = !pageFlowOpen)}
+					>
+						<svg class="h-4 w-4" viewBox="0 0 16 16" aria-hidden="true">
+							<path
+								d="M3 3.5h10v1.25H3V3.5Zm0 3.875h10v1.25H3v-1.25Zm0 3.875h10v1.25H3v-1.25Z"
+								fill="currentColor"
+							/>
+						</svg>
+						<span class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 whitespace-nowrap border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+							<span class="font-semibold">Page flow</span>
+							<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+								<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+									{#if pageFlowShortcutModifier === 'command'}
+										<Command size={12} strokeWidth={2} />
+									{:else}
+										Ctrl
+									{/if}
+								</span>
+								<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+								<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+									{SHORTCUTS.togglePageFlow.key}
+								</span>
 							</span>
 						</span>
-					</span>
+					</button>
+				{/if}
+			</div>
+
+			<!-- Center Device Selection -->
+			<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 z-10 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+				<button
+					type="button"
+					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize === 'desktop'
+						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+					onclick={() => builderViewportSize = 'desktop'}
+					title="Desktop (100%)"
+				>
+					<Monitor size={18} />
+				</button>
+				<button
+					type="button"
+					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize === 'tablet'
+						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+					onclick={() => builderViewportSize = 'tablet'}
+					title="Tablet (768px)"
+				>
+					<svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="18" x2="18.01" y1="12" y2="12"/></svg>
+				</button>
+				<button
+					type="button"
+					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize === 'mobile'
+						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+					onclick={() => builderViewportSize = 'mobile'}
+					title="Mobile (375px)"
+				>
+					<Smartphone size={18} />
 				</button>
 			</div>
 			<div class="flex items-center gap-2">
-				<button
-					type="button"
-					class={inspectorOpen
-						? 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
-						: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
-					aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
-					aria-pressed={inspectorOpen}
-					onclick={() => (inspectorOpen = !inspectorOpen)}
-				>
-					<svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-						<rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-						<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
-					</svg>
-					<span
-						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+				<!-- Mode Selector -->
+				<div class="inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+					<button
+						type="button"
+						class="inline-flex h-9 cursor-pointer items-center gap-2 px-3 text-sm font-medium transition-all duration-150 {!builderPreviewMode
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						onclick={() => builderPreviewMode = false}
 					>
-						<span class="font-semibold">Inspector</span>
-						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-							<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-								{#if pageFlowShortcutModifier === 'command'}
-									<Command size={12} strokeWidth={2} />
-								{:else}
-									Ctrl
-								{/if}
-							</span>
-							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Shift</span>
-							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-								{SHORTCUTS.toggleInspector.key}
+						<Edit2 size={16} />
+						<span>Editor</span>
+					</button>
+					<button
+						type="button"
+						class="inline-flex h-9 cursor-pointer items-center gap-2 px-3 text-sm font-medium transition-all duration-150 {builderPreviewMode
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						onclick={() => {
+							builderPreviewMode = true;
+							builderActiveBlockId = null;
+						}}
+					>
+						<Eye size={16} />
+						<span>Anteprima</span>
+					</button>
+				</div>
+
+				{#if !builderPreviewMode}
+					<button
+						type="button"
+						class={inspectorOpen
+							? 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
+							: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+						aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
+						aria-pressed={inspectorOpen}
+						onclick={() => (inspectorOpen = !inspectorOpen)}
+					>
+						<svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+							<rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+							<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
+						</svg>
+						<span
+							class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						>
+							<span class="font-semibold">Inspector</span>
+							<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+								<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+									{#if pageFlowShortcutModifier === 'command'}
+										<Command size={12} strokeWidth={2} />
+									{:else}
+										Ctrl
+									{/if}
+								</span>
+								<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+								<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Shift</span>
+								<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+								<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+									{SHORTCUTS.toggleInspector.key}
+								</span>
 							</span>
 						</span>
-					</span>
-				</button>
+					</button>
+				{/if}
 				<form
 					method="post"
 					action="?/save"
@@ -573,6 +645,8 @@
 					bind:inspectorOpen
 					bind:activeBlockId={builderActiveBlockId}
 					initialBrixYaml={data.file.brixYaml}
+					bind:previewMode={builderPreviewMode}
+					bind:viewportSize={builderViewportSize}
 					onBrixYamlChange={(value) => {
 						if (!brixYamlHydrated) {
 							initialBrixYaml = value;
