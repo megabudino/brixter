@@ -48,6 +48,7 @@
 	} from './contracts.js';
 	import BuilderInspector from './BuilderInspector.svelte';
 	import BuilderPreviewFrame from './BuilderPreviewFrame.svelte';
+	import ComponentPreviewThumbnail from './ComponentPreviewThumbnail.svelte';
 	import PageFlowSidebar from './PageFlowSidebar.svelte';
 
 	let {
@@ -71,6 +72,7 @@
 	let previewCollectionOverlays = $state<Record<string, PreviewCollectionOverlay[]>>({});
 	let activeBlockId = $state<string | null>(null);
 	let activeFieldEdit = $state<PreviewFieldEdit | null>(null);
+	let inserterModal = $state<{ blockId: string; placement: 'before' | 'after' } | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	const previewBlockElements = new Map<string, HTMLElement>();
 
@@ -209,6 +211,10 @@
 	}
 
 	function handleWindowKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape' && inserterModal) {
+			closeInserterModal();
+			return;
+		}
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
 			event.preventDefault();
 			togglePageFlow();
@@ -391,6 +397,24 @@
 	function closeReorderModal(): void {
 		if (!controller) return;
 		closeReorderModalInState(controller);
+	}
+
+	function openInserterModal(blockId: string, placement: 'before' | 'after'): void {
+		inserterModal = { blockId, placement };
+	}
+
+	function closeInserterModal(): void {
+		inserterModal = null;
+	}
+
+	function insertFromModal(type: string): void {
+		if (!inserterModal) return;
+		if (inserterModal.placement === 'before') {
+			addBlockBefore(inserterModal.blockId, type);
+		} else {
+			addBlockAfter(inserterModal.blockId, type);
+		}
+		inserterModal = null;
 	}
 
 	function closeFieldEdit(): void {
@@ -620,7 +644,8 @@
 		onAddItem: addItem,
 		onRemoveItem: removeItem,
 		onMoveItem: moveItem,
-		onOpenReorderModal: openReorderModal
+		onOpenReorderModal: openReorderModal,
+		onOpenInserterModal: openInserterModal
 	});
 </script>
 
@@ -759,6 +784,70 @@
 		/>
 	</div>
 </div>
+
+{#if inserterModal}
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-6">
+		<button
+			type="button"
+			class="absolute inset-0 bg-black/45"
+			aria-label="Chiudi selezione componente"
+			onclick={closeInserterModal}
+		></button>
+		<div
+			class="relative flex max-h-[min(760px,calc(100vh-3rem))] w-full max-w-5xl flex-col border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-[#111827]"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Scegli componente da aggiungere"
+			tabindex="-1"
+			onclick={(event) => event.stopPropagation()}
+			onkeydown={(event) => {
+				if (event.key === 'Escape') {
+					closeInserterModal();
+				}
+			}}
+		>
+			<div
+				class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 p-5 dark:border-gray-700"
+			>
+				<div>
+					<h2 class="text-heading text-lg font-semibold">Aggiungi componente</h2>
+					<p class="text-muted mt-1 text-sm">
+						Scegli il brik da inserire {inserterModal.placement === 'before' ? 'prima' : 'dopo'} questa
+						sezione.
+					</p>
+				</div>
+				<button
+					type="button"
+					class="flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:text-gray-200 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6]"
+					aria-label="Chiudi"
+					onclick={closeInserterModal}
+				>
+					×
+				</button>
+			</div>
+
+			<div class="min-h-0 flex-1 overflow-y-auto p-5">
+				<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+					{#each definitions as definition (definition.type)}
+						<button
+							type="button"
+							class="group overflow-hidden border border-gray-200 bg-white text-left transition-colors hover:border-[#2563EB] hover:bg-blue-50/50 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/30 focus:outline-none dark:border-gray-700 dark:bg-[#1f2937] dark:hover:border-[#3B82F6] dark:hover:bg-[#1e293b] dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]/30"
+							onclick={() => insertFromModal(definition.type)}
+						>
+							<ComponentPreviewThumbnail {definition} />
+							<div class="border-t border-gray-200 p-4 dark:border-gray-700">
+								<p class="text-heading text-sm font-semibold">{definition.type}</p>
+								<p class="text-muted mt-1 line-clamp-2 text-xs leading-5">
+									{definition.description}
+								</p>
+							</div>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {#if activeReorderContext}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-6">

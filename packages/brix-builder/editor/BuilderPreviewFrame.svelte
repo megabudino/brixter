@@ -26,6 +26,7 @@
 		onRemoveItem,
 		onMoveItem,
 		onOpenReorderModal,
+		onOpenInserterModal,
 		onKeydown
 	}: BuilderAppPreviewProps & {
 		definitions: BrikDefinition[];
@@ -60,6 +61,7 @@
 		rendererProps.onRemoveItem = onRemoveItem;
 		rendererProps.onMoveItem = onMoveItem;
 		rendererProps.onOpenReorderModal = onOpenReorderModal;
+		rendererProps.onOpenInserterModal = onOpenInserterModal;
 	}
 
 	function previewFrame(node: HTMLIFrameElement): { destroy: () => void } {

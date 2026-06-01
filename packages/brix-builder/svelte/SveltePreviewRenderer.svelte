@@ -26,10 +26,10 @@
 		onAddItem,
 		onRemoveItem,
 		onMoveItem,
-		onOpenReorderModal
+		onOpenReorderModal,
+		onOpenInserterModal
 	}: BuilderAppPreviewProps & { definitions: BrikDefinition[] } = $props();
 
-	let openInserterBlockId = $state<string | null>(null);
 	let hoveredCollectionItem = $state<string | null>(null);
 	let blockRenderSnapshots = $state<Record<string, Record<string, unknown>>>({});
 
@@ -68,29 +68,6 @@
 		}
 
 		return liveProps;
-	}
-
-	function getInserterKey(blockId: string, placement: 'before' | 'after'): string {
-		return `${blockId}:${placement}`;
-	}
-
-	function toggleInserter(blockId: string, placement: 'before' | 'after'): void {
-		const key = getInserterKey(blockId, placement);
-		openInserterBlockId = openInserterBlockId === key ? null : key;
-	}
-
-	function insertBlockBefore(blockId: string, type: string): void {
-		onAddBlockBefore(blockId, type);
-		openInserterBlockId = null;
-	}
-
-	function insertBlockAfter(blockId: string, type: string): void {
-		onAddBlockAfter(blockId, type);
-		openInserterBlockId = null;
-	}
-
-	function closeInserter(): void {
-		openInserterBlockId = null;
 	}
 
 	function getCollectionItemKey(blockId: string, collectionPath: string, index: number): string {
@@ -193,14 +170,10 @@
 					}}
 				>
 					<PreviewBlockInserter
-						{definitions}
 						placement="before"
 						lineVisible={activeBlockId !== block.id && blockIndex !== 0}
 						edgeInset={blockIndex === 0}
-						open={openInserterBlockId === getInserterKey(block.id, 'before')}
-						onToggle={() => toggleInserter(block.id, 'before')}
-						onClose={closeInserter}
-						onInsert={(type) => insertBlockBefore(block.id, type)}
+						onToggle={() => onOpenInserterModal(block.id, 'before')}
 					/>
 					<div data-builder-preview-content>
 						<BlockComponent {...renderProps} />
@@ -289,14 +262,10 @@
 					{/if}
 
 					<PreviewBlockInserter
-						{definitions}
 						placement="after"
 						lineVisible={activeBlockId !== block.id && blockIndex !== blocks.length - 1}
 						edgeInset={blockIndex === blocks.length - 1}
-						open={openInserterBlockId === getInserterKey(block.id, 'after')}
-						onToggle={() => toggleInserter(block.id, 'after')}
-						onClose={closeInserter}
-						onInsert={(type) => insertBlockAfter(block.id, type)}
+						onToggle={() => onOpenInserterModal(block.id, 'after')}
 					/>
 				</div>
 			{:else}
@@ -327,14 +296,10 @@
 					}}
 				>
 					<PreviewBlockInserter
-						{definitions}
 						placement="before"
 						lineVisible={activeBlockId !== block.id && blockIndex !== 0}
 						edgeInset={blockIndex === 0}
-						open={openInserterBlockId === getInserterKey(block.id, 'before')}
-						onToggle={() => toggleInserter(block.id, 'before')}
-						onClose={closeInserter}
-						onInsert={(type) => insertBlockBefore(block.id, type)}
+						onToggle={() => onOpenInserterModal(block.id, 'before')}
 					/>
 					<div data-builder-preview-content>
 						<BlockComponent {...renderProps} />
@@ -423,14 +388,10 @@
 					{/if}
 
 					<PreviewBlockInserter
-						{definitions}
 						placement="after"
 						lineVisible={activeBlockId !== block.id && blockIndex !== blocks.length - 1}
 						edgeInset={blockIndex === blocks.length - 1}
-						open={openInserterBlockId === getInserterKey(block.id, 'after')}
-						onToggle={() => toggleInserter(block.id, 'after')}
-						onClose={closeInserter}
-						onInsert={(type) => insertBlockAfter(block.id, type)}
+						onToggle={() => onOpenInserterModal(block.id, 'after')}
 					/>
 				</div>
 			{/if}
