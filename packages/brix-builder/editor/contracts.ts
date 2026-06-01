@@ -64,4 +64,6 @@ export interface BuilderAppPreviewProps {
 	onOpenReorderModal: (blockId: string, collectionPath: string) => void;
 	onOpenInserterModal: (blockId: string, placement: 'before' | 'after') => void;
 	onDeselectBlock: () => void;
+	previewMode?: boolean;
+	viewportSize?: 'desktop' | 'tablet' | 'mobile';
 }

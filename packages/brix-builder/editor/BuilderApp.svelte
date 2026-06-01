@@ -61,7 +61,9 @@
 		pageFlowOpen = $bindable(true),
 		inspectorOpen = $bindable(true),
 		activeBlockId = $bindable<string | null>(null),
-		onpickImage
+		onpickImage,
+		previewMode = $bindable(false),
+		viewportSize = $bindable<'desktop' | 'tablet' | 'mobile'>('desktop')
 	}: {
 		definitions: BuilderRenderDefinition[];
 		initialDocument?: BuilderDocument;
@@ -72,6 +74,8 @@
 		inspectorOpen?: boolean;
 		activeBlockId?: string | null;
 		onpickImage?: (callback: (imageUrl: string) => void) => void;
+		previewMode?: boolean;
+		viewportSize?: 'desktop' | 'tablet' | 'mobile';
 	} = $props();
 
 	let controller = $state<ReturnType<typeof createEditorControllerState> | null>(null);
@@ -726,7 +730,9 @@
 		onMoveItem: moveItem,
 		onOpenReorderModal: openReorderModal,
 		onOpenInserterModal: openInserterModal,
-		onDeselectBlock: deselectBlock
+		onDeselectBlock: deselectBlock,
+		previewMode,
+		viewportSize
 	});
 </script>
 
@@ -815,13 +821,71 @@
 				<p class="text-sm font-medium">Brixter Builder</p>
 			</div>
 
-			<div class="flex items-center gap-2">
-				<span class="text-muted border border-gray-200 px-2 py-1 text-xs dark:border-gray-700"
-					>Preview</span
-				>
+			<!-- Center Device Selection -->
+			<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 z-10 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
 				<button
 					type="button"
-					class="bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3B82F6]"
+					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'desktop'
+						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+					onclick={() => viewportSize = 'desktop'}
+					title="Desktop (100%)"
+				>
+					<svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+				</button>
+				<button
+					type="button"
+					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'tablet'
+						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+					onclick={() => viewportSize = 'tablet'}
+					title="Tablet (768px)"
+				>
+					<svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="18" x2="18.01" y1="12" y2="12"/></svg>
+				</button>
+				<button
+					type="button"
+					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'mobile'
+						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+					onclick={() => viewportSize = 'mobile'}
+					title="Mobile (375px)"
+				>
+					<svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+				</button>
+			</div>
+
+			<div class="flex items-center gap-2">
+				<!-- Mode Selector -->
+				<div class="inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+					<button
+						type="button"
+						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {!previewMode
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						onclick={() => previewMode = false}
+					>
+						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+						<span>Editor</span>
+					</button>
+					<button
+						type="button"
+						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {previewMode
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						onclick={() => {
+							previewMode = true;
+							deselectBlock();
+						}}
+					>
+						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/><circle cx="12" cy="12" r="3"/></svg>
+						<span>Anteprima</span>
+					</button>
+				</div>
+
+				<button
+					type="button"
+					class="bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3B82F6] cursor-pointer"
 					onclick={copyMdsvex}
 				>
 					{controller?.copied ? 'Copiato' : 'Copia export'}
@@ -878,7 +942,7 @@
 	{/if}
 
 	<div class="flex min-h-0 flex-1 overflow-hidden">
-		{#if pageFlowOpen}
+		{#if pageFlowOpen && !previewMode}
 			<div class="relative shrink-0" style="width: {pageFlowWidth}px">
 				<PageFlowSidebar
 					blocks={controller?.document.blocks ?? []}
@@ -904,7 +968,7 @@
 			</div>
 		</main>
 
-		{#if inspectorOpen}
+		{#if inspectorOpen && !previewMode}
 			<div class="relative shrink-0" style="width: {inspectorWidth}px">
 				<BuilderInspector
 					title={controller?.document.title ?? ''}

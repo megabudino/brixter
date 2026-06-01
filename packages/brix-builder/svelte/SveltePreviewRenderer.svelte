@@ -29,7 +29,8 @@
 		onRemoveItem,
 		onMoveItem,
 		onOpenReorderModal,
-		onOpenInserterModal
+		onOpenInserterModal,
+		previewMode = false
 	}: BuilderAppPreviewProps & { definitions: BrikDefinition[] } = $props();
 
 	let hoveredCollectionItem = $state<string | null>(null);
@@ -166,7 +167,7 @@
 		hasPreviewBindings: boolean
 	) {
 		return {
-			active: hasPreviewBindings,
+			active: previewMode ? false : hasPreviewBindings,
 			focusPath: activeFieldEdit?.blockId === blockId ? activeFieldEdit.path : null,
 			caretOffset:
 				activeFieldEdit?.blockId === blockId ? (activeFieldEdit.caretOffset ?? null) : null,
@@ -197,41 +198,42 @@
 						definition,
 						editing: getEditingContext(block.id, block.props, hasPreviewBindings)
 					}}
-					class={activeBlockId === block.id
-						? 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition'
-						: 'group relative cursor-pointer scroll-mt-0.5 scroll-mb-0.5 transition'}
-					role="button"
-					tabindex="0"
-					aria-label={`Modifica elementi del brik ${definition.type}`}
-					onclick={(event: MouseEvent) => onPreviewClick(block, event)}
-					onkeydown={(event: KeyboardEvent) => onPreviewKeydown(block, event)}
-					onmousemove={(event: MouseEvent) =>
+					class="group relative scroll-mt-0.5 scroll-mb-0.5 transition"
+					class:cursor-pointer={!previewMode}
+					role={previewMode ? undefined : "button"}
+					tabindex={previewMode ? undefined : 0}
+					aria-label={previewMode ? undefined : `Modifica elementi del brik ${definition.type}`}
+					onclick={previewMode ? undefined : (event: MouseEvent) => onPreviewClick(block, event)}
+					onkeydown={previewMode ? undefined : (event: KeyboardEvent) => onPreviewKeydown(block, event)}
+					onmousemove={previewMode ? undefined : (event: MouseEvent) =>
 						updateHoverStates(
 							block.id,
 							previewOverlays[block.id] ?? [],
 							previewCollectionOverlays[block.id] ?? [],
 							event
 						)}
-					onmouseleave={() => {
+					onmouseleave={previewMode ? undefined : () => {
 						hoveredCollectionItem = null;
 						hoveredCollection = null;
 					}}
 				>
-					<PreviewBlockInserter
-						placement="before"
-						edgeInset={blockIndex === 0}
-						onToggle={() => onOpenInserterModal(block.id, 'before')}
-					/>
+					{#if !previewMode}
+						<PreviewBlockInserter
+							placement="before"
+							edgeInset={blockIndex === 0}
+							onToggle={() => onOpenInserterModal(block.id, 'before')}
+						/>
+					{/if}
 					<div data-builder-preview-content>
 						<BlockComponent {...renderProps} />
 					</div>
-					{#if activeBlockId === block.id}
+					{#if activeBlockId === block.id && !previewMode}
 						<div
 							class="pointer-events-none absolute inset-px z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
 						></div>
 					{/if}
 
-					{#if definition.collections.length > 0}
+					{#if definition.collections.length > 0 && !previewMode}
 						<div class="pointer-events-none absolute inset-0">
 							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
 								<div
@@ -308,11 +310,13 @@
 						</div>
 					{/if}
 
-					<PreviewBlockInserter
-						placement="after"
-						edgeInset={blockIndex === blocks.length - 1}
-						onToggle={() => onOpenInserterModal(block.id, 'after')}
-					/>
+					{#if !previewMode}
+						<PreviewBlockInserter
+							placement="after"
+							edgeInset={blockIndex === blocks.length - 1}
+							onToggle={() => onOpenInserterModal(block.id, 'after')}
+						/>
+					{/if}
 				</div>
 			{:else}
 				<div
@@ -322,46 +326,47 @@
 						definition,
 						editing: getEditingContext(block.id, block.props, hasPreviewBindings)
 					}}
-					class={activeBlockId === block.id
-						? 'group relative scroll-mt-0.5 scroll-mb-0.5'
-						: 'group relative scroll-mt-0.5 scroll-mb-0.5 transition'}
-					role="button"
-					tabindex="0"
-					aria-label={`Seleziona brik ${definition.type}`}
-					onclick={() => onSelectBlock(block.id)}
-					onkeydown={(event: KeyboardEvent) => {
+					class="group relative scroll-mt-0.5 scroll-mb-0.5 transition"
+					class:cursor-pointer={!previewMode}
+					role={previewMode ? undefined : "button"}
+					tabindex={previewMode ? undefined : 0}
+					aria-label={previewMode ? undefined : `Seleziona brik ${definition.type}`}
+					onclick={previewMode ? undefined : () => onSelectBlock(block.id)}
+					onkeydown={previewMode ? undefined : (event: KeyboardEvent) => {
 						if (event.key === 'Enter' || event.key === ' ') {
 							event.preventDefault();
 							onSelectBlock(block.id);
 						}
 					}}
-					onmousemove={(event: MouseEvent) =>
+					onmousemove={previewMode ? undefined : (event: MouseEvent) =>
 						updateHoverStates(
 							block.id,
 							previewOverlays[block.id] ?? [],
 							previewCollectionOverlays[block.id] ?? [],
 							event
 						)}
-					onmouseleave={() => {
+					onmouseleave={previewMode ? undefined : () => {
 						hoveredCollectionItem = null;
 						hoveredCollection = null;
 					}}
 				>
-					<PreviewBlockInserter
-						placement="before"
-						edgeInset={blockIndex === 0}
-						onToggle={() => onOpenInserterModal(block.id, 'before')}
-					/>
+					{#if !previewMode}
+						<PreviewBlockInserter
+							placement="before"
+							edgeInset={blockIndex === 0}
+							onToggle={() => onOpenInserterModal(block.id, 'before')}
+						/>
+					{/if}
 					<div data-builder-preview-content>
 						<BlockComponent {...renderProps} />
 					</div>
-					{#if activeBlockId === block.id}
+					{#if activeBlockId === block.id && !previewMode}
 						<div
 							class="pointer-events-none absolute inset-px z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
 						></div>
 					{/if}
 
-					{#if definition.collections.length > 0}
+					{#if definition.collections.length > 0 && !previewMode}
 						<div class="pointer-events-none absolute inset-0">
 							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
 								<div
@@ -438,11 +443,13 @@
 						</div>
 					{/if}
 
-					<PreviewBlockInserter
-						placement="after"
-						edgeInset={blockIndex === blocks.length - 1}
-						onToggle={() => onOpenInserterModal(block.id, 'after')}
-					/>
+					{#if !previewMode}
+						<PreviewBlockInserter
+							placement="after"
+							edgeInset={blockIndex === blocks.length - 1}
+							onToggle={() => onOpenInserterModal(block.id, 'after')}
+						/>
+					{/if}
 				</div>
 			{/if}
 		{:else}

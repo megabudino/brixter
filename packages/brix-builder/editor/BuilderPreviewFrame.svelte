@@ -28,7 +28,9 @@
 		onOpenReorderModal,
 		onOpenInserterModal,
 		onDeselectBlock,
-		onKeydown
+		onKeydown,
+		previewMode = false,
+		viewportSize = 'desktop'
 	}: BuilderAppPreviewProps & {
 		definitions: BrikDefinition[];
 		onKeydown?: (event: KeyboardEvent) => void;
@@ -64,6 +66,8 @@
 		rendererProps.onOpenReorderModal = onOpenReorderModal;
 		rendererProps.onOpenInserterModal = onOpenInserterModal;
 		rendererProps.onDeselectBlock = onDeselectBlock;
+		rendererProps.previewMode = previewMode;
+		rendererProps.viewportSize = viewportSize;
 	}
 
 	function previewFrame(node: HTMLIFrameElement): { destroy: () => void } {
@@ -480,8 +484,22 @@ body[data-builder-preview-page-overflow='true']::before {
 	}
 </script>
 
-<iframe
-	use:previewFrame
-	title="Preview"
-	class="block h-full min-h-full w-full border-0 bg-white dark:bg-[#0f1623]"
-></iframe>
+<div
+	class="relative flex h-full w-full items-center justify-center p-0 transition-colors duration-300"
+	class:bg-gray-100={viewportSize !== 'desktop'}
+	class:dark:bg-gray-950={viewportSize !== 'desktop'}
+	class:p-4={viewportSize !== 'desktop'}
+>
+	<iframe
+		use:previewFrame
+		title="Preview"
+		class="block h-full border-0 bg-white dark:bg-[#0f1623] transition-all duration-300 ease-in-out"
+		class:w-full={viewportSize === 'desktop'}
+		class:shadow-2xl={viewportSize !== 'desktop'}
+		class:border={viewportSize !== 'desktop'}
+		class:border-gray-200={viewportSize !== 'desktop'}
+		class:dark:border-gray-800={viewportSize !== 'desktop'}
+		class:rounded-md={viewportSize !== 'desktop'}
+		style={viewportSize === 'tablet' ? 'width: 768px;' : viewportSize === 'mobile' ? 'width: 375px;' : ''}
+	></iframe>
+</div>
