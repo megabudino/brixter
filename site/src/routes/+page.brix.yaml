@@ -1,94 +1,104 @@
 title: Brixter CMS
 description: A visual CMS for SvelteKit, versioned in your repository.
-
 components:
   - type: Hero
     props:
       eyebrow: Brixter CMS
-      headline: "The CMS that does not take the site away from developers."
-      subtitle: "Landing pages, content, and routes editable in preview. Code stays in the repo. Marketing stops waiting."
+      headline: The CMS that does not take the site away from developers.
+      subtitle: Landing pages, content, and routes editable in preview. Code stays in
+        the repo. Marketing stops waiting.
       cta:
-        href: /admin
         label: Open the CMS
-        note: "Visual editing, clean commits, SvelteKit-first."
-
+        note: Visual editing, clean commits, SvelteKit-first.
+        href: /admin
+      screenshot: /brix-builder-demo.gif
   - type: PainPoints
     props:
       eyebrow: Why it exists
-      headline: "The hard part is not creating pages. It is keeping them alive."
+      headline: The hard part is not creating pages. It is keeping them alive.
       points:
-        - title: "Every change becomes a request"
-          text: "Headlines, sections, CTAs: small edits interrupt engineering work and slow the whole team down."
-        - title: "Traditional CMSs break the flow"
-          text: "Too much abstraction, too many templates, not enough confidence in what actually ships."
-        - title: "Content loses version control"
-          text: "When copy lives away from code, review, rollback, and history become favors instead of a system."
-
+        - title: Every change becomes a request
+          text: "Headlines, sections, CTAs: small edits interrupt engineering work and
+            slow the whole team down."
+        - title: Traditional CMSs break the flow
+          text: Too much abstraction, too many templates, not enough confidence in what
+            actually ships.
+        - title: Content loses version control
+          text: When copy lives away from code, review, rollback, and history become
+            favors instead of a system.
   - type: Bridge
     props:
-      statement: "Brixter treats pages like code, but makes them editable like content."
-      note: "No generic panels. Just Svelte briks, clear props, and an editable preview."
-
+      statement: Brixter treats pages like code, but makes them editable like content.
+      note: No generic panels. Just Svelte briks, clear props, and an editable
+        preview.
   - type: CoreOffer
     props:
       eyebrow: Core offer
-      headline: "A visual builder on top of real Svelte components."
-      description: "Define reusable sections, assemble them in .brix.yaml files, and let the dashboard handle editing, media, preview, and saving."
+      headline: A visual builder on top of real Svelte components.
+      description: Define reusable sections, assemble them in .brix.yaml files, and
+        let the dashboard handle editing, media, preview, and saving.
       cta:
-        href: /admin
         label: Try Brixter
+        href: /admin
       features:
-        - title: "Componentized briks"
-          text: "Every section is a Svelte component. Layout, style, and behavior stay readable."
-        - title: "Editable props"
-          text: "Content flows through props and fields declared in markup. Less schema, more page."
-        - title: "Commits in the repository"
-          text: "Changes become tracked files. Review, branches, and rollback stay in the natural workflow."
-
+        - title: Componentized briks
+          text: Every section is a Svelte component. Layout, style, and behavior stay
+            readable.
+        - title: Editable props
+          text: Content flows through props and fields declared in markup. Less schema,
+            more page.
+        - title: Commits in the repository
+          text: Changes become tracked files. Review, branches, and rollback stay in the
+            natural workflow.
   - type: Reviews
     props:
       eyebrow: Social proof
-      headline: "Built for teams that refuse to choose between speed and control."
+      headline: Built for teams that refuse to choose between speed and control.
       reviews:
-        - quote: "I can finally update a landing page without opening an issue for every headline."
-          author: "Marketing Lead"
-          role: "Growth team"
-        - quote: "Content stays in git. That changes everything when you need review and rollback."
-          author: "Frontend Engineer"
-          role: "SvelteKit"
-        - quote: "It is not a CMS fighting the codebase. It is a layer on top of components we already understand."
-          author: "Product Builder"
-          role: "Brixter user"
-
+        - quote: I can finally update a landing page without opening an issue for every
+            headline.
+          author: Marketing Lead
+          role: Growth team
+        - quote: Content stays in git. That changes everything when you need review and
+            rollback.
+          author: Frontend Engineer
+          role: SvelteKit
+        - quote: It is not a CMS fighting the codebase. It is a layer on top of components
+            we already understand.
+          author: Product Builder
+          role: Brixter user
   - type: Team
     props:
       eyebrow: Team
-      headline: "Built for people who live between product, code, and content."
-      description: "Brixter removes friction from marketing pages without turning your project into an opaque platform."
+      headline: Built for people who live between product, code, and content.
+      description: Brixter removes friction from marketing pages without turning your
+        project into an opaque platform.
       members:
-        - name: "Developer"
-          role: "Components and repository"
-          bio: "Defines briks, maintains the design system, and reviews changes like regular code."
-        - name: "Editor"
-          role: "Copy and content"
-          bio: "Updates text, sections, and CTAs from the preview without touching Svelte files."
-        - name: "Founder"
-          role: "Publishing speed"
-          bio: "Launches pages, tests offers, and keeps the site aligned with the real product."
-
+        - name: Developer
+          role: Components and repository
+          bio: Defines briks, maintains the design system, and reviews changes like
+            regular code.
+        - name: Editor
+          role: Copy and content
+          bio: Updates text, sections, and CTAs from the preview without touching Svelte
+            files.
+        - name: Founder
+          role: Publishing speed
+          bio: Launches pages, tests offers, and keeps the site aligned with the real
+            product.
   - type: FinalCta
     props:
-      headline: "Give the site an editor. Not another system to govern."
-      subtitle: "Start from your Svelte components and create landing pages that are editable, versioned, and ready to grow."
+      headline: Give the site an editor. Not another system to govern.
+      subtitle: Start from your Svelte components and create landing pages that are
+        editable, versioned, and ready to grow.
       cta:
-        href: /admin
         label: Enter Brixter
-        note: "Homepage generated with reusable briks."
-
+        note: Homepage generated with reusable briks.
+        href: /admin
   - type: Footer
     props:
       brand: Brixter
-      claim: "Visual CMS for SvelteKit. Versioned, composable, direct."
+      claim: Visual CMS for SvelteKit. Versioned, composable, direct.
       links:
         - label: Dashboard
           href: /admin
