@@ -1,1 +1,1 @@
-export { GET } from 'brixter/sveltekit/api';
+export { GET, POST } from 'brixter/sveltekit/api';
