@@ -540,7 +540,7 @@
 			</div>
 			<div class="flex items-center gap-2">
 				<!-- Mode Selector -->
-				<div class="inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+				<div class="group relative inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
 					<button
 						type="button"
 						class="inline-flex h-9 cursor-pointer items-center gap-2 px-3 text-sm font-medium transition-all duration-150 {!builderPreviewMode
@@ -562,8 +562,26 @@
 						}}
 					>
 						<Eye size={16} />
-						<span>Anteprima</span>
+						<span>Preview</span>
 					</button>
+					<span
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+					>
+						<span class="font-semibold">Preview</span>
+						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+							<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+								{#if pageFlowShortcutModifier === 'command'}
+									<Command size={12} strokeWidth={2} />
+								{:else}
+									Ctrl
+								{/if}
+							</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium uppercase text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+								{SHORTCUTS.togglePreview.key}
+							</span>
+						</span>
+					</span>
 				</div>
 
 				{#if !builderPreviewMode}

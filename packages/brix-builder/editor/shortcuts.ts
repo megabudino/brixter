@@ -9,6 +9,11 @@ export const SHORTCUTS = {
 		mod: true,
 		shift: true,
 	},
+	togglePreview: {
+		key: 'p',
+		mod: true,
+		shift: false,
+	},
 	closeModal: {
 		key: 'Escape',
 		mod: false,
