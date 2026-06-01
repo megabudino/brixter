@@ -2,6 +2,9 @@
 	export const brikDescription = 'Primary hero with promise, subtitle, and CTA.';
 
 	export const brikFields = {
+		screenshot: {
+			default: '/product-screenshot.png'
+		},
 		cta: {
 			fields: {
 				href: {
@@ -24,9 +27,16 @@
 		headline?: string;
 		subtitle?: string;
 		cta?: Cta;
+		screenshot?: string;
 	}
 
-	const { eyebrow, headline, subtitle, cta }: Props = $props();
+	const {
+		eyebrow,
+		headline,
+		subtitle,
+		cta,
+		screenshot = '/product-screenshot.png'
+	}: Props = $props();
 </script>
 
 <section class="bg-gray-50 px-6 py-24 dark:bg-gray-900 md:py-32">
@@ -79,4 +89,17 @@
 			</div>
 		{/if}
 	</div>
+
+	{#if screenshot}
+		<div class="mx-auto mt-16 max-w-5xl sm:mt-20">
+			<div class="rounded-xl bg-gray-900/5 p-2 ring-1 ring-inset ring-gray-900/10 dark:bg-white/5 dark:ring-white/10 lg:rounded-2xl lg:p-4">
+				<img
+					src={screenshot}
+					alt="Product screenshot"
+					class="w-full rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:ring-white/10"
+					data-builder-field="screenshot"
+				/>
+			</div>
+		</div>
+	{/if}
 </section>
