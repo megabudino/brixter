@@ -19,7 +19,8 @@
 		onAddItem,
 		onRemoveItem,
 		onMoveItem,
-		onCopyMdsvex
+		onCopyMdsvex,
+		onDeselectBlock
 	}: {
 		title: string;
 		description: string;
@@ -37,37 +38,14 @@
 		onRemoveItem: (block: BuilderBlock, path: string, index: number) => void;
 		onMoveItem: (block: BuilderBlock, path: string, index: number, direction: -1 | 1) => void;
 		onCopyMdsvex: () => void;
+		onDeselectBlock: () => void;
 	} = $props();
 
 	const inspectorEntries = $derived(Object.entries(inspectorFields));
 </script>
 
-<aside class="flex h-full min-h-0 w-[320px] shrink-0 flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]">
-	<div class="flex h-12 items-center border-b border-gray-200 px-4 dark:border-gray-700">
-		<h2 class="text-heading text-sm font-medium">Impostazioni</h2>
-	</div>
-
+<aside class="flex h-full min-h-0 w-[320px] shrink-0 flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]" onclick={(event) => { if (!(event.target as Element).closest('section')) onDeselectBlock(); }}>
 	<div class="min-h-0 flex-1 overflow-y-auto">
-		<section class="border-b border-gray-200 p-4 dark:border-gray-700">
-			<h3 class="text-muted mb-4 text-[11px] font-semibold uppercase tracking-wide">Pagina</h3>
-			<label class="block space-y-2 text-sm">
-				<span class="text-heading font-medium">Titolo pagina</span>
-				<input
-					value={title}
-					class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
-					placeholder="Titolo della pagina"
-					oninput={(event) => onTitleChange(event.currentTarget.value)} />
-			</label>
-			<label class="mt-4 block space-y-2 text-sm">
-				<span class="text-heading font-medium">Descrizione</span>
-				<input
-					value={description}
-					class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
-					placeholder="Descrizione per il frontmatter"
-					oninput={(event) => onDescriptionChange(event.currentTarget.value)} />
-			</label>
-		</section>
-
 		{#if activeBlock && activeDefinition}
 			<section class="border-b border-gray-200 p-4 dark:border-gray-700">
 				<div class="mb-4">
@@ -112,28 +90,25 @@
 				{/if}
 			</section>
 		{:else}
-			<p class="text-muted m-4 border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm dark:border-gray-600 dark:bg-gray-800">
-				Seleziona un brik dalla gerarchia o dalla preview per modificarne le impostazioni.
-			</p>
+			<section class="border-b border-gray-200 p-4 dark:border-gray-700">
+				<h3 class="text-muted mb-4 text-[11px] font-semibold uppercase tracking-wide">Page</h3>
+				<label class="block space-y-2 text-sm">
+					<span class="text-heading font-medium">Titolo pagina</span>
+					<input
+						value={title}
+						class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+						placeholder="Titolo della pagina"
+						oninput={(event) => onTitleChange(event.currentTarget.value)} />
+				</label>
+				<label class="mt-4 block space-y-2 text-sm">
+					<span class="text-heading font-medium">Descrizione</span>
+					<input
+						value={description}
+						class="w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+						placeholder="Descrizione per il frontmatter"
+						oninput={(event) => onDescriptionChange(event.currentTarget.value)} />
+				</label>
+			</section>
 		{/if}
-
-		<section class="border-b border-gray-200 p-4 dark:border-gray-700">
-			<div class="flex items-center justify-between gap-3">
-				<div>
-					<h3 class="text-heading text-sm font-semibold">Export mdsvex</h3>
-					<p class="text-muted mt-1 text-xs">Export opzionale generato dal documento corrente.</p>
-				</div>
-				<button
-					type="button"
-					class="border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
-					onclick={onCopyMdsvex}>
-					{copied ? 'Copiato' : 'Copia export'}
-				</button>
-			</div>
-			<textarea
-				readonly
-				class="text-muted mt-3 min-h-64 w-full border border-gray-300 bg-gray-50 px-3 py-2 font-mono text-xs dark:border-gray-600 dark:bg-[#1f2937]"
-			>{mdsvexOutput}</textarea>
-		</section>
 	</div>
 </aside>

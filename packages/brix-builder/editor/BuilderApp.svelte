@@ -50,6 +50,7 @@
 	import BuilderPreviewFrame from './BuilderPreviewFrame.svelte';
 	import ComponentPreviewThumbnail from './ComponentPreviewThumbnail.svelte';
 	import PageFlowSidebar from './PageFlowSidebar.svelte';
+	import { matchesShortcut, SHORTCUTS } from './shortcuts.js';
 
 	let {
 		definitions,
@@ -57,7 +58,8 @@
 		initialBrixYaml,
 		chrome = 'standalone',
 		onBrixYamlChange,
-		pageFlowOpen = $bindable(true)
+		pageFlowOpen = $bindable(true),
+		activeBlockId = $bindable<string | null>(null)
 	}: {
 		definitions: BuilderRenderDefinition[];
 		initialDocument?: BuilderDocument;
@@ -65,16 +67,18 @@
 		chrome?: 'standalone' | 'embedded';
 		onBrixYamlChange?: (value: string) => void;
 		pageFlowOpen?: boolean;
+		activeBlockId?: string | null;
 	} = $props();
 
 	let controller = $state<ReturnType<typeof createEditorControllerState> | null>(null);
 	let previewOverlays = $state<Record<string, PreviewOverlay[]>>({});
 	let previewCollectionOverlays = $state<Record<string, PreviewCollectionOverlay[]>>({});
-	let activeBlockId = $state<string | null>(null);
+	let initialized = $state(false);
 	let activeFieldEdit = $state<PreviewFieldEdit | null>(null);
 	let inserterModal = $state<{ blockId: string; placement: 'before' | 'after' } | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	const previewBlockElements = new Map<string, HTMLElement>();
+	const pageFlowShortcutKey = SHORTCUTS.togglePageFlow.key;
 
 	$effect(() => {
 		if (!controller) {
@@ -97,11 +101,18 @@
 		const blocks = controller?.document.blocks ?? [];
 		if (blocks.length === 0) {
 			activeBlockId = null;
+			initialized = false;
 			return;
 		}
 
-		if (!activeBlockId || !blocks.some((block) => block.id === activeBlockId)) {
+		if (!initialized) {
 			activeBlockId = blocks[0]?.id ?? null;
+			initialized = true;
+			return;
+		}
+
+		if (activeBlockId && !blocks.some((block) => block.id === activeBlockId)) {
+			activeBlockId = null;
 		}
 	});
 
@@ -211,11 +222,11 @@
 	}
 
 	function handleWindowKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape' && inserterModal) {
+		if (matchesShortcut(event, SHORTCUTS.closeModal) && inserterModal) {
 			closeInserterModal();
 			return;
 		}
-		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
+		if (matchesShortcut(event, SHORTCUTS.togglePageFlow)) {
 			event.preventDefault();
 			togglePageFlow();
 		}
@@ -419,6 +430,11 @@
 
 	function closeFieldEdit(): void {
 		activeFieldEdit = null;
+	}
+
+	function deselectBlock(): void {
+		activeFieldEdit = null;
+		activeBlockId = null;
 	}
 
 	function updatePreviewRichText(
@@ -645,7 +661,8 @@
 		onRemoveItem: removeItem,
 		onMoveItem: moveItem,
 		onOpenReorderModal: openReorderModal,
-		onOpenInserterModal: openInserterModal
+		onOpenInserterModal: openInserterModal,
+		onDeselectBlock: deselectBlock
 	});
 </script>
 
@@ -667,6 +684,7 @@
 	{#if chrome === 'standalone'}
 		<header
 			class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-[#111827]"
+			onclick={(event) => { if (!(event.target as Element).closest('button, input, a')) deselectBlock(); }}
 		>
 			<div class="flex items-center gap-2">
 				<div
@@ -712,7 +730,7 @@
 							<span
 								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
 							>
-								B
+								{pageFlowShortcutKey}
 							</span>
 						</span>
 					</span>
@@ -750,6 +768,7 @@
 				blocks={controller?.document.blocks ?? []}
 				{activeBlockId}
 				onSelectBlock={selectBlock}
+				onDeselectBlock={deselectBlock}
 				onMoveBlock={moveBlock}
 				onRemoveBlock={removeBlock}
 				onDragStart={handleDragStart}
@@ -781,6 +800,7 @@
 			onRemoveItem={removeItem}
 			onMoveItem={moveItem}
 			onCopyMdsvex={copyMdsvex}
+			onDeselectBlock={deselectBlock}
 		/>
 	</div>
 </div>

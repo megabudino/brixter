@@ -14,7 +14,7 @@
 		Command
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
-	import { BrixEditor, createBrixDefinitions } from '@brixter/brix-builder';
+	import { BrixEditor, createBrixDefinitions, SHORTCUTS } from '@brixter/brix-builder';
 	import {
 		RichTextEditor,
 		Toolbar,
@@ -47,6 +47,7 @@
 	let pageName = $state('');
 	let lightbox = $state<{ name: string; url: string } | null>(null);
 	let pageFlowOpen = $state(true);
+	let builderActiveBlockId = $state<string | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 
 	const existingDirNames = $derived(
@@ -447,6 +448,7 @@
 	<div class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-[#111827]">
 		<div
 			class="relative z-30 flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
+			onclick={(event) => { if (!(event.target as Element).closest('button, input, a')) builderActiveBlockId = null; }}
 		>
 			<div class="flex items-center gap-3">
 				<button
@@ -483,7 +485,7 @@
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
 							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
-								B
+								{SHORTCUTS.togglePageFlow.key}
 							</span>
 						</span>
 					</span>
@@ -530,6 +532,7 @@
 					definitions={brixDefinitions}
 					chrome="embedded"
 					bind:pageFlowOpen
+					bind:activeBlockId={builderActiveBlockId}
 					initialBrixYaml={data.file.brixYaml}
 					onBrixYamlChange={(value) => {
 						if (!brixYamlHydrated) {
