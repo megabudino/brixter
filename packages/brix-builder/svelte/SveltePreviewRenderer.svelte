@@ -6,6 +6,7 @@
 		normalizeBuilderPropsForRender
 	} from '../core.js';
 	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
+	import { attachPreviewInteractionGuard } from '../preview/block-preview-interactions.js';
 	import type { BuilderAppPreviewProps } from '../editor/contracts.js';
 	import type { PreviewOverlay, PreviewCollectionOverlay } from '../preview-dom.js';
 	import type { BrikDefinition } from './adapter.js';
@@ -174,6 +175,8 @@
 			previewProps: rawProps
 		};
 	}
+
+	$effect(() => attachPreviewInteractionGuard(document));
 </script>
 
 <div onclick={(event) => {

@@ -216,9 +216,32 @@ body.dark {
 	display: contents;
 }
 
-.ProseMirror {
+.builder-preview-text-editor {
 	position: relative;
 	white-space: inherit;
+}
+
+.builder-preview-text-editor.is-editor-empty::before {
+	content: attr(data-placeholder);
+	color: #9ca3af;
+	opacity: 0.6;
+	pointer-events: none;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	text-align: inherit;
+}
+
+.builder-preview-text-editor--inline.is-editor-empty::before {
+	position: static;
+	display: inline;
+	white-space: nowrap;
+}
+
+[data-builder-field-enhanced='true']:is(a, button, [role='button'], [role='link'])
+	.builder-preview-text-editor--inline.is-editor-empty::before {
+	white-space: nowrap;
 }
 
 .ProseMirror.is-editor-empty::before {
@@ -233,9 +256,37 @@ body.dark {
 	text-align: inherit;
 }
 
+[data-builder-field-enhanced='true']:is(a, button, [role='button'], [role='link']) {
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	color: var(--builder-preview-field-text-color) !important;
+	-webkit-text-fill-color: var(--builder-preview-field-text-color);
+}
+
+.builder-richtext-inline-editor--host-inline.is-editor-empty::before {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	display: block;
+	white-space: nowrap;
+	text-align: inherit;
+}
+
+.builder-richtext-inline-editor--host-inline.ProseMirror-focused.is-editor-empty::before {
+	content: none;
+}
+
 .builder-preview-text-editor::placeholder {
 	color: #9ca3af;
 	opacity: 0.6;
+}
+
+.ProseMirror {
+	position: relative;
+	white-space: inherit;
 }
 
 [data-builder-field]:empty::before,
@@ -247,17 +298,46 @@ body.dark {
 	pointer-events: none;
 }
 
+[data-builder-field]:is(a, button, [role='button'], [role='link']):empty::before {
+	display: inline;
+}
+
 [data-builder-field] > p:only-child:has(> br:only-child) > br {
 	display: none;
 }
 
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced="true"]) {
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
+	:is(a, button, [role='button'], [role='link'])
+) {
 	opacity: 0.6;
 }
 
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced="true"]),
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced="true"]) * {
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):is(
+	a,
+	button,
+	[role='button'],
+	[role='link']
+) {
+	opacity: 1;
 	color: #9ca3af !important;
+}
+
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
+	:is(a, button, [role='button'], [role='link'])
+),
+[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
+	:is(a, button, [role='button'], [role='link'])
+) *:not(.builder-preview-field-editor):not(.builder-preview-text-editor):not(.ProseMirror):not(.builder-richtext-inline-editor):not(.builder-richtext-mount) {
+	color: #9ca3af !important;
+}
+
+[data-builder-field-enhanced='true'] .builder-preview-text-editor,
+[data-builder-field-enhanced='true'] .ProseMirror,
+[data-builder-field-enhanced='true'] .builder-richtext-inline-editor,
+[data-builder-field-enhanced='true'] .builder-richtext-inline-editor p {
+	color: var(--builder-preview-field-text-color, currentColor) !important;
+	-webkit-text-fill-color: var(--builder-preview-field-text-color, currentColor);
+	caret-color: var(--builder-preview-field-text-color, currentColor);
 }
 
 body[data-builder-preview-page-overflow='true']::before {
@@ -277,6 +357,48 @@ body[data-builder-preview-page-overflow='true']::before {
 [data-builder-preview-overflow-item='true'] {
 	outline: 2px solid #f59e0b !important;
 	outline-offset: -2px;
+}
+
+body[data-builder-preview-canvas] [data-builder-preview-content] :is(
+	a,
+	button,
+	input[type='submit'],
+	input[type='button'],
+	input[type='reset'],
+	input[type='checkbox'],
+	input[type='radio'],
+	label[for],
+	select,
+	textarea,
+	summary,
+	[role='button'],
+	[role='link']
+),
+body[data-builder-preview-canvas] [data-builder-preview-content] :is(
+	a,
+	button,
+	input[type='submit'],
+	input[type='button'],
+	input[type='reset'],
+	input[type='checkbox'],
+	input[type='radio'],
+	label[for],
+	select,
+	textarea,
+	summary,
+	[role='button'],
+	[role='link']
+) * {
+	pointer-events: none !important;
+}
+
+body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='pending'],
+body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-preview-field-editor,
+body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-preview-text-editor,
+body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .ProseMirror,
+body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-richtext-inline-editor,
+body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-richtext-mount {
+	pointer-events: auto !important;
 }
 `;
 		frameDocument.head.append(styleElement);

@@ -9,6 +9,8 @@
 		mode,
 		placeholder = '',
 		chrome = 'panel',
+		plainTextOnly = false,
+		hostInline = false,
 		autofocus = false,
 		initialCaretOffset = null,
 		initialClickCoords = null,
@@ -20,6 +22,8 @@
 		mode: BuilderRichTextValue['mode'];
 		placeholder?: string;
 		chrome?: 'panel' | 'inline';
+		plainTextOnly?: boolean;
+		hostInline?: boolean;
 		autofocus?: boolean;
 		initialCaretOffset?: number | null;
 		initialClickCoords?: { left: number; top: number } | null;
@@ -41,12 +45,16 @@
 			autofocus: false,
 			extensions: [
 				StarterKit.configure({
-					heading: mode === 'inline' ? false : undefined,
-					bulletList: mode === 'inline' ? false : undefined,
-					orderedList: mode === 'inline' ? false : undefined,
-					blockquote: mode === 'inline' ? false : undefined,
+					heading: mode === 'inline' || plainTextOnly ? false : undefined,
+					bulletList: mode === 'inline' || plainTextOnly ? false : undefined,
+					orderedList: mode === 'inline' || plainTextOnly ? false : undefined,
+					blockquote: mode === 'inline' || plainTextOnly ? false : undefined,
 					codeBlock: false,
-					horizontalRule: mode === 'inline' ? false : undefined
+					horizontalRule: mode === 'inline' || plainTextOnly ? false : undefined,
+					bold: plainTextOnly ? false : undefined,
+					italic: plainTextOnly ? false : undefined,
+					strike: plainTextOnly ? false : undefined,
+					code: plainTextOnly ? false : undefined
 				})
 			],
 			content: initialHtml,
@@ -54,12 +62,20 @@
 				attributes: {
 					class:
 						chrome === 'inline'
-							? 'builder-richtext-inline-editor'
+							? `builder-richtext-inline-editor${hostInline ? ' builder-richtext-inline-editor--host-inline' : ''}`
 							: mode === 'inline'
 								? 'builder-richtext-panel-editor min-h-11 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]'
 								: 'builder-richtext-panel-editor min-h-32 border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]',
 					style: editorStyle,
 					'data-placeholder': placeholder
+				},
+				handleKeyDown: (_view, event) => {
+					if (plainTextOnly && event.key === 'Enter') {
+						event.preventDefault();
+						return true;
+					}
+
+					return false;
 				}
 			},
 			onBlur: () => {
@@ -112,6 +128,11 @@
 			const docSize = activeEditor.state.doc.content.size;
 			const pos = Math.min(initialCaretOffset + 1, Math.max(1, docSize - 1));
 			activeEditor.chain().focus().setTextSelection(pos).run();
+			return;
+		}
+
+		if (hostInline && activeEditor.isEmpty) {
+			activeEditor.chain().focus().setTextSelection(1).run();
 			return;
 		}
 
@@ -189,5 +210,25 @@
 		margin: 0;
 		padding: 0;
 		line-height: inherit;
+	}
+
+	:global(.builder-richtext-inline-editor--host-inline) {
+		display: block;
+		width: 100%;
+		min-height: 1lh;
+		vertical-align: baseline;
+		position: relative;
+		white-space: nowrap;
+	}
+
+	:global(.builder-richtext-inline-editor--host-inline p) {
+		display: block;
+		margin: 0;
+		padding: 0;
+		min-height: inherit;
+	}
+
+	:global(.builder-richtext-inline-editor--host-inline .ProseMirror-trailingBreak) {
+		display: none;
 	}
 </style>

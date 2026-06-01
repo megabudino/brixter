@@ -14,6 +14,11 @@ import {
 	type BuilderFields
 } from '../core.js';
 import { materializeFieldPath } from '../preview-dom.js';
+import {
+	isInteractiveFieldHost,
+	neutralizeInteractiveElement,
+} from './interactive-content.js';
+import { describeFieldElement, logFieldEditEvent } from './field-edit-debug.js';
 
 let globalSuppressBlurClose = false;
 
@@ -106,6 +111,11 @@ export function attachPreviewEditableFields(
 			if (!rawPath) {
 				continue;
 			}
+
+			if (isInteractiveFieldHost(element)) {
+				neutralizeInteractiveElement(element);
+			}
+
 			const path = resolveFieldPath(element, blockRoot);
 			if (!path) {
 				continue;
@@ -127,7 +137,28 @@ export function attachPreviewEditableFields(
 
 			const rawValue = getValueAtPath(currentParams.previewProps, path);
 			const isEmpty = rawValue === undefined || rawValue === '' || (isRichTextValue(rawValue) && !rawValue.html.trim());
-			element.toggleAttribute('data-builder-placeholder-active', isEmpty);
+			const isEditing =
+				path === focusPath || element.dataset.builderFieldEnhanced === 'true';
+
+			if (isEditing) {
+				element.removeAttribute('data-builder-placeholder-active');
+			} else {
+				element.toggleAttribute('data-builder-placeholder-active', isEmpty);
+			}
+
+			if (
+				isInteractiveFieldHost(element) &&
+				isEmpty &&
+				resolveFieldKind(element) === 'text'
+			) {
+				syncInteractiveHostMinWidth(
+					element,
+					plainDefaultString || element.getAttribute('data-builder-placeholder') || ''
+				);
+			} else if (element.dataset.builderPreviewMinWidth === 'true') {
+				element.style.removeProperty('min-width');
+				delete element.dataset.builderPreviewMinWidth;
+			}
 
 
 			if (!currentParams.active) {
@@ -179,11 +210,17 @@ export function attachPreviewEditableFields(
 		element.style.cursor = kind === 'image' ? 'pointer' : 'text';
 
 		const handleClick = (event: Event) => {
+			logFieldEditEvent('pending-mousedown', 'activate requested', {
+				path,
+				eventType: event.type,
+				...describeFieldElement(element),
+				target: describeFieldElement(event.target instanceof Element ? event.target : null)
+			});
 			event.stopPropagation();
 			activateField(element, path, event);
 		};
 
-		element.addEventListener('mousedown', handleClick);
+		element.addEventListener('mousedown', handleClick, true);
 
 		mounts.set(element, {
 			path,
@@ -191,7 +228,7 @@ export function attachPreviewEditableFields(
 			element,
 			instance: null,
 			cleanup: () => {
-				element.removeEventListener('mousedown', handleClick);
+				element.removeEventListener('mousedown', handleClick, true);
 				element.style.removeProperty('cursor');
 				delete element.dataset.builderFieldEnhanced;
 			}
@@ -199,6 +236,12 @@ export function attachPreviewEditableFields(
 	}
 
 	function activateField(element: HTMLElement, path: string, event?: Event): void {
+		logFieldEditEvent('activate', 'start', {
+			path,
+			caretOffset: event ? getClickCaretOffset(element, event) : null,
+			coords: getClickCoords(event),
+			...describeFieldElement(element)
+		});
 		suppressBlurClose = true;
 		globalSuppressBlurClose = true;
 
@@ -283,16 +326,41 @@ export function attachPreviewEditableFields(
 		}
 
 		const kind = resolveFieldKind(element);
-		const isPlaceholderActive = element.hasAttribute('data-builder-placeholder-active');
-		if (isPlaceholderActive) {
-			element.removeAttribute('data-builder-placeholder-active');
-		}
-		const fieldStyle = captureFieldEditorStyle(element);
-		if (isPlaceholderActive) {
-			element.setAttribute('data-builder-placeholder-active', '');
-		}
+		const useHostInlineTextEditor = kind === 'text' && isInteractiveFieldHost(element);
+		const multiline = kind === 'text' && !useHostInlineTextEditor && inferMultiline(element);
+
+		element.removeAttribute('data-builder-placeholder-active');
 		element.dataset.builderFieldEnhanced = 'true';
 		element.style.cursor = kind === 'image' ? 'pointer' : 'text';
+
+		const placeholder = element.getAttribute('data-builder-placeholder') || '';
+		const hostWidth = element.offsetWidth;
+		const placeholderWidth = measurePlaceholderWidth(element, placeholder);
+
+		if (useHostInlineTextEditor) {
+			element.style.setProperty(
+				'--builder-preview-field-text-color',
+				resolveInteractiveFieldTextColor(element)
+			);
+		}
+
+		const fieldStyle = captureFieldEditorStyle(element, {
+			includeMinHeight: kind !== 'text' || multiline || !isInteractiveFieldHost(element),
+			omitColor: useHostInlineTextEditor,
+			forceLineHeightMin: useHostInlineTextEditor
+		});
+
+		if (!useHostInlineTextEditor && fieldStyle.includes('color:')) {
+			const colorMatch = fieldStyle.match(/color:([^;]+)/);
+			if (colorMatch?.[1]) {
+				element.style.setProperty('--builder-preview-field-text-color', colorMatch[1].trim());
+			}
+		}
+
+		if (useHostInlineTextEditor) {
+			element.style.minWidth = `${Math.max(hostWidth, placeholderWidth)}px`;
+			element.dataset.builderPreviewMinWidth = 'true';
+		}
 
 		const mountHost = element.ownerDocument.createElement('div');
 		mountHost.className = 'builder-preview-field-editor';
@@ -306,7 +374,6 @@ export function attachPreviewEditableFields(
 
 		const value = getValueAtPath(currentParams.previewProps, path);
 		const shouldFocus = currentParams.focusPath === path;
-		const placeholder = element.getAttribute('data-builder-placeholder') || '';
 
 		let instance: Record<string, unknown>;
 
@@ -345,6 +412,35 @@ export function attachPreviewEditableFields(
 					onBlur: () => scheduleBlurClose()
 				}
 			}) as Record<string, unknown>;
+		} else if (useHostInlineTextEditor) {
+			const textValue = asPlainText(value);
+			const richValue = createRichTextValue('inline', textValue);
+			instance = mount(RichTextEditor, {
+				target: mountHost,
+				props: {
+					value: richValue,
+					mode: 'inline',
+					placeholder,
+					chrome: 'inline',
+					plainTextOnly: true,
+					hostInline: true,
+					autofocus: shouldFocus,
+					initialCaretOffset: shouldFocus ? (currentParams.caretOffset ?? null) : null,
+					initialClickCoords: shouldFocus ? clickCoords : null,
+					editorStyle: fieldStyle,
+					onChange: (nextValue: BuilderRichTextValue) => {
+						const plain = plainTextFromInlineRichHtml(
+							nextValue.html,
+							element.ownerDocument
+						);
+						if (plain.trim()) {
+							element.removeAttribute('data-builder-placeholder-active');
+						}
+						currentParams.onUpdateText(path, plain);
+					},
+					onBlur: () => scheduleBlurClose()
+				}
+			}) as Record<string, unknown>;
 		} else {
 			const textValue = asPlainText(value);
 			instance = mount(PreviewTextEditor, {
@@ -352,12 +448,18 @@ export function attachPreviewEditableFields(
 				props: {
 					value: textValue,
 					placeholder,
-					multiline: inferMultiline(element),
+					multiline,
+					inline: false,
 					textStyle: fieldStyle,
 					autofocus: shouldFocus,
 					initialCaretOffset: shouldFocus ? (currentParams.caretOffset ?? null) : null,
 					initialClickCoords: shouldFocus ? clickCoords : null,
-					onChange: (nextValue: string) => currentParams.onUpdateText(path, nextValue),
+					onChange: (nextValue: string) => {
+						if (nextValue.trim()) {
+							element.removeAttribute('data-builder-placeholder-active');
+						}
+						currentParams.onUpdateText(path, nextValue);
+					},
 					onBlur: () => scheduleBlurClose()
 				}
 			}) as Record<string, unknown>;
@@ -370,6 +472,11 @@ export function attachPreviewEditableFields(
 			instance,
 			cleanup: () => {
 				element.style.removeProperty('cursor');
+				element.style.removeProperty('--builder-preview-field-text-color');
+				if (element.dataset.builderPreviewMinWidth === 'true') {
+					element.style.removeProperty('min-width');
+					delete element.dataset.builderPreviewMinWidth;
+				}
 			}
 		});
 	}
@@ -385,18 +492,23 @@ export function attachPreviewEditableFields(
 			}
 
 			if (state.kind === 'text') {
-				const input = state.element.querySelector('input, textarea') as
-					| HTMLInputElement
-					| HTMLTextAreaElement
+				const proseMirror = state.element.querySelector('.ProseMirror') as HTMLElement | null;
+				const input = state.element.querySelector('.builder-preview-text-editor') as
+					| HTMLElement
 					| null;
-				if (!input) {
+				const editorEl = proseMirror ?? input;
+				if (!editorEl) {
 					return;
 				}
 
-				input.focus();
+				editorEl.focus();
+
+				if (clickCoords && proseMirror) {
+					return;
+				}
 
 				if (clickCoords) {
-					const doc = input.ownerDocument;
+					const doc = editorEl.ownerDocument;
 					const range =
 						doc.caretRangeFromPoint?.(clickCoords.left, clickCoords.top) ??
 						(() => {
@@ -411,16 +523,41 @@ export function attachPreviewEditableFields(
 							return nextRange;
 						})();
 
-					if (range && input.contains(range.startContainer)) {
-						const offset = range.startOffset;
-						input.setSelectionRange(offset, offset);
+					if (range && editorEl.contains(range.startContainer)) {
+						const selection = doc.getSelection();
+						selection?.removeAllRanges();
+						selection?.addRange(range);
 						return;
 					}
 				}
 
+				if (proseMirror || caretOffset == null || !input) {
+					return;
+				}
+
 				if (caretOffset != null) {
-					const offset = Math.min(caretOffset, input.value.length);
-					input.setSelectionRange(offset, offset);
+					const doc = input.ownerDocument;
+					const selection = doc.getSelection();
+					if (!selection) {
+						return;
+					}
+
+					const walker = doc.createTreeWalker(input, NodeFilter.SHOW_TEXT);
+					let remaining = caretOffset;
+
+					while (walker.nextNode()) {
+						const textNode = walker.currentNode as Text;
+						if (remaining <= textNode.length) {
+							const range = doc.createRange();
+							range.setStart(textNode, remaining);
+							range.collapse(true);
+							selection.removeAllRanges();
+							selection.addRange(range);
+							return;
+						}
+
+						remaining -= textNode.length;
+					}
 				}
 				return;
 			}
@@ -582,6 +719,10 @@ function asPlainText(value: unknown): string {
 }
 
 function inferMultiline(element: HTMLElement): boolean {
+	if (isInteractiveFieldHost(element)) {
+		return false;
+	}
+
 	const tagName = element.tagName.toLowerCase();
 	if (tagName === 'textarea' || tagName === 'p') {
 		return true;
@@ -595,6 +736,86 @@ function inferMultiline(element: HTMLElement): boolean {
 	const lineHeight = Number.parseFloat(computed.lineHeight);
 	const height = element.getBoundingClientRect().height;
 	return height > (Number.isFinite(lineHeight) ? lineHeight * 1.5 : 32);
+}
+
+function plainTextFromInlineRichHtml(html: string, doc: Document): string {
+	const trimmed = html.trim();
+	if (!trimmed || trimmed === '<p></p>') {
+		return '';
+	}
+
+	const paragraphMatch = trimmed.match(/^<p>([\s\S]*)<\/p>$/);
+	const inner = paragraphMatch ? paragraphMatch[1] : trimmed;
+	const container = doc.createElement('div');
+	container.innerHTML = inner;
+	return (container.textContent ?? '').replace(/\u00a0/g, ' ');
+}
+
+function measurePlaceholderWidth(element: HTMLElement, placeholder: string): number {
+	const text = placeholder.trim();
+	if (!text) {
+		return 0;
+	}
+
+	const doc = element.ownerDocument;
+	const view = doc.defaultView;
+	if (!view) {
+		return 0;
+	}
+
+	const probe = doc.createElement('span');
+	probe.textContent = text;
+	probe.style.visibility = 'hidden';
+	probe.style.position = 'absolute';
+	probe.style.whiteSpace = 'nowrap';
+	probe.style.pointerEvents = 'none';
+	const computed = view.getComputedStyle(element);
+	probe.style.font = computed.font;
+	probe.style.letterSpacing = computed.letterSpacing;
+	probe.style.textTransform = computed.textTransform;
+	doc.body.appendChild(probe);
+	const width = probe.offsetWidth;
+	probe.remove();
+	return width;
+}
+
+function syncInteractiveHostMinWidth(element: HTMLElement, placeholder: string): void {
+	const placeholderWidth = measurePlaceholderWidth(element, placeholder);
+	const hostWidth = element.offsetWidth;
+	const minWidth = Math.max(hostWidth, placeholderWidth);
+
+	if (minWidth > 0) {
+		element.style.minWidth = `${minWidth}px`;
+		element.dataset.builderPreviewMinWidth = 'true';
+		return;
+	}
+
+	if (element.dataset.builderPreviewMinWidth === 'true') {
+		element.style.removeProperty('min-width');
+		delete element.dataset.builderPreviewMinWidth;
+	}
+}
+
+function resolveInteractiveFieldTextColor(element: HTMLElement): string {
+	const doc = element.ownerDocument;
+	const view = doc.defaultView;
+	if (!view) {
+		return 'currentColor';
+	}
+
+	const clone = doc.createElement(element.tagName.toLowerCase());
+	for (const className of element.classList) {
+		clone.classList.add(className);
+	}
+	clone.textContent = '\u00a0';
+	clone.style.visibility = 'hidden';
+	clone.style.position = 'absolute';
+	clone.style.pointerEvents = 'none';
+	doc.body.appendChild(clone);
+	const color = view.getComputedStyle(clone).color;
+	clone.remove();
+
+	return isPlaceholderTone(color) ? 'currentColor' : color;
 }
 
 function restoreElementContent(
@@ -611,6 +832,11 @@ function restoreElementContent(
 
 	if (kind === 'text') {
 		const text = asPlainText(value);
+		if (!text.trim() && isInteractiveFieldHost(element)) {
+			element.textContent = '';
+			return;
+		}
+
 		element.textContent = text.trim() ? text : defaultValue;
 		return;
 	}
@@ -620,7 +846,13 @@ function restoreElementContent(
 	}
 }
 
-function captureFieldEditorStyle(element: HTMLElement): string {
+function captureFieldEditorStyle(
+	element: HTMLElement,
+	options: { includeMinHeight?: boolean; omitColor?: boolean; forceLineHeightMin?: boolean } = {}
+): string {
+	const includeMinHeight = options.includeMinHeight ?? true;
+	const omitColor = options.omitColor ?? false;
+	const forceLineHeightMin = options.forceLineHeightMin ?? false;
 	const view = element.ownerDocument.defaultView;
 	if (!view) {
 		return '';
@@ -628,8 +860,9 @@ function captureFieldEditorStyle(element: HTMLElement): string {
 
 	const computed = view.getComputedStyle(element);
 	const height = element.offsetHeight;
+	const color = omitColor ? null : resolveFieldEditorColor(element, computed.color);
 
-	return [
+	const styles = [
 		`font-family:${computed.fontFamily}`,
 		`font-size:${computed.fontSize}`,
 		`font-weight:${computed.fontWeight}`,
@@ -638,15 +871,49 @@ function captureFieldEditorStyle(element: HTMLElement): string {
 		`letter-spacing:${computed.letterSpacing}`,
 		`text-transform:${computed.textTransform}`,
 		`text-align:${computed.textAlign}`,
-		`color:${computed.color}`,
+		color ? `color:${color}` : '',
 		`font-variant:${computed.fontVariant}`,
 		`font-stretch:${computed.fontStretch}`,
 		`word-spacing:${computed.wordSpacing}`,
 		`white-space:${computed.whiteSpace}`,
-		height > 0 ? `min-height:${height}px` : ''
-	]
-		.filter(Boolean)
-		.join(';');
+		height > 0 && includeMinHeight ? `min-height:${height}px` : '',
+		forceLineHeightMin ? `min-height:${computed.lineHeight}` : ''
+	];
+
+	return styles.filter(Boolean).join(';');
+}
+
+function resolveFieldEditorColor(element: HTMLElement, color: string): string {
+	if (!isInteractiveFieldHost(element) || !isPlaceholderTone(color)) {
+		return color;
+	}
+
+	const hadPlaceholder = element.hasAttribute('data-builder-placeholder-active');
+	element.removeAttribute('data-builder-placeholder-active');
+
+	let resolved = element.ownerDocument.defaultView?.getComputedStyle(element).color ?? color;
+
+	if (isPlaceholderTone(resolved)) {
+		const probe = element.ownerDocument.createTextNode('\u00a0');
+		element.appendChild(probe);
+		resolved = element.ownerDocument.defaultView?.getComputedStyle(element).color ?? resolved;
+		probe.remove();
+	}
+
+	if (hadPlaceholder) {
+		element.setAttribute('data-builder-placeholder-active', '');
+	}
+
+	return isPlaceholderTone(resolved) ? color : resolved;
+}
+
+function isPlaceholderTone(color: string): boolean {
+	const normalized = color.replace(/\s+/g, '').toLowerCase();
+	return (
+		normalized === 'rgb(156,163,175)' ||
+		normalized === '#9ca3af' ||
+		normalized === 'rgb(156,163,175)'
+	);
 }
 
 function getClickCoords(event?: Event): ClickCoords | null {
