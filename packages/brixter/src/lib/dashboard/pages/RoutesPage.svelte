@@ -47,6 +47,7 @@
 	let pageName = $state('');
 	let lightbox = $state<{ name: string; url: string } | null>(null);
 	let pageFlowOpen = $state(true);
+	let inspectorOpen = $state(true);
 	let builderActiveBlockId = $state<string | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 
@@ -492,6 +493,40 @@
 				</button>
 			</div>
 			<div class="flex items-center gap-2">
+				<button
+					type="button"
+					class={inspectorOpen
+						? 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
+						: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+					aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
+					aria-pressed={inspectorOpen}
+					onclick={() => (inspectorOpen = !inspectorOpen)}
+				>
+					<svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+						<rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+						<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
+					</svg>
+					<span
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+					>
+						<span class="font-semibold">Inspector</span>
+						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+							<span class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+								{#if pageFlowShortcutModifier === 'command'}
+									<Command size={12} strokeWidth={2} />
+								{:else}
+									Ctrl
+								{/if}
+							</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Shift</span>
+							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
+							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+								{SHORTCUTS.toggleInspector.key}
+							</span>
+						</span>
+					</span>
+				</button>
 				<form
 					method="post"
 					action="?/save"
@@ -514,7 +549,7 @@
 					<button
 						type="submit"
 						disabled={saving || !brixDirty}
-						class="inline-flex cursor-pointer items-center gap-2 bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
+						class="inline-flex h-10 cursor-pointer items-center gap-2 bg-[#2563EB] px-4 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if saving}
 							<Spinner /> Committing…
@@ -532,6 +567,7 @@
 					definitions={brixDefinitions}
 					chrome="embedded"
 					bind:pageFlowOpen
+					bind:inspectorOpen
 					bind:activeBlockId={builderActiveBlockId}
 					initialBrixYaml={data.file.brixYaml}
 					onBrixYamlChange={(value) => {

@@ -186,8 +186,8 @@
 		{/each}
 	</div>
 {:else if fieldKind === 'richtext-inline' || fieldKind === 'richtext-block'}
-	<label class="block space-y-2 text-sm">
-		<span class="text-heading font-medium">{label}</span>
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
 		<RichTextEditor
 			value={richTextValue}
 			mode={fieldKind === 'richtext-inline' ? 'inline' : 'block'}
@@ -200,53 +200,53 @@
 			checked={booleanValue}
 			class="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
 			onchange={(event) => updateBoolean(event.currentTarget.checked)} />
-		<span class="text-heading font-medium">{label}</span>
+		<span class="text-sm font-medium text-label">{label}</span>
 	</label>
 {:else if fieldKind === 'number'}
-	<label class="block space-y-2 text-sm">
-		<span class="text-heading font-medium">{label}</span>
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
 		<input
 			type="number"
 			value={numberValue}
-			class="w-full border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+			class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 			oninput={(event) => updateNumber(event.currentTarget.value)} />
 	</label>
 {:else if fieldKind === 'image'}
-	<label class="block space-y-2 text-sm">
-		<span class="text-heading font-medium">{label}</span>
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
 		{#if stringValue}
 			<img
 				src={stringValue}
 				alt={label}
-				class="h-24 w-24 border border-gray-200 object-cover dark:border-gray-700" />
+				class="mb-2 h-24 w-24 border border-gray-200 object-cover dark:border-gray-700" />
 		{/if}
 		<div class="flex flex-wrap gap-2">
 			<input
 				type="text"
 				value={stringValue}
-				class="min-w-0 flex-1 border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+				class="min-w-0 flex-1 border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 				oninput={(event) => updateText(event.currentTarget.value)} />
 			<button
 				type="button"
-				class="border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
+				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onQueueFileEdit(path)}>
 				File
 			</button>
 		</div>
 	</label>
 {:else}
-	<label class="block space-y-2 text-sm">
-		<span class="text-heading font-medium">{label}</span>
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
 		{#if multiline}
 			<textarea
 				value={stringValue}
-				class="min-h-24 w-full border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+				class="min-h-24 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 				oninput={(event) => updateText(event.currentTarget.value)}></textarea>
 		{:else}
 			<input
 				type="text"
 				value={stringValue}
-				class="w-full border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+				class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
 				oninput={(event) => updateText(event.currentTarget.value)} />
 		{/if}
 	</label>
