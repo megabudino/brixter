@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { getBuilderDefinition } from '../editor-controller.js';
 	import {
 		createBuilderFallbackProps,
@@ -33,31 +34,41 @@
 
 	let hoveredCollectionItem = $state<string | null>(null);
 	let hoveredCollection = $state<string | null>(null);
-	let blockRenderSnapshots = $state<Record<string, Record<string, unknown>>>({});
 
-	$effect(() => {
+	let blockRenderSnapshotsCache: Record<string, Record<string, unknown>> = {};
+	let lastActiveBlockId: string | null = null;
+	let lastActivePath: string | null = null;
+
+	const blockRenderSnapshots = $derived.by(() => {
 		const edit = activeFieldEdit;
 		if (!edit) {
-			blockRenderSnapshots = {};
-			return;
+			blockRenderSnapshotsCache = {};
+			lastActiveBlockId = null;
+			lastActivePath = null;
+			return {} as Record<string, Record<string, unknown>>;
 		}
 
-		if (blockRenderSnapshots[edit.blockId]) {
-			return;
+		if (lastActiveBlockId === edit.blockId && lastActivePath === edit.path) {
+			return blockRenderSnapshotsCache;
 		}
 
 		const block = blocks.find((entry) => entry.id === edit.blockId);
 		if (!block) {
-			return;
+			return {} as Record<string, Record<string, unknown>>;
 		}
 
-		const definition = getBuilderDefinition(block.type, definitions);
-		blockRenderSnapshots = {
-			...blockRenderSnapshots,
-			[edit.blockId]: normalizeBuilderPropsForRender(
-				createBuilderFallbackProps(definition, block.props)
-			) as Record<string, unknown>
-		};
+		lastActiveBlockId = edit.blockId;
+		lastActivePath = edit.path;
+		blockRenderSnapshotsCache = untrack(() => {
+			const definition = getBuilderDefinition(block.type, definitions);
+			return {
+				[edit.blockId]: normalizeBuilderPropsForRender(
+					createBuilderFallbackProps(definition, block.props)
+				) as Record<string, unknown>
+			};
+		});
+
+		return blockRenderSnapshotsCache;
 	});
 
 	function getRenderProps(block: (typeof blocks)[number]): Record<string, unknown> {

@@ -320,7 +320,11 @@ export function attachPreviewEditableFields(
 						currentParams.onUpdateText(path, '');
 						currentParams.onCloseFieldEdit();
 					},
-					onBlur: () => currentParams.onCloseFieldEdit()
+					onBlur: () => {
+						if (currentParams.focusPath === path) {
+							currentParams.onCloseFieldEdit();
+						}
+					}
 				}
 			}) as Record<string, unknown>;
 		} else if (kind === 'richtext') {
