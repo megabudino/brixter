@@ -60,7 +60,8 @@
 		onBrixYamlChange,
 		pageFlowOpen = $bindable(true),
 		inspectorOpen = $bindable(true),
-		activeBlockId = $bindable<string | null>(null)
+		activeBlockId = $bindable<string | null>(null),
+		onpickImage
 	}: {
 		definitions: BuilderRenderDefinition[];
 		initialDocument?: BuilderDocument;
@@ -70,6 +71,7 @@
 		pageFlowOpen?: boolean;
 		inspectorOpen?: boolean;
 		activeBlockId?: string | null;
+		onpickImage?: (callback: (imageUrl: string) => void) => void;
 	} = $props();
 
 	let controller = $state<ReturnType<typeof createEditorControllerState> | null>(null);
@@ -276,9 +278,23 @@
 	}
 
 	function queueFileEdit(blockId: string, path: string): void {
+		console.log('queueFileEdit called in BuilderApp:', blockId, path, 'onpickImage is:', !!onpickImage);
 		if (!controller) return;
 		queueFileEditInState(controller, blockId, path);
-		openFilePicker();
+		if (onpickImage) {
+			console.log('calling onpickImage from BuilderApp...');
+			onpickImage((imageUrl) => {
+				console.log('onpickImage callback received image URL:', imageUrl);
+				if (!controller) return;
+				const updatedBlock = applyFileToPendingEdit(controller, imageUrl);
+				if (!updatedBlock) {
+					clearPendingFileEdit(controller);
+				}
+			});
+		} else {
+			console.log('onpickImage is not defined in BuilderApp, opening native file picker...');
+			openFilePicker();
+		}
 	}
 
 	function openFilePicker(): void {
@@ -332,8 +348,18 @@
 		event.preventDefault();
 
 		if (resolvedBinding.binding.type === 'image') {
-			closeFieldEdit();
-			queueFileEdit(block.id, resolvedBinding.path);
+			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
+			const rawPath = matchedElement.getAttribute('data-builder-field');
+			const path =
+				rawPath != null
+					? (materializeFieldPath(rawPath, container, matchedElement) ?? resolvedBinding.path)
+					: resolvedBinding.path;
+
+			activeFieldEdit = {
+				blockId: block.id,
+				path,
+				caretOffset: null
+			};
 			return;
 		}
 

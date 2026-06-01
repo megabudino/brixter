@@ -97,6 +97,7 @@
 	let frontmatterRef: FrontmatterEditor | null = $state(null);
 	let editorInstance: any = $state(null);
 	let mediaPickerOpen = $state(false);
+	let builderImagePickCallback = $state<((url: string) => void) | null>(null);
 	let editorFocused = $state(false);
 	let htmlBlockFocused = $state(false);
 	let activeTab: 'body' | 'frontmatter' = $state('body');
@@ -235,6 +236,20 @@
 			return `![${alt}](/${repoPath})`;
 		}
 	});
+
+	function transformGithubUrlToRelative(src: string): string {
+		if (/^https:\/\/raw\.githubusercontent\.com\//.test(src)) {
+			const match = src.match(
+				/^https:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/
+			);
+			let repoPath = match ? match[1].split('?')[0] : src;
+			if (mediaPrefix && repoPath.startsWith(mediaPrefix)) {
+				repoPath = repoPath.slice(mediaPrefix.length);
+			}
+			return `/${repoPath}`;
+		}
+		return src;
+	}
 
 	function getMarkdown(): string {
 		if (!editorRef) return '';
@@ -408,19 +423,7 @@
 				/>
 			</div>
 		{/if}
-		<MediaPicker
-			open={mediaPickerOpen}
-			branch={data.branch}
-			mediaPath={data.repo.mediaPath}
-			onselect={({ imageUrl, fileName }) => {
-				editorInstance
-					?.chain()
-					.focus()
-					.insertContent(`<img src="${imageUrl}" alt="${fileName}">`)
-					.run();
-			}}
-			onclose={() => (mediaPickerOpen = false)}
-		/>
+
 
 		{#if toastMessage}
 			<div
@@ -576,6 +579,13 @@
 							brixYamlHydrated = true;
 						}
 						currentBrixYaml = value;
+					}}
+					onpickImage={(callback) => {
+						builderImagePickCallback = (url) => {
+							const relativeUrl = transformGithubUrlToRelative(url);
+							callback(relativeUrl);
+						};
+						mediaPickerOpen = true;
 					}}
 				/>
 			{:else}
@@ -911,6 +921,29 @@
 		</div>
 	</div>
 {/if}
+
+<MediaPicker
+	open={mediaPickerOpen}
+	branch={data.branch}
+	mediaPath={data.repo.mediaPath}
+	onselect={({ imageUrl, fileName }) => {
+		if (builderImagePickCallback) {
+			builderImagePickCallback(imageUrl);
+			builderImagePickCallback = null;
+			mediaPickerOpen = false;
+		} else {
+			editorInstance
+				?.chain()
+				.focus()
+				.insertContent(`<img src="${imageUrl}" alt="${fileName}">`)
+				.run();
+		}
+	}}
+	onclose={() => {
+		mediaPickerOpen = false;
+		builderImagePickCallback = null;
+	}}
+/>
 
 {#if lightbox}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
