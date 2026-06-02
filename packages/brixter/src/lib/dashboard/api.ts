@@ -6,6 +6,32 @@ import { isWithinRepoRoot, normalizeRepoPath } from '../server/sveltekit-routes.
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 
+async function resolveLocalPath(repoRelativePath: string): Promise<string> {
+	const fs = await import('node:fs/promises');
+	const pathLib = await import('node:path');
+	
+	let root = process.cwd();
+	while (true) {
+		const gitPath = pathLib.join(root, '.git');
+		const hasGit = await fs.access(gitPath).then(() => true).catch(() => false);
+		if (hasGit) {
+			return pathLib.resolve(root, repoRelativePath);
+		}
+		const parent = pathLib.dirname(root);
+		if (parent === root) {
+			break;
+		}
+		root = parent;
+	}
+	
+	let resolved = pathLib.resolve(process.cwd(), repoRelativePath);
+	const cwdNormalized = process.cwd().replace(/\\/g, '/');
+	if (cwdNormalized.endsWith('/site') && repoRelativePath.startsWith('site/')) {
+		resolved = pathLib.resolve(pathLib.dirname(process.cwd()), repoRelativePath);
+	}
+	return resolved;
+}
+
 function apiPath(pathname: string): string {
 	const marker = '/admin/api/';
 	if (pathname.startsWith(marker)) return pathname.slice(marker.length);
@@ -60,7 +86,7 @@ async function mediaPicker(event: RequestEvent) {
 					try {
 						const fs = await import('node:fs/promises');
 						const pathLib = await import('node:path');
-						const localPath = pathLib.resolve(process.cwd(), targetPath);
+						const localPath = await resolveLocalPath(targetPath);
 						await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
 						await fs.writeFile(localPath, '');
 					} catch (fsErr) {
@@ -97,7 +123,7 @@ async function mediaPicker(event: RequestEvent) {
 					try {
 						const fs = await import('node:fs/promises');
 						const pathLib = await import('node:path');
-						const localPath = pathLib.resolve(process.cwd(), targetPath);
+						const localPath = await resolveLocalPath(targetPath);
 						await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
 						await fs.writeFile(localPath, Buffer.from(arrayBuffer));
 					} catch (fsErr) {
@@ -179,6 +205,34 @@ async function repoImage({ locals, url }: RequestEvent) {
 	const path = url.searchParams.get('path');
 	if (!branch || !path) return new Response('Missing parameters', { status: 400 });
 
+	if (process.env.NODE_ENV !== 'production') {
+		try {
+			const fs = await import('node:fs/promises');
+			const localFilePath = await resolveLocalPath(path);
+			const exists = await fs.access(localFilePath).then(() => true).catch(() => false);
+			if (exists) {
+				const content = await fs.readFile(localFilePath);
+				const contentType = path.endsWith('.svg')
+					? 'image/svg+xml'
+					: path.endsWith('.webp')
+						? 'image/webp'
+						: path.endsWith('.png')
+							? 'image/png'
+							: path.endsWith('.gif')
+								? 'image/gif'
+								: 'image/jpeg';
+				return new Response(content, {
+					headers: {
+						'Content-Type': contentType,
+						'Cache-Control': 'private, max-age=3600'
+					}
+				});
+			}
+		} catch (err) {
+			console.error('Failed to read local file for repoImage:', err);
+		}
+	}
+
 	const octokit = getOctokit();
 	const repo = getRepo();
 
@@ -217,6 +271,99 @@ async function repoImage({ locals, url }: RequestEvent) {
 	}
 }
 
+async function iconPicker(event: RequestEvent) {
+	const { locals, url } = event;
+	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+	const branch = url.searchParams.get('branch');
+	if (!branch) return json({ error: 'Missing required parameters' }, { status: 400 });
+
+	const { appRoot } = getConfig();
+	const iconsBase = [appRoot, 'src/lib/brixter/icons'].filter(Boolean).join('/');
+	const relativePath = url.searchParams.get('path') ?? '';
+	const targetPath = relativePath ? `${iconsBase}/${relativePath}` : iconsBase;
+
+	if (process.env.NODE_ENV !== 'production') {
+		try {
+			const fs = await import('node:fs/promises');
+			const localDir = await resolveLocalPath(targetPath);
+
+			const exists = await fs.access(localDir).then(() => true).catch(() => false);
+			if (exists) {
+				const dirents = await fs.readdir(localDir, { withFileTypes: true });
+				const entries = dirents
+					.map((item) => {
+						const itemPath = relativePath ? `${relativePath}/${item.name}` : item.name;
+						const fullRepoPath = `${targetPath}/${item.name}`;
+						return {
+							name: item.name,
+							path: itemPath,
+							type: item.isDirectory() ? 'dir' : 'file',
+							downloadUrl: item.isDirectory()
+								? null
+								: `/admin/api/repo-image?branch=${branch}&path=${fullRepoPath}`
+						};
+					})
+					.filter((item) => {
+						if (item.type === 'dir') return true;
+						return item.name.toLowerCase().endsWith('.svg');
+					})
+					.sort((a, b) => {
+						if (a.type === b.type) return a.name.localeCompare(b.name);
+						return a.type === 'dir' ? -1 : 1;
+					});
+
+				return json({ path: targetPath, entries });
+			}
+		} catch (err) {
+			console.error('Failed to read local icons directory:', err);
+		}
+	}
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	try {
+		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+			owner: repo.owner,
+			repo: repo.name,
+			path: targetPath,
+			ref: branch
+		});
+
+		if (!Array.isArray(data)) return json({ error: 'Path is not a directory' }, { status: 400 });
+
+		const entries = data
+			.map((item) => ({
+				name: item.name,
+				path: relativePath ? `${relativePath}/${item.name}` : item.name,
+				type: item.type as 'file' | 'dir',
+				downloadUrl: item.type === 'dir'
+					? null
+					: `/admin/api/repo-image?branch=${branch}&path=${item.path}`
+			}))
+			.filter((item) => {
+				if (item.type === 'dir') return true;
+				return item.name.toLowerCase().endsWith('.svg');
+			})
+			.sort((a, b) => {
+				if (a.type === b.type) return a.name.localeCompare(b.name);
+				return a.type === 'dir' ? -1 : 1;
+			});
+
+		return json({ path: targetPath, entries });
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		if (e.response?.status === 404) {
+			return json({ path: targetPath, entries: [] });
+		}
+		return json(
+			{ error: e.response?.data?.message ?? 'Failed to load icons' },
+			{ status: e.response?.status ?? 500 }
+		);
+	}
+}
+
 export async function handleDashboardApi(event: RequestEvent) {
 	if (event.url.pathname.startsWith('/__brixter'))
 		return new Response('Not found', { status: 404 });
@@ -226,6 +373,8 @@ export async function handleDashboardApi(event: RequestEvent) {
 			return mediaPicker(event);
 		case 'repo-image':
 			return repoImage(event);
+		case 'icon-picker':
+			return iconPicker(event);
 		default:
 			return new Response('Not found', { status: 404 });
 	}

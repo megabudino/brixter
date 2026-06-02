@@ -99,7 +99,7 @@
 	<div class="min-h-0 flex-1 overflow-y-auto py-2">
 		{#if blocks.length === 0}
 			<p class="text-muted mx-3 border border-dashed border-gray-300 px-4 py-6 text-sm dark:border-gray-600">
-				Nessun brik nella pagina.
+				No briks on the page.
 			</p>
 		{/if}
 
@@ -126,7 +126,7 @@
 					<button
 						type="button"
 						class="absolute inset-0 z-0 cursor-pointer"
-						aria-label={`Seleziona brik ${block.type}`}
+						aria-label={`Select brik ${block.type}`}
 						onclick={() => onSelectBlock(block.id)}></button>
 					<span class="pointer-events-none relative z-10 min-w-0 flex-1 truncate text-sm font-medium">
 						{block.type}
@@ -150,7 +150,7 @@
 							<button
 								type="button"
 								class="fixed inset-0 z-40 cursor-default bg-black/20 dark:bg-black/40"
-								aria-label="Chiudi menu azioni"
+								aria-label="Close actions menu"
 								onclick={(event) => closeActionMenu(event)}></button>
 
 							<div

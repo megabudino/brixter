@@ -123,12 +123,12 @@
 				type="button"
 				class="border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onAddItem(path)}>
-				+Aggiungi {field.itemLabel ?? 'elemento'}
+				+ Add {field.itemLabel ?? 'item'}
 			</button>
 		</div>
 
 		{#if arrayItems.length === 0}
-			<p class="text-muted text-sm">Nessun elemento configurato.</p>
+			<p class="text-muted text-sm">No items configured.</p>
 		{/if}
 
 		{#each arrayItems as item, index (`${path}-${index}`)}
@@ -140,19 +140,19 @@
 							type="button"
 							class="border border-gray-300 px-2 py-1 text-xs transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
 							onclick={() => onMoveItem(path, index, -1)}>
-							Su
+							Up
 						</button>
 						<button
 							type="button"
 							class="border border-gray-300 px-2 py-1 text-xs transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
 							onclick={() => onMoveItem(path, index, 1)}>
-							Giu
+							Down
 						</button>
 						<button
 							type="button"
 							class="border border-red-300 px-2 py-1 text-xs text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
 							onclick={() => onRemoveItem(path, index)}>
-							Rimuovi
+							Remove
 						</button>
 					</div>
 				</div>
@@ -231,6 +231,27 @@
 				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onQueueFileEdit(path)}>
 				File
+			</button>
+		</div>
+	</label>
+{:else if fieldKind === 'icon'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
+		<div class="flex flex-wrap gap-2">
+			<div class="min-w-0 flex-1 flex items-center justify-center h-[46px] border border-gray-300 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100">
+				{#if stringValue}
+					<span class="inline-block h-6 w-6 text-gray-700 dark:text-gray-300">
+						{@html stringValue}
+					</span>
+				{:else}
+					<span class="text-gray-400 dark:text-gray-500 text-xs">No icon</span>
+				{/if}
+			</div>
+			<button
+				type="button"
+				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
+				onclick={() => onQueueFileEdit(path)}>
+				Choose
 			</button>
 		</div>
 	</label>

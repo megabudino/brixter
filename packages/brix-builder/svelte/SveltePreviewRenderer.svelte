@@ -3,7 +3,9 @@
 	import { getBuilderDefinition } from '../editor-controller.js';
 	import {
 		createBuilderFallbackProps,
-		normalizeBuilderPropsForRender
+		normalizeBuilderPropsForRender,
+		getFieldByPath,
+		inferBuilderFieldKind
 	} from '../core.js';
 	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
 	import { attachPreviewInteractionGuard } from '../preview/block-preview-interactions.js';
@@ -59,10 +61,20 @@
 			return {} as Record<string, Record<string, unknown>>;
 		}
 
+		const definition = getBuilderDefinition(block.type, definitions);
+		const field = getFieldByPath(definition.fields, edit.path);
+		const kind = field ? inferBuilderFieldKind(field) : null;
+
+		if (kind === 'image' || kind === 'icon') {
+			blockRenderSnapshotsCache = {};
+			lastActiveBlockId = edit.blockId;
+			lastActivePath = edit.path;
+			return {} as Record<string, Record<string, unknown>>;
+		}
+
 		lastActiveBlockId = edit.blockId;
 		lastActivePath = edit.path;
 		blockRenderSnapshotsCache = untrack(() => {
-			const definition = getBuilderDefinition(block.type, definitions);
 			return {
 				[edit.blockId]: normalizeBuilderPropsForRender(
 					createBuilderFallbackProps(definition, block.props)

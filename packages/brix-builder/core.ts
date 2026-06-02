@@ -3,7 +3,7 @@ import yaml from 'yaml';
 const { parse: parseYaml, stringify: stringifyYaml } = yaml;
 
 export type BuilderMode = 'component' | 'markdown';
-export type BuilderBindingType = 'image' | 'richtext' | 'text';
+export type BuilderBindingType = 'image' | 'richtext' | 'text' | 'icon';
 export type BuilderFieldKind =
 	| 'text'
 	| 'boolean'
@@ -11,6 +11,7 @@ export type BuilderFieldKind =
 	| 'object'
 	| 'array'
 	| 'image'
+	| 'icon'
 	| 'richtext-inline'
 	| 'richtext-block';
 
@@ -194,6 +195,10 @@ function createBuilderFallbackValue(field: BuilderField, key: string): unknown {
 		return createImageFallback();
 	}
 
+	if (kind === 'icon') {
+		return createIconFallback();
+	}
+
 	if (isHrefKey(key)) {
 		return '#';
 	}
@@ -306,6 +311,16 @@ export function createBuilderPreviewBindingsFromFields(
 			continue;
 		}
 
+		if (kind === 'icon' && selector) {
+			bindings.push({
+				type: 'icon',
+				selector,
+				path,
+				label: field.previewLabel ?? field.label
+			});
+			continue;
+		}
+
 		if ((kind === 'richtext-inline' || kind === 'richtext-block') && selector) {
 			bindings.push({
 				type: 'richtext',
@@ -358,6 +373,7 @@ function createInspectorField(field: BuilderField): BuilderField | null {
 		Boolean(field.previewSelector || field.previewInMarkup) &&
 		(kind === 'text' ||
 			kind === 'image' ||
+			kind === 'icon' ||
 			kind === 'richtext-inline' ||
 			kind === 'richtext-block');
 
@@ -1038,6 +1054,7 @@ function inferFieldPreviewSelector(field: BuilderField, path: string): string | 
 	if (
 		kind === 'text' ||
 		kind === 'image' ||
+		kind === 'icon' ||
 		kind === 'richtext-inline' ||
 		kind === 'richtext-block'
 	) {
@@ -1083,4 +1100,45 @@ function createId(): string {
 	}
 
 	return `block-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createIconFallback(): string {
+	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`;
+}
+
+export function getFieldByRawPath(fields: BuilderFields, rawPath: string): BuilderField | null {
+	const segments = rawPath.split('.');
+	let currentFields: BuilderFields | undefined = fields;
+	let currentField: BuilderField | null = null;
+
+	for (const segment of segments) {
+		if (!currentFields) {
+			return null;
+		}
+
+		const isArray = segment.endsWith('[]');
+		const name = isArray ? segment.slice(0, -2) : segment;
+		const field: BuilderField | undefined = currentFields[name];
+
+		if (!field) {
+			return null;
+		}
+
+		currentField = field;
+
+		if (isArray && field.item?.fields) {
+			currentFields = field.item.fields;
+		} else if (field.fields) {
+			currentFields = field.fields;
+		} else {
+			currentFields = undefined;
+		}
+	}
+
+	return currentField;
+}
+
+export function getFieldByPath(fields: BuilderFields, path: string): BuilderField | null {
+	const rawPath = path.replace(/\[\d+\]/g, '[]');
+	return getFieldByRawPath(fields, rawPath);
 }

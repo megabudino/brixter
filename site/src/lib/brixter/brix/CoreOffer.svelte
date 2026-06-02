@@ -8,6 +8,10 @@
 			summaryField: 'title',
 			item: {
 				fields: {
+					icon: {
+						kind: 'icon',
+						default: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>'
+					},
 					title: {},
 					text: {
 						kind: 'richtext-inline'
@@ -27,6 +31,7 @@
 
 <script lang="ts">
 	interface Feature {
+		icon?: string;
 		title?: string;
 		text?: string;
 	}
@@ -94,19 +99,30 @@
 					class="border-b border-gray-300 p-6 last:border-b-0 dark:border-gray-700"
 					data-builder-collection-item="features"
 				>
-					<h3
-						class="text-heading text-lg font-semibold"
-						data-builder-field="features[].title"
-					>
-						{feature.title}
-					</h3>
-					<p
-						class="text-secondary mt-2 text-sm leading-6"
-						data-builder-field="features[].text"
-						data-builder-kind="richtext-inline"
-					>
-						{@html feature.text ?? ''}
-					</p>
+					<div class="flex items-start gap-3">
+						<span
+							class="h-5 w-5 mt-1 shrink-0 text-blue-600 dark:text-blue-400"
+							data-builder-field="features[].icon"
+							data-builder-kind="icon"
+						>
+							{@html feature.icon ?? ''}
+						</span>
+						<div>
+							<h3
+								class="text-heading text-lg font-semibold"
+								data-builder-field="features[].title"
+							>
+								{feature.title}
+							</h3>
+							<p
+								class="text-secondary mt-2 text-sm leading-6"
+								data-builder-field="features[].text"
+								data-builder-kind="richtext-inline"
+							>
+								{@html feature.text ?? ''}
+							</p>
+						</div>
+					</div>
 				</div>
 			{/each}
 		</div>
