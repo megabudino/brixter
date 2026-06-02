@@ -114,7 +114,7 @@
 
 				{#if file.patch}
 					<div class="max-h-96 overflow-auto">
-						<pre class="m-0 p-0 text-xs leading-5"><code>{#each file.patch.split('\n') as line}<div class="px-4 {diffLineClass(line)}">{line || ' '}</div>{/each}</code></pre>
+						<pre class="m-0 min-w-full w-max p-0 text-xs leading-5"><code>{#each file.patch.split('\n') as line}<div class="min-w-full w-max whitespace-pre px-4 {diffLineClass(line)}">{line || ' '}</div>{/each}</code></pre>
 					</div>
 				{:else}
 					<p class="text-muted px-5 py-4 text-sm">No diff available for this file.</p>
