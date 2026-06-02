@@ -38,6 +38,35 @@ interface MountedField {
 	cleanup: (() => void) | null;
 }
 
+function clearPreviewFieldChrome(element: HTMLElement): void {
+	element.removeAttribute('data-builder-placeholder');
+	element.removeAttribute('data-builder-placeholder-active');
+	element.removeAttribute('data-builder-icon-empty');
+	if (element.dataset.builderPreviewMinWidth === 'true') {
+		element.style.removeProperty('min-width');
+		delete element.dataset.builderPreviewMinWidth;
+	}
+}
+
+function restoreNeutralizedInteractiveElement(element: HTMLElement): void {
+	if (element.dataset.builderPreviewNeutralized !== 'true') {
+		return;
+	}
+
+	for (const attribute of ['href', 'target', 'download'] as const) {
+		const datasetKey = `builderPreview${attribute[0].toUpperCase()}${attribute.slice(1)}`;
+		const value = element.dataset[datasetKey];
+		if (value == null) {
+			continue;
+		}
+
+		element.setAttribute(attribute, value);
+		delete element.dataset[datasetKey];
+	}
+
+	delete element.dataset.builderPreviewNeutralized;
+}
+
 export function attachPreviewEditableFields(
 	node: HTMLElement,
 	params: {
@@ -120,13 +149,21 @@ export function attachPreviewEditableFields(
 				continue;
 			}
 
-			if (isInteractiveFieldHost(element)) {
-				neutralizeInteractiveElement(element);
-			}
-
 			const path = resolveFieldPath(element, blockRoot);
 			if (!path) {
 				continue;
+			}
+
+			if (!currentParams.active) {
+				if (isInteractiveFieldHost(element)) {
+					restoreNeutralizedInteractiveElement(element);
+				}
+				clearPreviewFieldChrome(element);
+				continue;
+			}
+
+			if (isInteractiveFieldHost(element)) {
+				neutralizeInteractiveElement(element);
 			}
 
 			const fieldDef = getFieldByRawPath(currentParams.definition.fields, rawPath);

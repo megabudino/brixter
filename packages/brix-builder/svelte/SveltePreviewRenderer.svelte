@@ -87,6 +87,10 @@
 
 	function getRenderProps(block: (typeof blocks)[number]): Record<string, unknown> {
 		const definition = getBuilderDefinition(block.type, definitions);
+		if (previewMode) {
+			return normalizeBuilderPropsForRender(block.props) as Record<string, unknown>;
+		}
+
 		const liveProps = normalizeBuilderPropsForRender(
 			createBuilderFallbackProps(definition, block.props)
 		) as Record<string, unknown>;

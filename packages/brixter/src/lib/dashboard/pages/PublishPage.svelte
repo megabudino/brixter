@@ -58,33 +58,29 @@
 			<p class="text-muted mt-1 text-sm">{data.repo.fullName}</p>
 		</div>
 
-		{#if data.isAdmin}
-			<form
-				method="post"
-				action="?/publish"
-				use:enhance={() => {
-					publishing = true;
-					return async ({ update }) => {
-						publishing = false;
-						await update();
-					};
-				}}
+		<form
+			method="post"
+			action="?/publish"
+			use:enhance={() => {
+				publishing = true;
+				return async ({ update }) => {
+					publishing = false;
+					await update();
+				};
+			}}
+		>
+			<button
+				type="submit"
+				disabled={publishing}
+				class="btn-brutal-flat inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
 			>
-				<button
-					type="submit"
-					disabled={publishing}
-					class="btn-brutal-flat inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					{#if publishing}
-						<Spinner /> Publishing…
-					{:else}
-						Publish
-					{/if}
-				</button>
-			</form>
-		{:else}
-			<p class="text-muted text-sm">Contact an admin to publish these changes.</p>
-		{/if}
+				{#if publishing}
+					<Spinner /> Publishing…
+				{:else}
+					Publish
+				{/if}
+			</button>
+		</form>
 	</div>
 
 	{#if form?.publishError}

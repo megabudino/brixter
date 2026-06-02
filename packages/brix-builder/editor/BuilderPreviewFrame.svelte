@@ -306,6 +306,15 @@ body.dark {
 	display: none;
 }
 
+img[data-builder-field][data-builder-placeholder-active] {
+	background-color: #f4f4f5;
+	object-fit: cover;
+}
+
+body.dark img[data-builder-field][data-builder-placeholder-active] {
+	background-color: #27272a;
+}
+
 [data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
 	:is(a, button, [role='button'], [role='link'])
 ) {
