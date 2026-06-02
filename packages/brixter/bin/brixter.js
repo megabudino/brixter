@@ -2,13 +2,14 @@
 /**
  * brixter CLI.
  *
- *   brixter init       Wire brixter into a SvelteKit app.
- *   brixter migrate    Apply pending SQL migrations to $DATABASE_URL.
+ *   brixter init       Install brixter, wire SvelteKit, and migrate the database.
+ *   brixter migrate    Apply Better Auth + brixter SQL migrations to $DATABASE_URL.
  *
  * For richer integration, import `migrate` from `brixter/server` directly.
  */
 import Database from 'better-sqlite3';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -20,9 +21,9 @@ const args = process.argv.slice(3);
 
 function usage() {
 	console.log(`Usage:
-  brixter init [--cwd <path>] [--admin-path <path>] [--icons <pack>] [--no-icons] [--dry-run]
+  brixter init [--cwd <path>] [--admin-path <path>] [--icons <pack>] [--no-icons] [--dry-run] [--skip-install] [--skip-migrate]
   brixter reset-password [--email <email>] [--password <password> | --password-stdin] [--cwd <path>]
-  brixter migrate`);
+  brixter migrate [--cwd <path>]`);
 }
 
 if (!command || command === '-h' || command === '--help') {
@@ -50,28 +51,27 @@ if (command === 'reset-password') {
 	}
 }
 
-if (command !== 'migrate') {
-	console.error(`Unknown command: ${command}`);
-	usage();
-	process.exit(1);
+if (command === 'migrate') {
+	try {
+		await runMigrations(parseMigrateArgs(args));
+		process.exit(0);
+	} catch (err) {
+		console.error(err?.message ?? err);
+		process.exit(1);
+	}
 }
 
-try {
-	const dist = path.resolve(import.meta.dirname, '../dist/server/index.js');
-	const source = path.resolve(import.meta.dirname, '../src/lib/server/index.ts');
-	const target = existsSync(dist) ? dist : source;
-	const { migrate } = await import(pathToFileURL(target).href);
-	await migrate();
-} catch (err) {
-	console.error(err?.message ?? err);
-	process.exit(1);
-}
+console.error(`Unknown command: ${command}`);
+usage();
+process.exit(1);
 
 function parseInitArgs(argv) {
 	const options = {
 		cwd: process.cwd(),
 		adminPath: '/admin',
 		dryRun: false,
+		skipInstall: false,
+		skipMigrate: false,
 		icons: 'lucide'
 	};
 
@@ -79,6 +79,10 @@ function parseInitArgs(argv) {
 		const arg = argv[i];
 		if (arg === '--dry-run') {
 			options.dryRun = true;
+		} else if (arg === '--skip-install') {
+			options.skipInstall = true;
+		} else if (arg === '--skip-migrate') {
+			options.skipMigrate = true;
 		} else if (arg === '--cwd') {
 			options.cwd = argv[++i];
 		} else if (arg === '--admin-path') {
@@ -95,6 +99,22 @@ function parseInitArgs(argv) {
 			options.icons = 'none';
 		} else {
 			throw new Error(`Unknown init option: ${arg}`);
+		}
+	}
+
+	options.cwd = path.resolve(options.cwd);
+	return options;
+}
+
+function parseMigrateArgs(argv) {
+	const options = { cwd: process.cwd() };
+
+	for (let i = 0; i < argv.length; i++) {
+		const arg = argv[i];
+		if (arg === '--cwd') {
+			options.cwd = argv[++i];
+		} else {
+			throw new Error(`Unknown migrate option: ${arg}`);
 		}
 	}
 
@@ -138,15 +158,18 @@ async function init(argv) {
 
 	const context = { ...options, changes, skipped, manual };
 	assertSvelteKitApp(context);
+	ensureBrixterPackage(context);
 	ensureRouteShims(context);
 	ensureHooks(context);
 	ensureVitePlugin(context);
 	ensureSvelteExtensions(context);
-	ensureTailwindSources(context);
 	ensureEnvExample(context);
+	ensureDotEnv(context);
 	if (options.icons && options.icons !== 'none') {
 		addIconPack(context, options.icons);
 	}
+	ensureTailwindSources(context);
+	await setupDatabase(context);
 
 	const changeLabel = options.dryRun ? 'would create/update' : 'created/updated';
 	for (const message of changes) console.log(`${changeLabel} ${message}`);
@@ -576,6 +599,7 @@ function ensureEnvExample(context) {
 	const relativePath = '.env.example';
 	const file = path.join(context.cwd, relativePath);
 	const entries = [
+		['DATABASE_URL', 'data/brixter.db'],
 		['ORIGIN', `"http://localhost:5173"`],
 		['BRIXTER_AUTH_SECRET', '"change-me"'],
 		['GITHUB_APP_ID', '""'],
@@ -608,6 +632,163 @@ function ensureEnvExample(context) {
 
 	write(context, file, `${block}\n`);
 	context.changes.push(`${relativePath} documented brixter env vars`);
+}
+
+function ensureDotEnv(context) {
+	const relativePath = '.env';
+	const envFile = path.join(context.cwd, relativePath);
+	const exampleFile = path.join(context.cwd, '.env.example');
+
+	if (existsSync(envFile)) {
+		context.skipped.push(`${relativePath} already exists`);
+		return;
+	}
+
+	if (!existsSync(exampleFile)) {
+		context.manual.push(
+			`create ${relativePath} with DATABASE_URL and BRIXTER_AUTH_SECRET before starting the app`
+		);
+		return;
+	}
+
+	if (context.dryRun) {
+		context.changes.push(`${relativePath} would be created from .env.example`);
+		return;
+	}
+
+	copyFileSync(exampleFile, envFile);
+	context.changes.push(`${relativePath} created from .env.example`);
+}
+
+function readBrixterPackageVersion() {
+	const pkgPath = path.resolve(import.meta.dirname, '../package.json');
+	return JSON.parse(read(pkgPath)).version;
+}
+
+function detectPackageManager(cwd) {
+	if (existsSync(path.join(cwd, 'bun.lock')) || existsSync(path.join(cwd, 'bun.lockb'))) {
+		return 'bun';
+	}
+	if (existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
+	if (existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
+	return 'npm';
+}
+
+function hasBrixterDependency(pkg) {
+	return Boolean(pkg.dependencies?.brixter ?? pkg.devDependencies?.brixter);
+}
+
+function findInstalledBrixterPackageJson(cwd) {
+	let dir = cwd;
+	while (true) {
+		const candidate = path.join(dir, 'node_modules/brixter/package.json');
+		if (existsSync(candidate)) return candidate;
+		const parent = path.dirname(dir);
+		if (parent === dir) break;
+		dir = parent;
+	}
+	return '';
+}
+
+function ensureBrixterPackage(context) {
+	if (context.skipInstall) {
+		context.skipped.push('package install skipped (--skip-install)');
+		return;
+	}
+
+	const pkgPath = path.join(context.cwd, 'package.json');
+	const pkg = JSON.parse(read(pkgPath));
+	const installedPath = findInstalledBrixterPackageJson(context.cwd);
+
+	if (hasBrixterDependency(pkg) && installedPath) {
+		context.skipped.push('brixter is already installed');
+		return;
+	}
+
+	const version = readBrixterPackageVersion();
+
+	if (!hasBrixterDependency(pkg)) {
+		pkg.dependencies ??= {};
+		pkg.dependencies.brixter = `^${version}`;
+		if (context.dryRun) {
+			context.changes.push(`package.json would add brixter@^${version}`);
+		} else {
+			writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+			context.changes.push(`package.json added brixter@^${version}`);
+		}
+	} else if (!installedPath) {
+		context.skipped.push('package.json already lists brixter');
+	}
+
+	if (context.dryRun) {
+		context.changes.push(`would run ${detectPackageManager(context.cwd)} install`);
+		return;
+	}
+
+	runPackageInstall(context);
+}
+
+function runPackageInstall(context) {
+	const pm = detectPackageManager(context.cwd);
+	const args =
+		pm === 'bun'
+			? ['install']
+			: pm === 'pnpm'
+				? ['install']
+				: pm === 'yarn'
+					? ['install']
+					: ['install'];
+	const command = pm === 'npm' ? (process.platform === 'win32' ? 'npm.cmd' : 'npm') : pm;
+	const result = spawnSync(command, args, {
+		cwd: context.cwd,
+		stdio: 'inherit',
+		env: process.env
+	});
+
+	if (result.status !== 0) {
+		throw new Error(`${command} ${args.join(' ')} failed`);
+	}
+
+	context.changes.push(`ran ${command} ${args.join(' ')}`);
+}
+
+function loadEnvIntoProcess(cwd) {
+	const env = readEnvFile(path.join(cwd, '.env'));
+	for (const [key, value] of Object.entries(env)) {
+		if (process.env[key] === undefined) process.env[key] = value;
+	}
+}
+
+async function resolveMigrateModule() {
+	const dist = path.resolve(import.meta.dirname, '../dist/server/migrate.js');
+	const source = path.resolve(import.meta.dirname, '../src/lib/server/migrate.ts');
+	const target = existsSync(dist) ? dist : source;
+	return pathToFileURL(target).href;
+}
+
+async function runMigrations({ cwd }) {
+	loadEnvIntoProcess(cwd);
+	const { migrate } = await import(await resolveMigrateModule());
+	await migrate({ cwd });
+}
+
+async function setupDatabase(context) {
+	if (context.skipMigrate) {
+		context.skipped.push('database setup skipped (--skip-migrate)');
+		return;
+	}
+
+	if (context.dryRun) {
+		context.changes.push('would run Better Auth and brixter database migrations');
+		return;
+	}
+
+	if (!findInstalledBrixterPackageJson(context.cwd)) {
+		throw new Error('brixter is not installed in node_modules; run init without --skip-install first');
+	}
+
+	await runMigrations({ cwd: context.cwd });
+	context.changes.push('database migrations applied (Better Auth + brixter)');
 }
 
 function findFirst(cwd, candidates) {

@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
@@ -27,6 +27,7 @@
 		"LICENSE",
 		"README.md",
 		"bin",
+		"dist",
 		"src/lib",
 		"static"
 	],
@@ -71,11 +72,13 @@
 			"default": "./src/lib/sveltekit/api.ts"
 		},
 		"./vite": {
-			"types": "./src/lib/vite/index.ts",
-			"default": "./src/lib/vite/index.ts"
+			"types": "./dist/vite/index.d.ts",
+			"default": "./dist/vite/index.js"
 		}
 	},
 	"scripts": {
+		"build:package": "node ./scripts/build-package.mjs",
+		"prepublishOnly": "npm run build:package",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
@@ -87,7 +90,7 @@
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
 		"auth:schema": "bunx @better-auth/cli@1.5.0-beta.13 generate --config src/lib/server/auth-cli.ts --output src/lib/server/db/auth.schema.ts --yes",
-		"db:migrate": "bunx @better-auth/cli@1.5.0-beta.13 migrate --config src/lib/server/auth-cli.ts -y && bun scripts/migrate.ts"
+		"db:migrate": "bun scripts/migrate.ts"
 	},
 	"bin": {
 		"brixter": "./bin/brixter.js"
@@ -127,7 +130,7 @@
 		"better-sqlite3"
 	],
 	"dependencies": {
-		"@brixter/brix-builder": "^0.0.1",
+		"@brixter/brix-builder": "^0.0.2",
 		"@octokit/auth-app": "^8.2.0",
 		"@octokit/core": "^7.0.6",
 		"@tailwindcss/typography": "^0.5.19",

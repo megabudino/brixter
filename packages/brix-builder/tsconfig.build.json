@@ -22,6 +22,7 @@
     "./index.ts",
     "./svelte/**/*.ts",
     "./editor/**/*.ts",
+    "./preview/**/*.ts",
     "./core.ts",
     "./editor-controller.ts",
     "./preview-dom.ts",

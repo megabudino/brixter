@@ -6,7 +6,7 @@
     },
     "packages/brix-builder": {
       "name": "@brixter/brix-builder",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "dependencies": {
         "@tiptap/core": "^3.22.4",
         "@tiptap/starter-kit": "^3.22.4",
@@ -18,12 +18,12 @@
     },
     "packages/brixter": {
       "name": "brixter",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "bin": {
         "brixter": "./bin/brixter.js",
       },
       "dependencies": {
-        "@brixter/brix-builder": "workspace:*",
+        "@brixter/brix-builder": "^0.0.2",
         "@octokit/auth-app": "^8.2.0",
         "@octokit/core": "^7.0.6",
         "@tailwindcss/typography": "^0.5.19",
@@ -88,12 +88,15 @@
         "vitest": "^4.1.0",
         "vitest-browser-svelte": "^2.0.2",
       },
+      "peerDependencies": {
+        "@sveltejs/kit": "^2.0.0",
+        "svelte": "^5.0.0",
+      },
     },
     "site": {
       "name": "site",
       "version": "0.0.1",
       "dependencies": {
-        "@brixter/brix-builder": "workspace:*",
         "brixter": "workspace:*",
       },
       "devDependencies": {

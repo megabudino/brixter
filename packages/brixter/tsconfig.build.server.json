@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"rootDir": "./src/lib/server",
+		"outDir": "./dist/server",
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		"noEmitOnError": true,
+		"strict": true,
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true
+	},
+	"include": ["./src/lib/server/migrate.ts", "./src/lib/server/auth-migrate.ts"]
+}

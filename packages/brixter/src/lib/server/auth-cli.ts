@@ -9,21 +9,6 @@
  *   bunx @better-auth/cli migrate  --config src/lib/server/auth-cli.ts
  */
 import { betterAuth } from 'better-auth';
-import Database from 'better-sqlite3';
+import { createAuthOptions } from './auth-migrate.ts';
 
-export const auth = betterAuth({
-	baseURL: process.env.ORIGIN ?? 'http://localhost:5173',
-	secret: process.env.BRIXTER_AUTH_SECRET ?? 'cli-placeholder-secret',
-	database: new Database(process.env.DATABASE_URL ?? 'data/brixter.db'),
-	emailAndPassword: { enabled: true, allowClientUserCreation: false },
-	user: {
-		additionalFields: {
-			role: {
-				type: 'string',
-				required: false,
-				defaultValue: 'user',
-				input: false
-			}
-		}
-	}
-});
+export const auth = betterAuth(createAuthOptions());

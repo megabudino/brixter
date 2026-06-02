@@ -2,26 +2,24 @@
 
 Brixter CMS package for SvelteKit apps.
 
-## Install
-
-```sh
-npm install brixter
-```
-
-The visual page builder ships as a dependency ([`@brixter/brix-builder`](../brix-builder)); you normally do not install it separately.
-
 ## Init
 
-After installing the package, wire the dashboard into a SvelteKit app:
+From your SvelteKit app directory, run:
 
 ```sh
-brixter init
+npx brixter init
 ```
 
-The init command creates the hidden `__brixter` route shims, wires SvelteKit
-hooks, adds the Vite plugin, documents required environment variables, and adds
-Tailwind sources for package components. It does not copy dashboard
-implementation files into the app.
+The init command adds `brixter` to `package.json` and runs your package manager,
+creates the hidden `__brixter` route shims, wires SvelteKit hooks, adds the Vite
+plugin, documents required environment variables in `.env.example`, creates
+`.env` when missing, adds Tailwind sources for package components, and applies
+Better Auth plus brixter SQL migrations to `DATABASE_URL`. It does not copy
+dashboard implementation files into the app.
+
+The visual page builder ships as a dependency of `brixter`
+([`@brixter/brix-builder`](../brix-builder)); you normally do not install it
+separately.
 
 Useful options:
 
@@ -29,6 +27,14 @@ Useful options:
 brixter init --dry-run
 brixter init --cwd ./apps/web
 brixter init --admin-path /admin
+brixter init --skip-install
+brixter init --skip-migrate
+```
+
+To re-run database migrations (Better Auth schema + brixter SQL):
+
+```sh
+npx brixter migrate
 ```
 
 ## Explorer

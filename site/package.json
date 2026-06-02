@@ -15,7 +15,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
-		"db:migrate": "bunx @better-auth/cli@1.5.0-beta.13 migrate --config ../packages/brixter/src/lib/server/auth-cli.ts -y && node --env-file=.env --import tsx ../packages/brixter/scripts/migrate.ts"
+		"db:migrate": "node --env-file=.env --import tsx ../packages/brixter/scripts/migrate.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.3",
