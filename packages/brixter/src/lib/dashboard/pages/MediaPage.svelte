@@ -27,7 +27,8 @@
 	let dragOver = $state(false);
 	let selectedFile: any = $state(null);
 	let copied = $state(false);
-	let showDeleteConfirm = $state(false);
+	let deleteTarget: { name: string; path: string; type: string; sha: string | null } | null =
+		$state(null);
 	let deleting = $state(false);
 	let toast: { text: string; type: 'success' | 'error' } | null = $state(null);
 	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -157,6 +158,25 @@
 		return `/admin/api/repo-image?branch=${data.branch}&path=${entry.path}`;
 	}
 
+	function beginDelete(item: { name: string; path: string; type: string; sha?: string | null }) {
+		deleteTarget = {
+			name: item.name,
+			path: item.path,
+			type: item.type,
+			sha: item.sha ?? null
+		};
+	}
+
+	function cancelDelete() {
+		deleteTarget = null;
+	}
+
+	function handleDeleteKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape' && !deleting) {
+			cancelDelete();
+		}
+	}
+
 	$effect(() => {
 		if (form?.createDirectorySuccess) {
 			addingFolder = false;
@@ -165,7 +185,7 @@
 		}
 		if (form?.deleteSuccess) {
 			selectedFile = null;
-			showDeleteConfirm = false;
+			deleteTarget = null;
 			showToast('Item deleted successfully');
 		}
 	});
@@ -233,15 +253,13 @@
 			{#if data.relativePath}
 				<button
 					type="button"
-					onclick={() => {
-						selectedFile = {
-							name: data.relativePath.split('/').pop(),
+					onclick={() =>
+						beginDelete({
+							name: data.relativePath.split('/').pop() ?? '',
 							path: data.currentPath,
 							type: 'dir',
 							sha: null
-						};
-						showDeleteConfirm = true;
-					}}
+						})}
 					class="text-error hover:text-red-700 dark:hover:text-red-300 inline-flex cursor-pointer items-center gap-2 text-sm transition-colors"
 				>
 					<Trash2 size={16} />
@@ -384,9 +402,8 @@
 		role="dialog"
 		aria-modal="true"
 		onclick={(e) => {
-			if (e.target === e.currentTarget && !deleting) {
+			if (e.target === e.currentTarget && !deleting && !deleteTarget) {
 				selectedFile = null;
-				showDeleteConfirm = false;
 			}
 		}}
 	>
@@ -411,10 +428,7 @@
 				{/if}
 				<button
 					type="button"
-					onclick={() => {
-						selectedFile = null;
-						showDeleteConfirm = false;
-					}}
+					onclick={() => (selectedFile = null)}
 					class="text-secondary hover:text-heading absolute top-3 right-3 cursor-pointer p-2 transition-colors"
 					aria-label="Close"
 				>
@@ -460,85 +474,99 @@
 				</div>
 
 				<div class="mt-8 border-t border-gray-300 pt-6 dark:border-gray-700">
-					{#if showDeleteConfirm}
-						<div
-							class="space-y-3 border border-red-300 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20"
-						>
-							<p class="text-error text-xs font-medium">
-								{#if selectedFile.type === 'dir'}
-									Delete this folder and everything inside it? This cannot be undone.
-								{:else}
-									Delete this file? This cannot be undone.
-								{/if}
-							</p>
-							<div class="flex gap-2">
-								<form
-									method="post"
-									action="?/deleteMedia"
-									class="flex-1"
-									use:enhance={() => {
-										deleting = true;
-										return async ({ result, update }) => {
-											deleting = false;
-											if (result.type === 'success') {
-												const wasDir = selectedFile.type === 'dir';
-												selectedFile = null;
-												showDeleteConfirm = false;
-												showToast(
-													wasDir ? 'Folder deleted successfully' : 'File deleted successfully'
-												);
-												if (wasDir) {
-													const parentLink = data.relativePath
-														.split('/')
-														.slice(0, -1)
-														.join('/');
-													window.location.href = mediaHref(parentLink);
-												}
-											}
-											await update();
-										};
-									}}
-								>
-									<input type="hidden" name="itemPath" value={selectedFile.path} />
-									<input type="hidden" name="sha" value={selectedFile.sha || ''} />
-									<input
-										type="hidden"
-										name="isDir"
-										value={selectedFile.type === 'dir' ? 'true' : 'false'}
-									/>
-									<button
-										type="submit"
-										disabled={deleting}
-										class="inline-flex w-full cursor-pointer items-center justify-center gap-2 bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-									>
-										{#if deleting}
-											<Spinner />
-										{:else}
-											Yes, delete
-										{/if}
-									</button>
-								</form>
-								<button
-									type="button"
-									onclick={() => (showDeleteConfirm = false)}
-									disabled={deleting}
-									class="text-secondary hover:text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
-								>
-									Cancel
-								</button>
-							</div>
-						</div>
-					{:else}
-						<button
-							type="button"
-							onclick={() => (showDeleteConfirm = true)}
-							class="text-error hover:text-red-700 dark:hover:text-red-300 inline-flex w-full cursor-pointer items-center justify-center gap-2 text-sm transition-colors"
-						>
-							<Trash2 size={16} />
-							{selectedFile.type === 'dir' ? 'Delete folder' : 'Delete file'}
-						</button>
-					{/if}
+					<button
+						type="button"
+						onclick={() => beginDelete(selectedFile)}
+						class="text-error hover:text-red-700 dark:hover:text-red-300 inline-flex w-full cursor-pointer items-center justify-center gap-2 text-sm transition-colors"
+					>
+						<Trash2 size={16} />
+						{selectedFile.type === 'dir' ? 'Delete folder' : 'Delete file'}
+					</button>
 				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if deleteTarget}
+	<div class="fixed inset-0 z-70 flex items-center justify-center p-6">
+		<button
+			type="button"
+			class="absolute inset-0 bg-black/50"
+			aria-label="Cancel delete"
+			disabled={deleting}
+			onclick={() => !deleting && cancelDelete()}
+		></button>
+		<div
+			class="relative w-full max-w-md border border-gray-300 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+			role="alertdialog"
+			aria-modal="true"
+			aria-labelledby="delete-media-title"
+			tabindex="-1"
+			onkeydown={handleDeleteKeydown}
+		>
+			<h2 id="delete-media-title" class="text-heading text-lg font-semibold">
+				{deleteTarget.type === 'dir' ? 'Delete folder' : 'Delete file'}
+			</h2>
+			<p class="text-secondary mt-2 text-sm">
+				{#if deleteTarget.type === 'dir'}
+					Delete “{deleteTarget.name}” and everything inside it? This cannot be undone.
+				{:else}
+					Delete “{deleteTarget.name}”? This cannot be undone.
+				{/if}
+			</p>
+			<div class="mt-6 flex gap-2">
+				<form
+					method="post"
+					action="?/deleteMedia"
+					class="flex-1"
+					use:enhance={() => {
+						deleting = true;
+						return async ({ result, update }) => {
+							deleting = false;
+							if (result.type === 'success') {
+								const wasDir = deleteTarget?.type === 'dir';
+								deleteTarget = null;
+								selectedFile = null;
+								showToast(
+									wasDir ? 'Folder deleted successfully' : 'File deleted successfully'
+								);
+								if (wasDir) {
+									const parentLink = data.relativePath.split('/').slice(0, -1).join('/');
+									window.location.href = mediaHref(parentLink);
+								}
+							}
+							await update();
+						};
+					}}
+				>
+					<input type="hidden" name="itemPath" value={deleteTarget.path} />
+					<input type="hidden" name="sha" value={deleteTarget.sha || ''} />
+					<input
+						type="hidden"
+						name="isDir"
+						value={deleteTarget.type === 'dir' ? 'true' : 'false'}
+					/>
+					<button
+						type="submit"
+						disabled={deleting}
+						class="inline-flex w-full cursor-pointer items-center justify-center gap-2 bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{#if deleting}
+							<Spinner />
+						{:else}
+							Yes, delete
+						{/if}
+					</button>
+				</form>
+				<button
+					type="button"
+					onclick={cancelDelete}
+					disabled={deleting}
+					class="text-secondary hover:text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+				>
+					Cancel
+				</button>
 			</div>
 		</div>
 	</div>

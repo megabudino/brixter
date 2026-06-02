@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page as pageStore } from '$app/stores';
-	import { Compass, Settings, Sun, Moon, Monitor, Image as ImageIcon } from 'lucide-svelte';
+	import { Compass, Sun, Moon, Monitor, Image as ImageIcon, Users } from 'lucide-svelte';
 	import LoginPage from './pages/LoginPage.svelte';
 	import SetupPage from './pages/SetupPage.svelte';
-	import SettingsPage from './pages/SettingsPage.svelte';
+	import AccountsPage from './pages/AccountsPage.svelte';
 	import RoutesPage from './pages/RoutesPage.svelte';
 	import PublishPage from './pages/PublishPage.svelte';
 	import MediaPage from './pages/MediaPage.svelte';
@@ -25,7 +25,10 @@
 	const mediaActive = $derived(
 		currentPublicPath === '/admin/media' || currentPublicPath.startsWith('/admin/media/')
 	);
-	const pageData = $derived({ ...(data.pageData ?? {}), isAdmin: data.isAdmin });
+	const accountsActive = $derived(
+		currentPublicPath === '/admin/accounts' || currentPublicPath.startsWith('/admin/accounts/')
+	);
+	const pageData = $derived({ ...(data.pageData ?? {}) });
 
 	const themeIcons: Record<ThemePreference, typeof Sun> = {
 		light: Sun,
@@ -41,8 +44,8 @@
 		<LoginPage {form} />
 	{:else if data.page === 'setup'}
 		<SetupPage {form} />
-	{:else if data.page === 'settings'}
-		<SettingsPage data={pageData} {form} />
+	{:else if data.page === 'accounts'}
+		<AccountsPage data={pageData} {form} />
 	{:else if data.page === 'branch'}
 		<RoutesPage data={pageData} {form} />
 	{:else if data.page === 'publish'}
@@ -53,7 +56,7 @@
 {/snippet}
 
 <div class="min-h-svh bg-gray-50 dark:bg-gray-900">
-	{#if data.isAdmin}
+	{#if data.showNav}
 		<div class="flex">
 			<aside
 				class="sticky top-0 flex h-svh w-56 shrink-0 flex-col border-r border-gray-300 bg-white px-3 py-6 dark:border-gray-700 dark:bg-gray-800"
@@ -77,13 +80,12 @@
 						<ImageIcon size={16} /> Media
 					</a>
 					<a
-						href="/admin/settings"
-						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {currentPublicPath ===
-						'/admin/settings'
+						href="/admin/accounts"
+						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {accountsActive
 							? 'font-medium text-heading'
 							: 'text-secondary hover:text-heading'}"
 					>
-						<Settings size={16} /> Settings
+						<Users size={16} /> Accounts
 					</a>
 				</nav>
 				<div class="mt-auto px-3 pt-6">

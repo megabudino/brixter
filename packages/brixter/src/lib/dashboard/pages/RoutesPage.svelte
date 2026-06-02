@@ -16,7 +16,10 @@
 		Tablet,
 		Smartphone,
 		Eye,
-		Edit2
+		Edit2,
+		Ellipsis,
+		Pencil,
+		Trash2
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
 	import { BrixEditor, createBrixDefinitions, SHORTCUTS } from '@brixter/brix-builder';
@@ -58,6 +61,23 @@
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	let builderPreviewMode = $state(false);
 	let builderViewportSize = $state<'desktop' | 'tablet' | 'mobile'>('desktop');
+	let deleteTarget = $state<{
+		kind: 'page' | 'route';
+		path: string;
+		label: string;
+		routeDirPath: string;
+		filePath?: string;
+	} | null>(null);
+	let deleting = $state(false);
+	let openMenuPath = $state<string | null>(null);
+	let renameTarget = $state<{
+		kind: 'page' | 'route';
+		path: string;
+		label: string;
+		routeDirPath: string;
+	} | null>(null);
+	let renameName = $state('');
+	let renaming = $state(false);
 
 	const existingDirNames = $derived(
 		new Set<string>((data.childDirNames ?? []).map((name: string) => name.toLowerCase()))
@@ -75,6 +95,33 @@
 	const duplicatePage = $derived(
 		trimmedPageName.length > 0 && existingPageNames.has(trimmedPageName.toLowerCase())
 	);
+	const routesRoot = $derived(normalizeRoutesRoot(data.repo?.routesRoot ?? data.explorerRoot ?? ''));
+	const trimmedRenameName = $derived(renameName.trim());
+	const renameOldSegment = $derived(
+		renameTarget ? routeSegmentName(renameTarget.routeDirPath) : ''
+	);
+	const duplicateRename = $derived(
+		trimmedRenameName.length > 0 &&
+			trimmedRenameName.toLowerCase() !== renameOldSegment.toLowerCase() &&
+			(existingDirNames.has(trimmedRenameName.toLowerCase()) ||
+				existingPageNames.has(trimmedRenameName.toLowerCase()))
+	);
+
+	function normalizeRoutesRoot(value: string) {
+		return value.trim().replace(/^\/+|\/+$/g, '');
+	}
+
+	function routeSegmentName(routeDirPath: string) {
+		return routeDirPath.split('/').pop() ?? '';
+	}
+
+	function canRenameEntry(entry: { routeDirPath?: string }) {
+		return !!entry.routeDirPath && entry.routeDirPath !== routesRoot;
+	}
+
+	function canShowEntryMenu(entry: { routeDirPath?: string }) {
+		return !!entry.routeDirPath;
+	}
 
 	function startAddingDirectory() {
 		cancelAddingPage();
@@ -96,6 +143,62 @@
 	function cancelAddingPage() {
 		addingPage = false;
 		pageName = '';
+	}
+
+	function beginDelete(entry: {
+		kind: 'page' | 'route';
+		path: string;
+		label: string;
+		routeDirPath?: string;
+		filePath?: string;
+	}) {
+		if (!entry.routeDirPath) return;
+		cancelRename();
+		openMenuPath = null;
+		deleteTarget = {
+			kind: entry.kind,
+			path: entry.path,
+			label: entry.label,
+			routeDirPath: entry.routeDirPath,
+			filePath: entry.filePath
+		};
+	}
+
+	function cancelDelete() {
+		deleteTarget = null;
+	}
+
+	function handleDeleteKeydown(e: KeyboardEvent) {
+		if (e.key === 'Escape' && !deleting) {
+			cancelDelete();
+		}
+	}
+
+	function startRename(entry: {
+		kind: 'page' | 'route';
+		path: string;
+		label: string;
+		routeDirPath?: string;
+	}) {
+		if (!canRenameEntry(entry)) return;
+		cancelDelete();
+		openMenuPath = null;
+		renameTarget = {
+			kind: entry.kind,
+			path: entry.path,
+			label: entry.label,
+			routeDirPath: entry.routeDirPath!
+		};
+		renameName = routeSegmentName(entry.routeDirPath!);
+	}
+
+	function cancelRename() {
+		renameTarget = null;
+		renameName = '';
+	}
+
+	function toggleEntryMenu(path: string) {
+		openMenuPath = openMenuPath === path ? null : path;
 	}
 
 	function focusOnMount(node: HTMLInputElement) {
@@ -282,7 +385,18 @@
 			}
 		};
 		window.addEventListener('beforeunload', handler);
-		return () => window.removeEventListener('beforeunload', handler);
+
+		const closeMenuOnClick = (e: MouseEvent) => {
+			if (!(e.target as Element).closest('[data-entry-menu]')) {
+				openMenuPath = null;
+			}
+		};
+		document.addEventListener('click', closeMenuOnClick);
+
+		return () => {
+			window.removeEventListener('beforeunload', handler);
+			document.removeEventListener('click', closeMenuOnClick);
+		};
 	});
 </script>
 
@@ -769,41 +883,36 @@
 							The draft is {data.behindBy} commit{data.behindBy > 1 ? 's' : ''} behind main.
 						</span>
 					{/if}
-					{#if !data.isAdmin}
-						<span class="font-normal">Contact an admin to resolve it.</span>
-					{/if}
 				</p>
-				{#if data.isAdmin}
-					{#if form?.mergeSuccess}
-						<span class="text-sm text-green-700 dark:text-green-400">Merged!</span>
-					{:else}
-						<form
-							method="post"
-							action="?/merge"
-							use:enhance={() => {
-								merging = true;
-								return async ({ update }) => {
-									merging = false;
-									await update({ reset: false });
-								};
-							}}
+				{#if form?.mergeSuccess}
+					<span class="text-sm text-green-700 dark:text-green-400">Merged!</span>
+				{:else}
+					<form
+						method="post"
+						action="?/merge"
+						use:enhance={() => {
+							merging = true;
+							return async ({ update }) => {
+								merging = false;
+								await update({ reset: false });
+							};
+						}}
+					>
+						<button
+							type="submit"
+							disabled={merging}
+							class="inline-flex cursor-pointer items-center gap-2 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
 						>
-							<button
-								type="submit"
-								disabled={merging}
-								class="inline-flex cursor-pointer items-center gap-2 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
-							>
-								{#if merging}
-									<Spinner /> Updating…
-								{:else}
-									Retry update
-								{/if}
-							</button>
-						</form>
-					{/if}
-					{#if form?.mergeError}
-						<span class="text-error text-sm">{form.mergeError}</span>
-					{/if}
+							{#if merging}
+								<Spinner /> Updating…
+							{:else}
+								Retry update
+							{/if}
+						</button>
+					</form>
+				{/if}
+				{#if form?.mergeError}
+					<span class="text-error text-sm">{form.mergeError}</span>
 				{/if}
 			</div>
 		</div>
@@ -834,16 +943,7 @@
 							class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
 						>
 					{:else}
-						<span class="text-heading inline-flex items-center gap-2">
-							{crumb.label}
-							{#if crumb.fileTypeLabel}
-								<span
-									class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
-								>
-									{crumb.fileTypeLabel}
-								</span>
-							{/if}
-						</span>
+						<span class="text-heading">{crumb.label}</span>
 					{/if}
 				{/each}
 			</div>
@@ -878,6 +978,12 @@
 			<p class="text-error mb-3 text-sm">A route named “{trimmedPageName}” already exists.</p>
 		{:else if form?.createPageError}
 			<p class="text-error mb-3 text-sm">{form.createPageError}</p>
+		{:else if form?.deleteError}
+			<p class="text-error mb-3 text-sm">{form.deleteError}</p>
+		{:else if renameTarget && duplicateRename}
+			<p class="text-error mb-3 text-sm">A route named “{trimmedRenameName}” already exists.</p>
+		{:else if form?.renameError}
+			<p class="text-error mb-3 text-sm">{form.renameError}</p>
 		{/if}
 
 		{#if parentPath !== null}
@@ -894,49 +1000,138 @@
 				<ul class="divide-y divide-gray-300 dark:divide-gray-700">
 					{#each data.entries as entry}
 						<li>
-							{#if entry.kind === 'page' && isImage(entry.label)}
-								<button
-									type="button"
-									onclick={() => (lightbox = { name: entry.label, url: entry.downloadUrl })}
-									class="flex w-full cursor-pointer items-center gap-3 px-5 py-4 text-left text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
-								>
-									<Image size={18} class="text-muted" />
-									{entry.label}
-								</button>
-							{:else if entry.disabled}
-								<div
-									class="text-muted flex cursor-not-allowed items-center gap-3 px-5 py-4 opacity-70"
-									aria-disabled="true"
-								>
-									<FileText size={18} class="text-muted" />
-									<span class="min-w-0 flex-1">{entry.label}</span>
-									{#if entry.fileTypeLabel}
-										<span
-											class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
-										>
-											{entry.fileTypeLabel}
-										</span>
-									{/if}
-								</div>
-							{:else}
-								<a
-									href={routesHref(entry.path)}
-									class="flex cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
+							{#if renameTarget && renameTarget.path === entry.path}
+								<form
+									method="post"
+									action="?/renameRoute"
+									class="flex items-center gap-3 px-5 py-4"
+									use:enhance={({ cancel }) => {
+										if (!trimmedRenameName || duplicateRename) {
+											cancel();
+											return;
+										}
+										renaming = true;
+										return async ({ result, update }) => {
+											renaming = false;
+											if (result.type === 'redirect' || result.type === 'success') {
+												cancelRename();
+											}
+											await update();
+										};
+									}}
 								>
 									{#if entry.kind === 'route'}
-										<Folder size={18} class="text-muted" />
+										<Folder size={18} class="text-muted shrink-0" />
 									{:else}
-										<FileText size={18} class="text-muted" />
+										<FileText size={18} class="text-muted shrink-0" />
 									{/if}
-									<span class="min-w-0 flex-1">{entry.label}</span>
-									{#if entry.fileTypeLabel}
-										<span
-											class="text-muted rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-700 dark:text-gray-300"
+									<input type="hidden" name="routeDirPath" value={renameTarget.routeDirPath} />
+									<input
+										use:focusOnMount
+										name="new_name"
+										value={renameName}
+										aria-label="New name"
+										disabled={renaming}
+										oninput={(e: Event) => (renameName = (e.target as HTMLInputElement).value)}
+										onkeydown={(e: KeyboardEvent) => {
+											if (e.key === 'Escape') cancelRename();
+										}}
+										class="min-w-0 flex-1 bg-transparent text-gray-900 outline-none dark:text-gray-100"
+									/>
+									<button
+										type="button"
+										onclick={cancelRename}
+										disabled={renaming}
+										class="text-secondary hover:text-heading shrink-0 cursor-pointer px-2 text-sm disabled:opacity-50"
+									>
+										Cancel
+									</button>
+									{#if renaming}
+										<Spinner />
+									{/if}
+								</form>
+							{:else}
+								<div
+									class="group flex w-full items-stretch transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+								>
+									{#if entry.kind === 'page' && isImage(entry.label)}
+										<button
+											type="button"
+											onclick={() => (lightbox = { name: entry.label, url: entry.downloadUrl })}
+											class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-5 py-4 text-left text-gray-900 dark:text-gray-100"
 										>
-											{entry.fileTypeLabel}
-										</span>
+											<Image size={18} class="text-muted" />
+											{entry.label}
+										</button>
+									{:else if entry.disabled}
+										<div
+											class="text-muted flex min-w-0 flex-1 cursor-not-allowed items-center gap-3 px-5 py-4 opacity-70"
+											aria-disabled="true"
+										>
+											<FileText size={18} class="text-muted" />
+											<span class="min-w-0 flex-1">{entry.label}</span>
+										</div>
+									{:else}
+										<a
+											href={routesHref(entry.path)}
+											class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 dark:text-gray-100"
+										>
+											{#if entry.kind === 'route'}
+												<Folder size={18} class="text-muted" />
+											{:else}
+												<FileText size={18} class="text-muted" />
+											{/if}
+											<span class="min-w-0 flex-1">{entry.label}</span>
+										</a>
 									{/if}
-								</a>
+									{#if canShowEntryMenu(entry)}
+										<div
+											class="relative flex shrink-0 items-center pr-3"
+											data-entry-menu
+										>
+											<button
+												type="button"
+												onclick={(e) => {
+													e.stopPropagation();
+													toggleEntryMenu(entry.path);
+												}}
+												class="text-muted group-hover:text-heading inline-flex h-full cursor-pointer items-center justify-center px-2 py-4 transition-colors"
+												aria-label="Actions for {entry.label}"
+												aria-expanded={openMenuPath === entry.path}
+												aria-haspopup="menu"
+											>
+												<Ellipsis size={16} />
+											</button>
+											{#if openMenuPath === entry.path}
+												<div
+													role="menu"
+													class="absolute top-full right-0 z-20 mt-1 min-w-[9rem] border border-gray-300 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+												>
+													{#if canRenameEntry(entry)}
+														<button
+															type="button"
+															role="menuitem"
+															onclick={() => startRename(entry)}
+															class="text-secondary hover:text-heading flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+														>
+															<Pencil size={14} />
+															Rename
+														</button>
+													{/if}
+													<button
+														type="button"
+														role="menuitem"
+														onclick={() => beginDelete(entry)}
+														class="text-error hover:bg-red-50 dark:hover:bg-red-950/30 flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+													>
+														<Trash2 size={14} />
+														Delete
+													</button>
+												</div>
+											{/if}
+										</div>
+									{/if}
+								</div>
 							{/if}
 						</li>
 					{/each}
@@ -1035,6 +1230,107 @@
 			{:else}
 				<p class="text-muted py-8 text-center text-sm">There's nothing here.</p>
 			{/if}
+		</div>
+	</div>
+
+	{#if toastMessage}
+		<div class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2" transition:fly={{ y: 16, duration: 200 }}>
+			<div
+				class="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg {toastMessage.type ===
+				'success'
+					? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+					: 'bg-red-600 text-white'}"
+			>
+				{toastMessage.text}
+				<button
+					type="button"
+					onclick={() => (toastMessage = null)}
+					class="ml-1 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
+				>
+					<X size={14} />
+				</button>
+			</div>
+		</div>
+	{/if}
+{/if}
+
+{#if deleteTarget}
+	{@const target = deleteTarget}
+	<div class="fixed inset-0 z-70 flex items-center justify-center p-6">
+		<button
+			type="button"
+			class="absolute inset-0 bg-black/50"
+			aria-label="Cancel delete"
+			disabled={deleting}
+			onclick={() => !deleting && cancelDelete()}
+		></button>
+		<div
+			class="relative w-full max-w-md border border-gray-300 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+			role="alertdialog"
+			aria-modal="true"
+			aria-labelledby="delete-route-title"
+			tabindex="-1"
+			onkeydown={handleDeleteKeydown}
+		>
+			<h2 id="delete-route-title" class="text-heading text-lg font-semibold">
+				{target.kind === 'route' ? 'Delete directory' : 'Delete page'}
+			</h2>
+			<p class="text-secondary mt-2 text-sm">
+				{#if target.kind === 'route'}
+					Delete “{target.label}” and everything inside it? This cannot be undone.
+				{:else}
+					Delete page “{target.label}”? This cannot be undone.
+				{/if}
+			</p>
+			<div class="mt-6 flex gap-2">
+				<form
+					method="post"
+					action="?/deleteRoute"
+					class="flex-1"
+					use:enhance={() => {
+						deleting = true;
+						return async ({ result, update }) => {
+							deleting = false;
+							if (result.type === 'success') {
+								const wasRoute = target.kind === 'route';
+								cancelDelete();
+								showToast(wasRoute ? 'Directory deleted' : 'Page deleted');
+							} else if (result.type === 'failure') {
+								showToast(
+									(result.data as { deleteError?: string })?.deleteError ?? 'Delete failed',
+									'error'
+								);
+							}
+							await update();
+						};
+					}}
+				>
+					<input type="hidden" name="kind" value={target.kind} />
+					<input type="hidden" name="routeDirPath" value={target.routeDirPath} />
+					{#if target.filePath}
+						<input type="hidden" name="filePath" value={target.filePath} />
+					{/if}
+					<button
+						type="submit"
+						disabled={deleting}
+						class="inline-flex w-full cursor-pointer items-center justify-center gap-2 bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{#if deleting}
+							<Spinner />
+						{:else}
+							Yes, delete
+						{/if}
+					</button>
+				</form>
+				<button
+					type="button"
+					onclick={cancelDelete}
+					disabled={deleting}
+					class="text-secondary hover:text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+				>
+					Cancel
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

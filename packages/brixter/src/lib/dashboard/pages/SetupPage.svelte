@@ -11,7 +11,7 @@
 			<h1 class="text-heading font-display text-3xl font-bold tracking-tight">
 				Welcome to brixter
 			</h1>
-			<p class="text-secondary mt-2">Create your admin account to get started.</p>
+			<p class="text-secondary mt-2">Create your account to get started.</p>
 		</div>
 
 		<form method="post" action="?/setup" use:enhance class="space-y-6">
@@ -30,7 +30,7 @@
 				<p class="text-error text-sm">{form.message}</p>
 			{/if}
 
-			<Button class="w-full">Create Admin Account</Button>
+			<Button class="w-full">Create account</Button>
 		</form>
 	</div>
 </div>

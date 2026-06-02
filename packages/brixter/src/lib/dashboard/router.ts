@@ -3,7 +3,6 @@ import { getAuth } from '../server/auth.ts';
 import { getConfig } from '../server/config.ts';
 import { getDb } from '../server/db.ts';
 import { getOctokit, getRepo } from '../server/github.ts';
-import { getRepoConfig, updateRepoConfig } from '../server/repo-config.ts';
 import {
 	childDirNames,
 	childPageNames,
@@ -16,7 +15,8 @@ import {
 	routeBreadcrumbs,
 	routePageUrlPath,
 	routeUrlPathToDirPath,
-	type RouteNode
+	type RouteNode,
+	type TreeEntry
 } from '../server/sveltekit-routes.ts';
 import {
 	getBranchRouteSnapshot,
@@ -26,7 +26,7 @@ import {
 import { marked } from 'marked';
 import { resolveLocalPath } from './api.ts';
 
-type DashboardPage = 'login' | 'setup' | 'settings' | 'branch' | 'media' | 'publish';
+type DashboardPage = 'login' | 'setup' | 'accounts' | 'branch' | 'media' | 'publish';
 
 interface PageMatch {
 	page: DashboardPage;
@@ -62,7 +62,8 @@ function matchPage(pathname: string): PageMatch {
 	if (!path) throw redirect(302, '/admin/routes');
 	if (path === 'login') return { page: 'login' };
 	if (path === 'setup') return { page: 'setup' };
-	if (path === 'settings') return { page: 'settings' };
+	if (path === 'settings') throw redirect(302, '/admin/routes');
+	if (path === 'accounts') return { page: 'accounts' };
 	if (path === 'publish') return { page: 'publish', branch: DRAFT_BRANCH };
 
 	const parts = path.split('/');
@@ -102,20 +103,19 @@ async function loadLogin({ locals }: RequestEvent) {
 	return {};
 }
 
-async function loadSettings({ locals }: RequestEvent) {
+async function loadAccounts({ locals }: RequestEvent) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (locals.user.role !== 'admin') throw error(403, 'Only admins can access settings');
 
-	const config = getRepoConfig();
-	const coreConfig = getConfig();
-	const repo = getRepo();
+	const users = getDb()
+		.prepare('SELECT id, name, email, createdAt FROM "user" ORDER BY createdAt ASC')
+		.all() as Array<{
+		id: string;
+		name: string;
+		email: string;
+		createdAt: string;
+	}>;
 
-	return {
-		repo: { name: repo.name, fullName: repo.fullName },
-		config,
-		routesRoot: coreConfig.routesRoot,
-		mediaDir: coreConfig.mediaDir
-	};
+	return { users, currentUserId: locals.user.id };
 }
 
 function parentPathFor(path: string, routeTree: RouteNode): string | null {
@@ -574,8 +574,8 @@ export async function loadDashboard(event: RequestEvent) {
 		case 'setup':
 			pageData = {};
 			break;
-		case 'settings':
-			pageData = await loadSettings(event);
+		case 'accounts':
+			pageData = await loadAccounts(event);
 			break;
 		case 'branch':
 			pageData = await loadBranch(event, match);
@@ -590,7 +590,7 @@ export async function loadDashboard(event: RequestEvent) {
 
 	return {
 		page: match.page,
-		isAdmin: event.locals.user?.role === 'admin',
+		showNav: Boolean(event.locals.user) && match.page !== 'login' && match.page !== 'setup',
 		pageData
 	};
 }
@@ -666,8 +666,7 @@ async function setupAction({ request, cookies }: RequestEvent) {
 
 	try {
 		const auth = getAuth();
-		const user = await auth.api.signUpEmail({ body: { email, password, name } });
-		getDb().prepare('UPDATE "user" SET role = ? WHERE id = ?').run('admin', user.user.id);
+		await auth.api.signUpEmail({ body: { email, password, name } });
 		const result = await auth.api.signInEmail({
 			body: { email, password },
 			headers: request.headers,
@@ -682,29 +681,35 @@ async function setupAction({ request, cookies }: RequestEvent) {
 	throw redirect(302, '/admin/routes');
 }
 
-async function settingsAction({ request, locals }: RequestEvent) {
+async function inviteAccountAction({ request, locals }: RequestEvent) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (locals.user.role !== 'admin') throw error(403, 'Only admins can access settings');
 
 	const formData = await request.formData();
-	const extensionsRaw = formData.get('extensions')?.toString().trim() ?? '';
-	const extensions = extensionsRaw
-		.split(',')
-		.map((e) => e.trim())
-		.filter((e) => e.startsWith('.'));
+	const name = formData.get('name')?.toString().trim() ?? '';
+	const email = formData.get('email')?.toString().trim() ?? '';
+	const password = formData.get('password')?.toString() ?? '';
+	const confirmPassword = formData.get('confirmPassword')?.toString() ?? '';
 
-	if (extensions.length === 0) {
-		return fail(400, { message: 'At least one valid extension is required (e.g. .md).' });
+	if (!name || !email || !password)
+		return fail(400, { message: 'All fields are required.', name, email });
+	if (password.length < 8) {
+		return fail(400, { message: 'Password must be at least 8 characters.', name, email });
+	}
+	if (password !== confirmPassword)
+		return fail(400, { message: 'Passwords do not match.', name, email });
+
+	try {
+		await getAuth().api.signUpEmail({ body: { email, password, name } });
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Account creation failed.';
+		return fail(400, { message, name, email });
 	}
 
-	const config = getRepoConfig();
-	updateRepoConfig({ allowedPaths: [], allowedExtensions: extensions, mediaPath: config.mediaPath });
 	return { success: true };
 }
 
 async function mergeAction({ locals, url }: RequestEvent) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (locals.user.role !== 'admin') return fail(403, { mergeError: 'Only admins can merge.' });
 
 	const match = matchPage(url.pathname);
 	if (match.page !== 'branch' || !match.branch) return fail(404, { mergeError: 'Not found.' });
@@ -1101,6 +1106,357 @@ async function uploadMediaAction({ request, locals, url }: RequestEvent) {
 	return { uploadSuccess: true };
 }
 
+type RouteDeleteKind = 'page' | 'route';
+
+function collectRouteDeletePaths(
+	kind: RouteDeleteKind,
+	routeDirPath: string,
+	filePath: string | undefined,
+	tree: TreeEntry[],
+	routesRoot: string
+): string[] {
+	if (kind === 'page') {
+		return filePath ? [filePath] : [];
+	}
+
+	if (routeDirPath === routesRoot) return [];
+
+	const prefix = `${routeDirPath}/`;
+	return tree
+		.filter((entry) => entry.type === 'blob' && entry.path.startsWith(prefix))
+		.map((entry) => entry.path);
+}
+
+interface GitBlobEntry {
+	path: string;
+	sha: string;
+}
+
+async function fetchBranchGitBlobs(branch: string): Promise<GitBlobEntry[]> {
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	let treeItems: Array<{ path?: string; type?: string; sha?: string }>;
+
+	try {
+		const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
+			owner: repo.owner,
+			repo: repo.name,
+			tree_sha: branch,
+			recursive: '1'
+		});
+		treeItems = tree.tree ?? [];
+	} catch (err: unknown) {
+		const e = err as { status?: number; response?: { status?: number } };
+		const status = e.status ?? e.response?.status;
+		if (status !== 404 && status !== 422) throw err;
+
+		const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+			owner: repo.owner,
+			repo: repo.name,
+			ref: `heads/${branch}`
+		});
+		const { data: commit } = await octokit.request(
+			'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
+			{
+				owner: repo.owner,
+				repo: repo.name,
+				commit_sha: ref.object.sha
+			}
+		);
+		const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
+			owner: repo.owner,
+			repo: repo.name,
+			tree_sha: commit.tree.sha,
+			recursive: '1'
+		});
+		treeItems = tree.tree ?? [];
+	}
+
+	return treeItems
+		.filter((item) => item.type === 'blob' && item.path && item.sha)
+		.map((item) => ({ path: item.path as string, sha: item.sha as string }));
+}
+
+function collectBlobsUnderDir(routeDirPath: string, blobs: GitBlobEntry[]): GitBlobEntry[] {
+	const prefix = `${routeDirPath}/`;
+	return blobs.filter((blob) => blob.path.startsWith(prefix));
+}
+
+function remapRepoPath(path: string, fromDir: string, toDir: string): string {
+	const prefix = `${fromDir}/`;
+	if (!path.startsWith(prefix)) {
+		throw new Error(`Path ${path} is not under ${fromDir}`);
+	}
+	return `${toDir}${path.slice(fromDir.length)}`;
+}
+
+async function commitTreeChanges(
+	branch: string,
+	treeItems: Array<{
+		path: string;
+		mode: '100644';
+		type: 'blob';
+		sha: string | null;
+	}>,
+	message: string
+): Promise<void> {
+	if (treeItems.length === 0) return;
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+		owner: repo.owner,
+		repo: repo.name,
+		ref: `heads/${branch}`
+	});
+	const commitSha = ref.object.sha;
+
+	const { data: commit } = await octokit.request(
+		'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
+		{
+			owner: repo.owner,
+			repo: repo.name,
+			commit_sha: commitSha
+		}
+	);
+
+	const { data: newTree } = await octokit.request('POST /repos/{owner}/{repo}/git/trees', {
+		owner: repo.owner,
+		repo: repo.name,
+		base_tree: commit.tree.sha,
+		tree: treeItems
+	});
+
+	const { data: newCommit } = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
+		owner: repo.owner,
+		repo: repo.name,
+		message,
+		tree: newTree.sha,
+		parents: [commitSha]
+	});
+
+	await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/{ref}', {
+		owner: repo.owner,
+		repo: repo.name,
+		ref: `heads/${branch}`,
+		sha: newCommit.sha
+	});
+}
+
+async function deletePathsFromBranch(branch: string, pathsToDelete: string[]): Promise<void> {
+	const treeItems = pathsToDelete.map((path) => ({
+		path,
+		mode: '100644' as const,
+		type: 'blob' as const,
+		sha: null
+	}));
+
+	const messageLabel =
+		pathsToDelete.length === 1
+			? pathsToDelete[0].split('/').pop()
+			: `${pathsToDelete.length} route files`;
+
+	await commitTreeChanges(branch, treeItems, `Delete ${messageLabel}`);
+}
+
+async function moveRouteDirOnBranch(
+	branch: string,
+	routeDirPath: string,
+	newRouteDirPath: string,
+	blobs: GitBlobEntry[]
+): Promise<void> {
+	const treeItems = [
+		...blobs.map(({ path, sha }) => ({
+			path: remapRepoPath(path, routeDirPath, newRouteDirPath),
+			mode: '100644' as const,
+			type: 'blob' as const,
+			sha
+		})),
+		...blobs.map(({ path }) => ({
+			path,
+			mode: '100644' as const,
+			type: 'blob' as const,
+			sha: null
+		}))
+	];
+
+	const label = routeDirPath.split('/').pop() ?? routeDirPath;
+	await commitTreeChanges(branch, treeItems, `Rename ${label}`);
+}
+
+async function deleteRouteAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'branch' || !match.branch) return fail(404, { deleteError: 'Not found.' });
+
+	const formData = await request.formData();
+	const kind = formData.get('kind')?.toString() as RouteDeleteKind | undefined;
+	const routeDirPath = normalizeRepoPath(formData.get('routeDirPath')?.toString() ?? '');
+	const filePath = normalizeRepoPath(formData.get('filePath')?.toString() ?? '');
+
+	if (kind !== 'page' && kind !== 'route') {
+		return fail(400, { deleteError: 'Invalid delete target.' });
+	}
+	if (!routeDirPath) {
+		return fail(400, { deleteError: 'Route path is required.' });
+	}
+
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
+	if (!isWithinRepoRoot(routeDirPath, routesRoot)) {
+		return fail(403, { deleteError: 'Access denied.' });
+	}
+	if (kind === 'route' && routeDirPath === routesRoot) {
+		return fail(403, { deleteError: 'The routes root cannot be deleted.' });
+	}
+	if (kind === 'page' && (!filePath || !isWithinRepoRoot(filePath, routesRoot))) {
+		return fail(400, { deleteError: 'Page path is required.' });
+	}
+
+	let pathsToDelete: string[] = [];
+	try {
+		const { tree } = await getBranchRouteSnapshot(match.branch, routesRoot);
+		pathsToDelete = collectRouteDeletePaths(kind, routeDirPath, filePath, tree, routesRoot);
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			deleteError: e.response?.data?.message ?? 'Failed to resolve route files.'
+		});
+	}
+
+	if (pathsToDelete.length === 0) {
+		return fail(404, { deleteError: 'Nothing to delete.' });
+	}
+
+	try {
+		await deletePathsFromBranch(match.branch, pathsToDelete);
+		invalidateBranchRouteCache(match.branch);
+
+		if (process.env.NODE_ENV !== 'production') {
+			try {
+				const fs = await import('node:fs/promises');
+				if (kind === 'route') {
+					await fs.rm(await resolveLocalPath(routeDirPath), { recursive: true, force: true });
+				} else {
+					await fs.rm(await resolveLocalPath(filePath), { force: true });
+				}
+			} catch (fsErr) {
+				console.error('Failed to delete local route files:', fsErr);
+			}
+		}
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			deleteError: e.response?.data?.message ?? 'Delete failed.'
+		});
+	}
+
+	return { deleteSuccess: true };
+}
+
+async function renameRouteAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'branch' || !match.branch) return fail(404, { renameError: 'Not found.' });
+
+	const formData = await request.formData();
+	const routeDirPath = normalizeRepoPath(formData.get('routeDirPath')?.toString() ?? '');
+	const newName = formData.get('new_name')?.toString().trim() ?? '';
+
+	const validationError = validateDirectoryName(newName);
+	if (validationError) return fail(400, { renameError: validationError, newName });
+
+	if (!routeDirPath) {
+		return fail(400, { renameError: 'Route path is required.' });
+	}
+
+	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
+	if (!isWithinRepoRoot(routeDirPath, routesRoot)) {
+		return fail(403, { renameError: 'Access denied.' });
+	}
+	if (routeDirPath === routesRoot) {
+		return fail(403, { renameError: 'The routes root cannot be renamed.' });
+	}
+
+	const oldSegment = routeDirPath.split('/').pop() ?? '';
+	if (oldSegment.toLowerCase() === newName.toLowerCase()) {
+		return fail(400, { renameError: 'Name is unchanged.', newName });
+	}
+
+	const parentDir = routeDirPath.slice(0, routeDirPath.lastIndexOf('/'));
+	const newRouteDirPath = `${parentDir}/${newName}`;
+	if (!isWithinRepoRoot(newRouteDirPath, routesRoot)) {
+		return fail(403, { renameError: 'Access denied.', newName });
+	}
+
+	try {
+		const { routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot);
+		const siblingDirs = childDirNames(routeTree, parentDir);
+		const siblingPages = childPageNames(routeTree, parentDir);
+		const taken = new Set(
+			[...siblingDirs, ...siblingPages]
+				.filter((name) => name.toLowerCase() !== oldSegment.toLowerCase())
+				.map((name) => name.toLowerCase())
+		);
+		if (taken.has(newName.toLowerCase())) {
+			return fail(409, {
+				renameError: `A route named "${newName}" already exists.`,
+				newName
+			});
+		}
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			renameError: e.response?.data?.message ?? 'Failed to check route name.',
+			newName
+		});
+	}
+
+	let blobsToMove: GitBlobEntry[] = [];
+	try {
+		const allBlobs = await fetchBranchGitBlobs(match.branch);
+		blobsToMove = collectBlobsUnderDir(routeDirPath, allBlobs);
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			renameError: e.response?.data?.message ?? 'Failed to resolve route files.',
+			newName
+		});
+	}
+
+	if (blobsToMove.length === 0) {
+		return fail(404, { renameError: 'Nothing to rename.', newName });
+	}
+
+	try {
+		await moveRouteDirOnBranch(match.branch, routeDirPath, newRouteDirPath, blobsToMove);
+		invalidateBranchRouteCache(match.branch);
+
+		if (process.env.NODE_ENV !== 'production') {
+			try {
+				const fs = await import('node:fs/promises');
+				await fs.rename(
+					await resolveLocalPath(routeDirPath),
+					await resolveLocalPath(newRouteDirPath)
+				);
+			} catch (fsErr) {
+				console.error('Failed to rename local route directory:', fsErr);
+			}
+		}
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			renameError: e.response?.data?.message ?? 'Rename failed.',
+			newName
+		});
+	}
+
+	throw redirect(303, routesHref(routeDirUrlPath(routesRoot, newRouteDirPath)));
+}
+
 async function deleteMediaAction({ request, locals, url }: RequestEvent) {
 	if (!locals.user) throw redirect(302, '/admin/login');
 
@@ -1179,7 +1535,6 @@ async function deleteMediaAction({ request, locals, url }: RequestEvent) {
 
 async function publishAction({ locals, url }: RequestEvent) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (locals.user.role !== 'admin') return fail(403, { publishError: 'Only admins can publish.' });
 
 	const match = matchPage(url.pathname);
 	if (match.page !== 'publish') return fail(404, { publishError: 'Not found.' });
@@ -1246,11 +1601,11 @@ export const dashboardActions: Actions = {
 		if (match.page !== 'setup') throw error(405, 'Method not allowed');
 		return setupAction(event);
 	},
-	settings: async (event) => {
+	inviteAccount: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 		const match = matchPage(event.url.pathname);
-		if (match.page !== 'settings') throw error(405, 'Method not allowed');
-		return settingsAction(event);
+		if (match.page !== 'accounts') throw error(405, 'Method not allowed');
+		return inviteAccountAction(event);
 	},
 	merge: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
@@ -1267,6 +1622,14 @@ export const dashboardActions: Actions = {
 	createPage: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 		return createPageAction(event);
+	},
+	deleteRoute: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return deleteRouteAction(event);
+	},
+	renameRoute: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return renameRouteAction(event);
 	},
 	createMediaDirectory: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
