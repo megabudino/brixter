@@ -9,18 +9,18 @@
  */
 import Database from 'better-sqlite3';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { Writable } from 'node:stream';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
 function usage() {
 	console.log(`Usage:
-  brixter init [--cwd <path>] [--admin-path <path>] [--dry-run]
+  brixter init [--cwd <path>] [--admin-path <path>] [--icons <pack>] [--no-icons] [--dry-run]
   brixter reset-password [--email <email>] [--password <password> | --password-stdin] [--cwd <path>]
   brixter migrate`);
 }
@@ -71,7 +71,8 @@ function parseInitArgs(argv) {
 	const options = {
 		cwd: process.cwd(),
 		adminPath: '/admin',
-		dryRun: false
+		dryRun: false,
+		icons: 'lucide'
 	};
 
 	for (let i = 0; i < argv.length; i++) {
@@ -82,6 +83,16 @@ function parseInitArgs(argv) {
 			options.cwd = argv[++i];
 		} else if (arg === '--admin-path') {
 			options.adminPath = argv[++i];
+		} else if (arg === '--icons') {
+			const next = argv[i + 1];
+			if (next && !next.startsWith('--')) {
+				options.icons = next;
+				i++;
+			} else {
+				options.icons = 'lucide';
+			}
+		} else if (arg === '--no-icons') {
+			options.icons = 'none';
 		} else {
 			throw new Error(`Unknown init option: ${arg}`);
 		}
@@ -133,6 +144,9 @@ async function init(argv) {
 	ensureSvelteExtensions(context);
 	ensureTailwindSources(context);
 	ensureEnvExample(context);
+	if (options.icons && options.icons !== 'none') {
+		addIconPack(context, options.icons);
+	}
 
 	const changeLabel = options.dryRun ? 'would create/update' : 'created/updated';
 	for (const message of changes) console.log(`${changeLabel} ${message}`);
@@ -605,4 +619,60 @@ function addImport(contents, statement) {
 function toCssPath(value) {
 	const normalized = value.split(path.sep).join('/');
 	return normalized.startsWith('.') ? normalized : `./${normalized}`;
+}
+
+function addIconPack(context, packName) {
+	if (packName === 'none') return;
+	if (packName !== 'lucide') {
+		throw new Error(`Unsupported icon pack: ${packName}`);
+	}
+
+	const relativeTargetDir = `src/lib/brixter/icons/${packName}`;
+	const targetDir = path.join(context.cwd, relativeTargetDir);
+
+	if (existsSync(targetDir)) {
+		context.skipped.push(`${relativeTargetDir} directory already configured`);
+		return;
+	}
+
+	let sourceDir = '';
+	try {
+		const resolved = import.meta.resolve('lucide-static/package.json');
+		const pkgPath = fileURLToPath(resolved);
+		sourceDir = path.join(path.dirname(pkgPath), 'icons');
+	} catch (e) {
+		try {
+			const resolved = import.meta.resolve('lucide-static');
+			const pkgPath = fileURLToPath(resolved);
+			const mainDir = path.dirname(pkgPath);
+			if (existsSync(path.join(mainDir, '../../icons'))) {
+				sourceDir = path.join(mainDir, '../../icons');
+			} else if (existsSync(path.join(mainDir, 'icons'))) {
+				sourceDir = path.join(mainDir, 'icons');
+			} else if (existsSync(path.join(mainDir, '../icons'))) {
+				sourceDir = path.join(mainDir, '../icons');
+			}
+		} catch (innerErr) {
+			sourceDir = path.resolve(import.meta.dirname, '../node_modules/lucide-static/icons');
+			if (!existsSync(sourceDir)) {
+				sourceDir = path.resolve(import.meta.dirname, '../../../../node_modules/lucide-static/icons');
+			}
+		}
+	}
+
+	if (!existsSync(sourceDir)) {
+		throw new Error(`Could not find lucide-static source icons directory at ${sourceDir}`);
+	}
+
+	if (!context.dryRun) {
+		mkdirSync(targetDir, { recursive: true });
+		const files = readdirSync(sourceDir);
+		for (const file of files) {
+			if (file.endsWith('.svg')) {
+				copyFileSync(path.join(sourceDir, file), path.join(targetDir, file));
+			}
+		}
+	}
+
+	context.changes.push(`${relativeTargetDir} (copied all Lucide SVG icons)`);
 }

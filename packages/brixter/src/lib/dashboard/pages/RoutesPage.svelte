@@ -25,7 +25,8 @@
 		Toolbar,
 		InlineToolbar,
 		FrontmatterEditor,
-		MediaPicker
+		MediaPicker,
+		IconPicker
 	} from 'brixter/editor';
 	import TurndownService from 'turndown';
 	import { onMount } from 'svelte';
@@ -105,6 +106,8 @@
 	let editorInstance: any = $state(null);
 	let mediaPickerOpen = $state(false);
 	let builderImagePickCallback = $state<((url: string) => void) | null>(null);
+	let iconPickerOpen = $state(false);
+	let builderIconPickCallback = $state<((iconSvg: string) => void) | null>(null);
 	let editorFocused = $state(false);
 	let htmlBlockFocused = $state(false);
 	let activeTab: 'body' | 'frontmatter' = $state('body');
@@ -679,6 +682,10 @@
 						};
 						mediaPickerOpen = true;
 					}}
+					onpickIcon={(callback) => {
+						builderIconPickCallback = callback;
+						iconPickerOpen = true;
+					}}
 				/>
 			{:else}
 				<div class="mx-auto max-w-2xl px-6 py-16">
@@ -1034,6 +1041,32 @@
 	onclose={() => {
 		mediaPickerOpen = false;
 		builderImagePickCallback = null;
+	}}
+/>
+
+<IconPicker
+	open={iconPickerOpen}
+	branch={data.branch}
+	onselect={async ({ downloadUrl }) => {
+		const callback = builderIconPickCallback;
+		if (callback) {
+			iconPickerOpen = false;
+			try {
+				const res = await fetch(downloadUrl);
+				if (!res.ok) throw new Error('Failed to fetch SVG');
+				const svgText = await res.text();
+				callback(svgText);
+			} catch (err) {
+				console.error('Failed to load icon SVG:', err);
+			}
+			if (builderIconPickCallback === callback) {
+				builderIconPickCallback = null;
+			}
+		}
+	}}
+	onclose={() => {
+		iconPickerOpen = false;
+		builderIconPickCallback = null;
 	}}
 />
 

@@ -128,7 +128,7 @@ function resolveFieldKind(value: string | undefined, tagName: string): BuilderFi
 		return value;
 	}
 
-	if (value === 'array' || value === 'image' || value === 'richtext-inline' || value === 'richtext-block') {
+	if (value === 'array' || value === 'image' || value === 'icon' || value === 'richtext-inline' || value === 'richtext-block') {
 		return value;
 	}
 

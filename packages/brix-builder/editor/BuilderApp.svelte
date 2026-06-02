@@ -28,6 +28,8 @@
 		parseBrixYamlDocument,
 		serializeToBrixYaml,
 		serializeToMdsvex,
+		getFieldByPath,
+		inferBuilderFieldKind,
 		type BuilderBlock,
 		type BuilderDocument,
 		type BuilderPreviewBinding,
@@ -63,6 +65,7 @@
 		inspectorOpen = $bindable(true),
 		activeBlockId = $bindable<string | null>(null),
 		onpickImage,
+		onpickIcon,
 		previewMode = $bindable(false),
 		viewportSize = $bindable<'desktop' | 'tablet' | 'mobile'>('desktop')
 	}: {
@@ -75,6 +78,7 @@
 		inspectorOpen?: boolean;
 		activeBlockId?: string | null;
 		onpickImage?: (callback: (imageUrl: string) => void) => void;
+		onpickIcon?: (callback: (iconSvg: string) => void) => void;
 		previewMode?: boolean;
 		viewportSize?: 'desktop' | 'tablet' | 'mobile';
 	} = $props();
@@ -297,6 +301,30 @@
 	function queueFileEdit(blockId: string, path: string): void {
 		console.log('queueFileEdit called in BuilderApp:', blockId, path, 'onpickImage is:', !!onpickImage);
 		if (!controller) return;
+
+		const block = controller.document.blocks.find((b) => b.id === blockId);
+		const definition = block ? getBuilderDefinition(block.type, definitions) : null;
+		const field = definition ? getFieldByPath(definition.fields, path) : null;
+		const kind = field ? inferBuilderFieldKind(field) : null;
+
+		if (kind === 'icon') {
+			queueFileEditInState(controller, blockId, path);
+			if (onpickIcon) {
+				onpickIcon((iconSvg) => {
+					if (!controller) return;
+					const updatedBlock = applyFileToPendingEdit(controller, iconSvg);
+					closeFieldEdit();
+					if (!updatedBlock) {
+						clearPendingFileEdit(controller);
+					}
+				});
+			} else {
+				console.warn('onpickIcon is not defined in BuilderApp');
+				clearPendingFileEdit(controller);
+			}
+			return;
+		}
+
 		queueFileEditInState(controller, blockId, path);
 		if (onpickImage) {
 			console.log('calling onpickImage from BuilderApp...');
@@ -304,6 +332,7 @@
 				console.log('onpickImage callback received image URL:', imageUrl);
 				if (!controller) return;
 				const updatedBlock = applyFileToPendingEdit(controller, imageUrl);
+				closeFieldEdit();
 				if (!updatedBlock) {
 					clearPendingFileEdit(controller);
 				}
@@ -382,7 +411,7 @@
 
 		event.preventDefault();
 
-		if (resolvedBinding.binding.type === 'image') {
+		if (resolvedBinding.binding.type === 'image' || resolvedBinding.binding.type === 'icon') {
 			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
 			const rawPath = matchedElement.getAttribute('data-builder-field');
 			const path =
@@ -447,6 +476,7 @@
 		try {
 			const dataUrl = await readFileAsDataUrl(file);
 			const updatedBlock = applyFileToPendingEdit(controller, dataUrl);
+			closeFieldEdit();
 			if (!updatedBlock) {
 				clearPendingFileEdit(controller);
 			}
@@ -1061,14 +1091,14 @@
 		<button
 			type="button"
 			class="absolute inset-0 bg-black/45"
-			aria-label="Chiudi selezione componente"
+			aria-label="Close component selector"
 			onclick={closeInserterModal}
 		></button>
 		<div
 			class="relative flex max-h-[min(760px,calc(100vh-3rem))] w-full max-w-5xl flex-col border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-[#111827]"
 			role="dialog"
 			aria-modal="true"
-			aria-label="Scegli componente da aggiungere"
+			aria-label="Choose component to add"
 			tabindex="-1"
 			onclick={(event) => event.stopPropagation()}
 			onkeydown={(event) => {
@@ -1081,16 +1111,16 @@
 				class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 p-5 dark:border-gray-700"
 			>
 				<div>
-					<h2 class="text-heading text-lg font-semibold">Aggiungi componente</h2>
+					<h2 class="text-heading text-lg font-semibold">Add component</h2>
 					<p class="text-muted mt-1 text-sm">
-						Scegli il brik da inserire {inserterModal.placement === 'before' ? 'prima' : 'dopo'} questa
-						sezione.
+						Choose the component to insert {inserterModal.placement === 'before' ? 'before' : 'after'} this
+						section.
 					</p>
 				</div>
 				<button
 					type="button"
 					class="flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:text-gray-200 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6]"
-					aria-label="Chiudi"
+					aria-label="Close"
 					onclick={closeInserterModal}
 				>
 					×
