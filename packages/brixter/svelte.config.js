@@ -5,10 +5,11 @@ import adapter from '@sveltejs/adapter-node';
 const config = {
 	kit: {
 		adapter: adapter(),
-		// Self-dev aliases mirror brixter's package exports while this package
-		// runs directly against source instead of a built dist.
+		// Monorepo dev: resolve published import names against local source.
+		// Consumers use `brixter` (npm) and `@brixter/brix-builder` (npm, via brixter dep).
 		alias: {
 			'@brixter/brix-builder': '../brix-builder/index.ts',
+			'brixter/vite': 'src/lib/vite/index.ts',
 			'brixter/server': 'src/lib/server/index.ts',
 			'brixter/editor': 'src/lib/editor/index.ts',
 			'brixter/ui': 'src/lib/ui/index.ts',

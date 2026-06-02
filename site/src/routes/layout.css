@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@source "../../../packages/brix-builder";
+@source "../../../packages/brix-builder/dist";
 @source "../../../packages/brixter/src/lib/ui";
 @source "../../../packages/brixter/src/lib/editor";
 @source "../../../packages/brixter/src/lib/dashboard";

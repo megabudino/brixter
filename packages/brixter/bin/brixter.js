@@ -544,7 +544,7 @@ function ensureTailwindSources(context) {
 	}
 
 	const cssDir = path.dirname(file);
-	const sources = ['ui', 'editor', 'dashboard']
+	const brixterSources = ['ui', 'editor', 'dashboard']
 		.map((name) => {
 			const sourcePath = toCssPath(
 				path.relative(cssDir, path.join(context.cwd, 'node_modules/brixter/src/lib', name))
@@ -552,6 +552,13 @@ function ensureTailwindSources(context) {
 			return `@source "${sourcePath}";`;
 		})
 		.join('\n');
+	const builderSourcePath = toCssPath(
+		path.relative(
+			cssDir,
+			path.join(context.cwd, 'node_modules/@brixter/brix-builder/dist')
+		)
+	);
+	const sources = `${brixterSources}\n@source "${builderSourcePath}";`;
 
 	if (contents.includes("@import 'tailwindcss';")) {
 		contents = contents.replace("@import 'tailwindcss';", `@import 'tailwindcss';\n${sources}`);

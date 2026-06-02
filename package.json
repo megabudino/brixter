@@ -1,8 +1,21 @@
 {
-  "name": "brixter",
+  "name": "brixter-monorepo",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/megabudino/brixter.git"
+  },
   "workspaces": [
     "site",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "build:brix-builder": "npm run build --workspace=@brixter/brix-builder",
+    "pack:brix-builder": "npm run build:brix-builder && npm pack --workspace=@brixter/brix-builder",
+    "pack:brixter": "npm run build:brix-builder && npm pack --workspace=brixter",
+    "publish:brix-builder": "npm run build:brix-builder && npm publish --workspace=@brixter/brix-builder --access public",
+    "publish:brixter": "npm publish --workspace=brixter",
+    "publish:packages": "npm run publish:brix-builder && npm run publish:brixter"
+  }
 }

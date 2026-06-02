@@ -2,6 +2,14 @@
 
 Brixter CMS package for SvelteKit apps.
 
+## Install
+
+```sh
+npm install brixter
+```
+
+The visual page builder ships as a dependency ([`@brixter/brix-builder`](../brix-builder)); you normally do not install it separately.
+
 ## Init
 
 After installing the package, wire the dashboard into a SvelteKit app:
@@ -84,3 +92,7 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## License
+
+[MIT](./LICENSE)

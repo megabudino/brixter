@@ -1,9 +1,42 @@
 {
 	"name": "brixter",
-	"private": true,
 	"version": "0.0.1",
+	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
+	"license": "MIT",
+	"author": "megabudino (https://github.com/megabudino)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/megabudino/brixter.git",
+		"directory": "packages/brixter"
+	},
+	"bugs": {
+		"url": "https://github.com/megabudino/brixter/issues"
+	},
+	"homepage": "https://github.com/megabudino/brixter/tree/main/packages/brixter#readme",
+	"keywords": [
+		"brixter",
+		"cms",
+		"sveltekit",
+		"svelte",
+		"content-management"
+	],
 	"type": "module",
 	"packageManager": "bun@1.2.15",
+	"svelte": "./src/lib/index.ts",
+	"files": [
+		"LICENSE",
+		"README.md",
+		"bin",
+		"src/lib",
+		"static"
+	],
+	"peerDependencies": {
+		"@sveltejs/kit": "^2.0.0",
+		"svelte": "^5.0.0"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org/"
+	},
 	"exports": {
 		".": {
 			"types": "./src/lib/index.ts",
@@ -46,7 +79,6 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
@@ -95,7 +127,7 @@
 		"better-sqlite3"
 	],
 	"dependencies": {
-		"@brixter/brix-builder": "workspace:*",
+		"@brixter/brix-builder": "^0.0.1",
 		"@octokit/auth-app": "^8.2.0",
 		"@octokit/core": "^7.0.6",
 		"@tailwindcss/typography": "^0.5.19",

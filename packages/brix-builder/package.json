@@ -1,19 +1,40 @@
 {
   "name": "@brixter/brix-builder",
   "version": "0.0.1",
+  "description": "Visual page builder for Brixter (Svelte 5)",
+  "license": "MIT",
+  "author": "megabudino (https://github.com/megabudino)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/megabudino/brixter.git",
+    "directory": "packages/brix-builder"
+  },
+  "bugs": {
+    "url": "https://github.com/megabudino/brixter/issues"
+  },
+  "homepage": "https://github.com/megabudino/brixter/tree/main/packages/brix-builder#readme",
+  "keywords": [
+    "brixter",
+    "cms",
+    "page-builder",
+    "svelte"
+  ],
   "type": "module",
   "types": "./dist/index.d.ts",
   "svelte": "./dist/index.js",
   "scripts": {
-    "build": "node ./scripts/build.mjs"
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md"
   ],
   "exports": {
     ".": {
-      "types": "./index.ts",
-      "svelte": "./index.ts",
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },
@@ -24,7 +45,8 @@
     "**/*.svelte"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@tiptap/core": "^3.22.4",

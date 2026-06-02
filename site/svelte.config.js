@@ -19,8 +19,7 @@ const config = {
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
-		// Workspace-time aliases mirror brixter's package exports while we run
-		// directly against source instead of a built dist.
+		// Monorepo dev: same import paths as a published app (`brixter`, `@brixter/brix-builder`).
 		alias: {
 			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
 			'brixter/server': '../packages/brixter/src/lib/server/index.ts',
