@@ -10,6 +10,8 @@
 		writeStoredThemePreference
 	} from './theme';
 
+	let { root = null }: { root?: HTMLElement | null } = $props();
+
 	let preference = $state<ThemePreference>(
 		browser ? readStoredThemePreference() : DEFAULT_THEME_PREFERENCE
 	);
@@ -35,8 +37,8 @@
 	});
 
 	$effect(() => {
-		if (!browser) return;
-		document.body.classList.toggle('dark', dark);
-		document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+		if (!browser || !root) return;
+		root.classList.toggle('dark', dark);
+		root.style.colorScheme = dark ? 'dark' : 'light';
 	});
 </script>

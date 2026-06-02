@@ -17,6 +17,8 @@
 
 	let { data, form } = $props();
 
+	let root = $state<HTMLElement | null>(null);
+
 	const currentPath = $derived($pageStore.url.pathname);
 	const currentPublicPath = $derived(currentPath as string);
 	const routesActive = $derived(
@@ -37,8 +39,6 @@
 	};
 </script>
 
-<ThemeController />
-
 {#snippet renderPage()}
 	{#if data.page === 'login'}
 		<LoginPage {form} />
@@ -55,7 +55,8 @@
 	{/if}
 {/snippet}
 
-<div class="min-h-svh bg-gray-50 dark:bg-gray-900">
+<div class="brixter-root min-h-svh bg-gray-50 dark:bg-gray-900" bind:this={root}>
+	<ThemeController {root} />
 	{#if data.showNav}
 		<div class="flex">
 			<aside

@@ -21,7 +21,7 @@ const args = process.argv.slice(3);
 
 function usage() {
 	console.log(`Usage:
-  brixter init [--cwd <path>] [--admin-path <path>] [--icons <pack>] [--no-icons] [--dry-run] [--skip-install] [--skip-migrate]
+  brixter init [--cwd <path>] [--layout embedded|split] [--cms-dir <path>] [--admin-path <path>] [--icons <pack>] [--no-icons] [--dry-run] [--skip-install] [--skip-migrate]
   brixter reset-password [--email <email>] [--password <password> | --password-stdin] [--cwd <path>]
   brixter migrate [--cwd <path>]`);
 }
@@ -68,6 +68,8 @@ process.exit(1);
 function parseInitArgs(argv) {
 	const options = {
 		cwd: process.cwd(),
+		layout: '',
+		cmsDir: '',
 		adminPath: '/admin',
 		dryRun: false,
 		skipInstall: false,
@@ -83,6 +85,10 @@ function parseInitArgs(argv) {
 			options.skipInstall = true;
 		} else if (arg === '--skip-migrate') {
 			options.skipMigrate = true;
+		} else if (arg === '--layout') {
+			options.layout = argv[++i];
+		} else if (arg === '--cms-dir') {
+			options.cmsDir = argv[++i];
 		} else if (arg === '--cwd') {
 			options.cwd = argv[++i];
 		} else if (arg === '--admin-path') {
@@ -103,6 +109,12 @@ function parseInitArgs(argv) {
 	}
 
 	options.cwd = path.resolve(options.cwd);
+	if (options.layout && options.layout !== 'embedded' && options.layout !== 'split') {
+		throw new Error(`Unknown layout: ${options.layout}. Use "embedded" or "split".`);
+	}
+	if (options.cmsDir) {
+		options.cmsDir = path.resolve(options.cmsDir);
+	}
 	return options;
 }
 
@@ -152,24 +164,20 @@ function parseResetPasswordArgs(argv) {
 
 async function init(argv) {
 	const options = parseInitArgs(argv);
+	options.layout = options.layout || (await promptLayout(options));
+
 	const changes = [];
 	const skipped = [];
 	const manual = [];
 
 	const context = { ...options, changes, skipped, manual };
 	assertSvelteKitApp(context);
-	ensureBrixterPackage(context);
-	ensureRouteShims(context);
-	ensureHooks(context);
-	ensureVitePlugin(context);
-	ensureSvelteExtensions(context);
-	ensureEnvExample(context);
-	ensureDotEnv(context);
-	if (options.icons && options.icons !== 'none') {
-		addIconPack(context, options.icons);
+
+	if (options.layout === 'split') {
+		await initSplit(context);
+	} else {
+		await initEmbedded(context);
 	}
-	ensureTailwindSources(context);
-	await setupDatabase(context);
 
 	const changeLabel = options.dryRun ? 'would create/update' : 'created/updated';
 	for (const message of changes) console.log(`${changeLabel} ${message}`);
@@ -181,6 +189,88 @@ async function init(argv) {
 		console.log('\nbrixter init finished with manual steps.');
 	} else {
 		console.log('\nbrixter init complete.');
+	}
+
+	if (options.layout === 'split') {
+		const cmsDir = resolveCmsDir(context);
+		console.log('\nSplit layout:');
+		console.log(`  Site app: ${context.cwd} (page builder only)`);
+		console.log(`  CMS app:  ${cmsDir}`);
+		console.log('  Start the site with your usual dev command.');
+		console.log(`  Start the CMS from ${cmsDir} with npm run dev.`);
+	}
+}
+
+async function promptLayout(options) {
+	if (!process.stdin.isTTY) return 'embedded';
+
+	console.log('\nWhere should Brixter run?\n');
+	console.log('  1) Same app as my site (default)');
+	console.log('  2) Separate CMS app\n');
+
+	const answer = (await prompt('Choice [1]: ')).trim();
+	if (!answer || answer === '1') return 'embedded';
+	if (answer === '2') return 'split';
+	throw new Error('Invalid choice. Enter 1 or 2.');
+}
+
+async function initEmbedded(context) {
+	ensureBrixterPackage(context);
+	ensureRouteShims(context);
+	ensureHooks(context);
+	ensureVitePlugin(context);
+	ensureSvelteExtensions(context);
+	ensureEnvExample(context);
+	ensureDotEnv(context);
+	if (context.icons && context.icons !== 'none') {
+		addIconPack(context, context.icons);
+	}
+	ensureBrixterLayout(context);
+	await setupDatabase(context);
+}
+
+async function initSplit(context) {
+	const siteAppRoot = resolveSiteAppRoot(context.cwd);
+	const cmsDir = resolveCmsDir(context);
+	const cmsNeedsScaffold = !existsSync(path.join(cmsDir, 'package.json'));
+
+	initSplitSite(context);
+
+	if (cmsNeedsScaffold) {
+		scaffoldCmsAppSkeleton(context, cmsDir, siteAppRoot);
+		ensureWorkspaceEntry(context, cmsDir);
+	} else {
+		context.skipped.push(`${displayPath(context.cwd, cmsDir)} cms app already exists`);
+	}
+
+	if (context.dryRun && cmsNeedsScaffold) {
+		context.changes.push(
+			`${displayPath(context.cwd, cmsDir)}/ would receive admin routes, hooks, env, and database migrations`
+		);
+		return;
+	}
+
+	const cmsContext = { ...context, cwd: cmsDir };
+	assertSvelteKitApp(cmsContext);
+	ensureBrixterPackage(cmsContext);
+	ensureRouteShims(cmsContext);
+	ensureHooks(cmsContext);
+	ensureVitePlugin(cmsContext, { appRoot: siteAppRoot });
+	ensureSvelteExtensions(cmsContext);
+	ensureCmsEnvExample(cmsContext);
+	ensureDotEnv(cmsContext);
+	ensureBrixterLayout(cmsContext);
+	await setupDatabase(cmsContext);
+}
+
+function initSplitSite(context) {
+	ensureBrixterPackage(context);
+	ensureVitePlugin(context);
+	ensureSvelteExtensions(context);
+	ensureSiteEnvExample(context);
+	ensureDotEnv(context);
+	if (context.icons && context.icons !== 'none') {
+		addIconPack(context, context.icons);
 	}
 }
 
@@ -374,6 +464,21 @@ function ensureRouteShims(context) {
 	);
 }
 
+function ensureBrixterLayout(context) {
+	createFile(
+		context,
+		'src/routes/__brixter/+layout.svelte',
+		`<script lang="ts">
+	import 'brixter/styles.css';
+
+	let { children } = $props();
+</script>
+
+{@render children()}
+`
+	);
+}
+
 function ensureHooks(context) {
 	ensureClientHooks(context);
 	ensureServerHooks(context);
@@ -460,7 +565,7 @@ export const handle = sequence(brixterHandle);
 	);
 }
 
-function ensureVitePlugin(context) {
+function ensureVitePlugin(context, pluginOptions = {}) {
 	const relativePath = findFirst(context.cwd, ['vite.config.ts', 'vite.config.js']);
 	if (!relativePath) {
 		context.manual.push("vite config not found; add brixter() from 'brixter/vite' to plugins");
@@ -479,10 +584,15 @@ function ensureVitePlugin(context) {
 		return;
 	}
 
+	const brixterOptions = [`adminPath: '${context.adminPath}'`];
+	if (pluginOptions.appRoot) {
+		brixterOptions.push(`appRoot: '${pluginOptions.appRoot}'`);
+	}
+
 	contents = addImport(contents, "import { brixter } from 'brixter/vite';");
 	contents = contents.replace(
 		/plugins\s*:\s*\[/,
-		`plugins: [brixter({ adminPath: '${context.adminPath}' }), `
+		`plugins: [brixter({ ${brixterOptions.join(', ')} }), `
 	);
 	write(context, file, contents);
 	context.changes.push(`${relativePath} added brixter vite plugin`);
@@ -544,63 +654,22 @@ function ensureSvelteExtensions(context) {
 	);
 }
 
-function ensureTailwindSources(context) {
-	const relativePath = findFirst(context.cwd, [
-		'src/routes/layout.css',
-		'src/app.css',
-		'src/app.postcss'
-	]);
-
-	if (!relativePath) {
-		context.manual.push('app stylesheet not found; add Tailwind @source entries for brixter');
-		return;
-	}
-
-	const file = path.join(context.cwd, relativePath);
-	let contents = read(file);
-	if (
-		contents.includes('node_modules/brixter/src/lib/dashboard') ||
-		contents.includes('packages/brixter/src/lib/dashboard')
-	) {
-		context.skipped.push(`${relativePath} already includes brixter Tailwind sources`);
-		return;
-	}
-
-	const cssDir = path.dirname(file);
-	const brixterSources = ['ui', 'editor', 'dashboard']
-		.map((name) => {
-			const sourcePath = toCssPath(
-				path.relative(cssDir, path.join(context.cwd, 'node_modules/brixter/src/lib', name))
-			);
-			return `@source "${sourcePath}";`;
-		})
-		.join('\n');
-	const builderSourcePath = toCssPath(
-		path.relative(
-			cssDir,
-			path.join(context.cwd, 'node_modules/@brixter/brix-builder/dist')
-		)
-	);
-	const sources = `${brixterSources}\n@source "${builderSourcePath}";`;
-
-	if (contents.includes("@import 'tailwindcss';")) {
-		contents = contents.replace("@import 'tailwindcss';", `@import 'tailwindcss';\n${sources}`);
-	} else if (contents.includes('@import "tailwindcss";')) {
-		contents = contents.replace('@import "tailwindcss";', `@import "tailwindcss";\n${sources}`);
-	} else {
-		contents = `${sources}\n${contents}`;
-	}
-
-	write(context, file, contents);
-	context.changes.push(`${relativePath} added brixter Tailwind sources`);
+function ensureEnvExample(context) {
+	ensureEnvEntries(context, '.env.example', embeddedEnvEntries());
 }
 
-function ensureEnvExample(context) {
-	const relativePath = '.env.example';
-	const file = path.join(context.cwd, relativePath);
-	const entries = [
+function ensureSiteEnvExample(context) {
+	ensureEnvEntries(context, '.env.example', siteEnvEntries());
+}
+
+function ensureCmsEnvExample(context) {
+	ensureEnvEntries(context, '.env.example', cmsEnvEntries());
+}
+
+function embeddedEnvEntries() {
+	return [
 		['DATABASE_URL', 'data/brixter.db'],
-		['ORIGIN', `"http://localhost:5173"`],
+		['ORIGIN', '"http://localhost:5173"'],
 		['BRIXTER_AUTH_SECRET', '"change-me"'],
 		['GITHUB_APP_ID', '""'],
 		['GITHUB_PRIVATE_KEY', '""'],
@@ -612,7 +681,36 @@ function ensureEnvExample(context) {
 		['BRIXTER_SOURCE_DEFAULT_BRANCH', '""'],
 		['BRIXTER_SOURCE_COMMIT', '""']
 	];
+}
 
+function siteEnvEntries() {
+	return [
+		['BRIXTER_CMS_URL', '"http://localhost:5174"'],
+		['BRIXTER_SOURCE_REPO', '""'],
+		['BRIXTER_SOURCE_DEFAULT_BRANCH', '""'],
+		['BRIXTER_SOURCE_COMMIT', '""']
+	];
+}
+
+function cmsEnvEntries() {
+	return [
+		['DATABASE_URL', 'data/brixter.db'],
+		['ORIGIN', '"http://localhost:5174"'],
+		['BRIXTER_AUTH_SECRET', '"change-me"'],
+		['GITHUB_APP_ID', '""'],
+		['GITHUB_PRIVATE_KEY', '""'],
+		['GITHUB_INSTALLATION_ID', '""'],
+		['GITHUB_REPO_OWNER', '""'],
+		['GITHUB_REPO_NAME', '""'],
+		['GITHUB_DEFAULT_BRANCH', '""'],
+		['BRIXTER_SOURCE_REPO', '""'],
+		['BRIXTER_SOURCE_DEFAULT_BRANCH', '""'],
+		['BRIXTER_SOURCE_COMMIT', '""']
+	];
+}
+
+function ensureEnvEntries(context, relativePath, entries) {
+	const file = path.join(context.cwd, relativePath);
 	const existing = existsSync(file) ? read(file) : '';
 	const missing = entries.filter(([key]) => !new RegExp(`^${key}=`, 'm').test(existing));
 	if (missing.length === 0) {
@@ -634,6 +732,187 @@ function ensureEnvExample(context) {
 	context.changes.push(`${relativePath} documented brixter env vars`);
 }
 
+function resolveGitRepoRoot(cwd) {
+	const result = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+		cwd,
+		encoding: 'utf-8'
+	});
+	if (result.status === 0) return result.stdout.trim();
+	return cwd;
+}
+
+function resolveSiteAppRoot(siteCwd) {
+	const repoRoot = resolveGitRepoRoot(siteCwd);
+	const relative = path.relative(repoRoot, siteCwd).split(path.sep).join('/');
+	if (relative && relative !== '.') return relative;
+	return path.basename(siteCwd);
+}
+
+function resolveCmsDir(context) {
+	if (context.cmsDir) return context.cmsDir;
+	return path.resolve(context.cwd, '..', 'cms');
+}
+
+function displayPath(fromCwd, targetPath) {
+	return path.relative(fromCwd, targetPath).split(path.sep).join('/') || '.';
+}
+
+function readBrixterDependencySpec(cwd) {
+	const pkgPath = path.join(cwd, 'package.json');
+	if (!existsSync(pkgPath)) return `^${readBrixterPackageVersion()}`;
+	const pkg = JSON.parse(read(pkgPath));
+	return pkg.dependencies?.brixter ?? pkg.devDependencies?.brixter ?? `^${readBrixterPackageVersion()}`;
+}
+
+function monorepoSvelteAliasesBlock() {
+	return `\t\talias: {
+\t\t\t'@brixter/brix-builder': '../packages/brix-builder/index.ts',
+\t\t\t'brixter/server': '../packages/brixter/src/lib/server/index.ts',
+\t\t\t'brixter/editor': '../packages/brixter/src/lib/editor/index.ts',
+\t\t\t'brixter/ui': '../packages/brixter/src/lib/ui/index.ts',
+\t\t\t'brixter/sveltekit/server': '../packages/brixter/src/lib/sveltekit/server.ts',
+\t\t\t'brixter/sveltekit/api': '../packages/brixter/src/lib/sveltekit/api.ts',
+\t\t\t'brixter/sveltekit': '../packages/brixter/src/lib/sveltekit/index.ts',
+\t\t\t'brixter/styles.css': '../packages/brixter/styles.css'
+\t\t}`;
+}
+
+function usesMonorepoBrixterAliases(cwd) {
+	const svelteConfig = findFirst(cwd, ['svelte.config.js', 'svelte.config.ts']);
+	if (!svelteConfig) return false;
+	return read(path.join(cwd, svelteConfig)).includes('packages/brixter/src/lib/server');
+}
+
+function scaffoldCmsAppSkeleton(context, cmsDir, siteAppRoot) {
+	const cmsName = path.basename(cmsDir);
+	const brixterSpec = readBrixterDependencySpec(context.cwd);
+	const aliasBlock = usesMonorepoBrixterAliases(context.cwd) ? `\n${monorepoSvelteAliasesBlock()},` : '';
+
+	const files = {
+		'package.json': `${JSON.stringify(
+			{
+				name: cmsName,
+				private: true,
+				version: '0.0.1',
+				type: 'module',
+				dependencies: {
+					brixter: brixterSpec
+				},
+				scripts: {
+					dev: 'vite dev --port 5174',
+					build: 'vite build',
+					preview: 'vite preview --port 5174',
+					prepare: "svelte-kit sync || echo ''",
+					'db:migrate': 'brixter migrate'
+				},
+				devDependencies: {
+					'@sveltejs/adapter-auto': '^7.0.0',
+					'@sveltejs/kit': '^2.50.2',
+					'@sveltejs/vite-plugin-svelte': '^6.2.4',
+					'@tailwindcss/vite': '^4.1.18',
+					'@types/node': '^22',
+					svelte: '^5.54.0',
+					tailwindcss: '^4.1.18',
+					typescript: '^5.9.3',
+					vite: '^7.3.1'
+				}
+			},
+			null,
+			2
+		)}\n`,
+		'vite.config.ts': `import tailwindcss from '@tailwindcss/vite';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+import { brixter } from 'brixter/vite';
+
+export default defineConfig({
+	plugins: [
+		tailwindcss(),
+		brixter({ adminPath: '${context.adminPath}', appRoot: '${siteAppRoot}' }),
+		sveltekit()
+	],
+	ssr: {
+		noExternal: ['brixter', 'lucide-svelte']
+	}
+});
+`,
+		'svelte.config.js': `import adapter from '@sveltejs/adapter-auto';
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+	extensions: ['.svelte', '.brix.yaml', '.brix.yml'],
+	kit: {
+		adapter: adapter(),${aliasBlock}
+	}
+};
+
+export default config;
+`,
+		'tsconfig.json': `{
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"moduleResolution": "bundler"
+	}
+}
+`,
+		'src/app.html': `<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>
+`,
+		'src/routes/+page.server.ts': `import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async () => {
+	throw redirect(302, '${context.adminPath}');
+};
+`
+	};
+
+	for (const [relativePath, contents] of Object.entries(files)) {
+		const cmsContext = { ...context, cwd: cmsDir };
+		createFile(cmsContext, relativePath, contents);
+	}
+
+	context.changes.push(`${displayPath(context.cwd, cmsDir)}/ (scaffolded CMS app)`);
+}
+
+function ensureWorkspaceEntry(context, cmsDir) {
+	const repoRoot = resolveGitRepoRoot(context.cwd);
+	const workspaceFile = path.join(repoRoot, 'package.json');
+	if (!existsSync(workspaceFile)) return;
+
+	const pkg = JSON.parse(read(workspaceFile));
+	if (!Array.isArray(pkg.workspaces)) return;
+
+	const cmsRel = path.relative(repoRoot, cmsDir).split(path.sep).join('/');
+	if (pkg.workspaces.includes(cmsRel)) {
+		context.skipped.push(`workspace already includes ${cmsRel}`);
+		return;
+	}
+
+	pkg.workspaces.push(cmsRel);
+	if (!context.dryRun) {
+		writeFileSync(workspaceFile, `${JSON.stringify(pkg, null, 2)}\n`);
+	}
+	context.changes.push(`package.json added workspace ${cmsRel}`);
+}
+
 function ensureDotEnv(context) {
 	const relativePath = '.env';
 	const envFile = path.join(context.cwd, relativePath);
@@ -646,7 +925,7 @@ function ensureDotEnv(context) {
 
 	if (!existsSync(exampleFile)) {
 		context.manual.push(
-			`create ${relativePath} with DATABASE_URL and BRIXTER_AUTH_SECRET before starting the app`
+			`create ${relativePath} with the required Brixter env vars before starting the app`
 		);
 		return;
 	}
@@ -802,11 +1081,6 @@ function addImport(contents, statement) {
 	const last = importMatches.at(-1);
 	const insertAt = last.index + last[0].length;
 	return `${contents.slice(0, insertAt)}\n${statement}${contents.slice(insertAt)}`;
-}
-
-function toCssPath(value) {
-	const normalized = value.split(path.sep).join('/');
-	return normalized.startsWith('.') ? normalized : `./${normalized}`;
 }
 
 function addIconPack(context, packName) {

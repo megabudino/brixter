@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.0.3",
+	"version": "0.0.5",
 	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
@@ -29,7 +29,8 @@
 		"bin",
 		"dist",
 		"src/lib",
-		"static"
+		"static",
+		"styles.css"
 	],
 	"peerDependencies": {
 		"@sveltejs/kit": "^2.0.0",
@@ -74,7 +75,8 @@
 		"./vite": {
 			"types": "./dist/vite/index.d.ts",
 			"default": "./dist/vite/index.js"
-		}
+		},
+		"./styles.css": "./styles.css"
 	},
 	"scripts": {
 		"build:package": "node ./scripts/build-package.mjs",
