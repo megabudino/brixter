@@ -69,7 +69,7 @@
 			<div class="mt-10">
 				<a
 					href={cta.href}
-					class="inline-block max-w-full bg-[#2563EB] px-[24px] py-[15px] text-center font-sans text-base font-bold text-white shadow-md transition-all duration-200 ease-in-out hover:bg-[#3B82F6] focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 focus:ring-offset-white focus:outline-none active:translate-y-[2px] dark:bg-[#3B82F6] dark:text-gray-100 dark:shadow-xl dark:hover:bg-[#2563EB] dark:focus:ring-[#3B82F6] dark:focus:ring-offset-[#030712]"
+					class="inline-block max-w-full bg-[#FDE047] px-[24px] py-[15px] text-center font-sans text-base font-bold text-gray-900 shadow-md transition-all duration-200 ease-in-out hover:bg-[#FACC15] focus:ring-2 focus:ring-[#FDE047] focus:ring-offset-2 focus:ring-offset-white focus:outline-none active:translate-y-[2px] dark:bg-[#FDE047] dark:text-gray-900 dark:shadow-xl dark:hover:bg-[#FACC15] dark:focus:ring-[#FACC15] dark:focus:ring-offset-[#030712]"
 					data-builder-field="cta.label"
 				>
 					{cta.label}

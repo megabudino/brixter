@@ -144,13 +144,13 @@ body {
 
 body {
 	background: #ffffff;
-	color: #111827;
+	color: #1e1c18;
 	overflow-x: hidden;
 	overflow-y: auto;
 }
 
 body.dark {
-	background: #0f1623;
+	background: #12100d;
 	color: #f3f4f6;
 }
 
@@ -181,7 +181,7 @@ body.dark {
 }
 
 *::-webkit-scrollbar-thumb:hover {
-	background: #2563eb;
+	background: #fde047;
 	background-clip: padding-box;
 }
 
@@ -199,7 +199,7 @@ body.dark {
 }
 
 .dark *::-webkit-scrollbar-thumb:hover {
-	background: #3b82f6;
+	background: #facc15;
 	background-clip: padding-box;
 }
 
@@ -417,13 +417,13 @@ body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-f
 
 body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']:hover,
 body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon'][data-builder-field-enhanced='true'] {
-	outline: 2px dashed #2563eb !important;
+	outline: 2px dashed #fde047 !important;
 	outline-offset: 2px;
 	border-radius: 4px;
 }
 .dark body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']:hover,
 .dark body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon'][data-builder-field-enhanced='true'] {
-	outline-color: #3b82f6 !important;
+	outline-color: #facc15 !important;
 }
 `;
 		frameDocument.head.append(styleElement);
@@ -640,7 +640,7 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 	<iframe
 		use:previewFrame
 		title="Preview"
-		class="block h-full border-0 bg-white dark:bg-[#0f1623] transition-all duration-300 ease-in-out"
+		class="block h-full border-0 bg-white dark:bg-[#12100d] transition-all duration-300 ease-in-out"
 		class:w-full={viewportSize === 'desktop'}
 		class:shadow-2xl={viewportSize !== 'desktop'}
 		class:border={viewportSize !== 'desktop'}

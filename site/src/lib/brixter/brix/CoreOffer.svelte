@@ -52,7 +52,7 @@
 	const { eyebrow, headline, description, features = [], cta }: Props = $props();
 </script>
 
-<section class="bg-white px-6 py-20 dark:bg-[#111827]">
+<section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-start">
 		<div>
 			{#if eyebrow}
@@ -85,7 +85,7 @@
 			{#if cta}
 				<a
 					href={cta.href}
-					class="mt-8 inline-block max-w-full bg-[#2563EB] px-[24px] py-[15px] text-center font-sans text-base font-bold text-white shadow-md transition-all duration-200 ease-in-out hover:bg-[#3B82F6] focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 focus:ring-offset-white focus:outline-none active:translate-y-[2px] dark:bg-[#3B82F6] dark:text-gray-100 dark:shadow-xl dark:hover:bg-[#2563EB] dark:focus:ring-[#3B82F6] dark:focus:ring-offset-[#030712]"
+					class="mt-8 inline-block max-w-full bg-[#FDE047] px-[24px] py-[15px] text-center font-sans text-base font-bold text-gray-900 shadow-md transition-all duration-200 ease-in-out hover:bg-[#FACC15] focus:ring-2 focus:ring-[#FDE047] focus:ring-offset-2 focus:ring-offset-white focus:outline-none active:translate-y-[2px] dark:bg-[#FDE047] dark:text-gray-900 dark:shadow-xl dark:hover:bg-[#FACC15] dark:focus:ring-[#FACC15] dark:focus:ring-offset-[#030712]"
 					data-builder-field="cta.label"
 				>
 					{cta.label}
@@ -93,7 +93,7 @@
 			{/if}
 		</div>
 
-		<div class="border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-[#1f2937]">
+		<div class="border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
 			{#each features as feature}
 				<div
 					class="border-b border-gray-300 p-6 last:border-b-0 dark:border-gray-700"
@@ -101,7 +101,7 @@
 				>
 					<div class="flex items-start gap-3">
 						<span
-							class="h-5 w-5 mt-1 shrink-0 text-blue-600 dark:text-blue-400"
+							class="h-5 w-5 mt-1 shrink-0 text-yellow-500 dark:text-yellow-400"
 							data-builder-field="features[].icon"
 							data-builder-kind="icon"
 						>

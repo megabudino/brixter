@@ -36,7 +36,7 @@
 	const { eyebrow, headline, description, members = [] }: Props = $props();
 </script>
 
-<section class="bg-white px-6 py-20 dark:bg-[#111827]">
+<section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-5xl">
 		<div class="grid gap-8 md:grid-cols-[0.8fr_1.2fr] md:items-end">
 			<div>
@@ -72,7 +72,7 @@
 		<div class="mt-12 grid gap-4 md:grid-cols-3">
 			{#each members as member}
 				<article
-					class="border border-gray-300 bg-gray-50 p-6 dark:border-gray-700 dark:bg-[#1f2937]"
+					class="border border-gray-300 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800"
 					data-builder-collection-item="members"
 				>
 					<h3 class="text-heading text-lg font-semibold" data-builder-field="members[].name">

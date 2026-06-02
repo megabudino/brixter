@@ -26,7 +26,7 @@
 			return 'text-secondary';
 		}
 		if (line.startsWith('@@')) {
-			return 'text-blue-600 dark:text-blue-400';
+			return 'text-yellow-500 dark:text-yellow-400';
 		}
 		if (line.startsWith('+')) {
 			return 'bg-green-500/10 text-green-800 dark:bg-green-500/15 dark:text-green-300';
@@ -49,7 +49,7 @@
 
 	<div class="mt-6 flex flex-wrap items-start justify-between gap-4">
 		<div>
-			<h1 class="font-display text-3xl text-gray-900 dark:text-gray-50">Review & Publish</h1>
+			<h1 class="font-display text-heading text-3xl">Review & Publish</h1>
 			<p class="text-secondary mt-2 text-sm">
 				{data.aheadBy} unpublished commit{data.aheadBy === 1 ? '' : 's'} on
 				<code class="text-heading">{data.branch}</code>
@@ -73,7 +73,7 @@
 				<button
 					type="submit"
 					disabled={publishing}
-					class="inline-flex cursor-pointer items-center gap-2 bg-[#2563EB] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] disabled:cursor-not-allowed disabled:opacity-50"
+					class="btn-brutal-flat inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#if publishing}
 						<Spinner /> Publishing…
@@ -93,9 +93,9 @@
 
 	<div class="mt-10 space-y-6">
 		{#each data.files as file (file.filename)}
-			<section class="overflow-hidden border border-gray-300 bg-white dark:border-gray-700 dark:bg-[#1f2937]">
+			<section class="overflow-hidden border-2 border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-800">
 				<div
-					class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-300 px-5 py-4 dark:border-gray-700"
+					class="flex flex-wrap items-center justify-between gap-3 border-b-2 border-gray-300 px-5 py-4 dark:border-gray-700"
 				>
 					<div class="flex min-w-0 items-center gap-3">
 						<FileDiff size={18} class="text-muted shrink-0" />
@@ -103,7 +103,7 @@
 					</div>
 					<div class="flex shrink-0 items-center gap-3 text-xs">
 						<span
-							class="text-muted rounded bg-gray-100 px-2 py-1 tracking-wide uppercase dark:bg-gray-800"
+							class="text-muted border-2 border-gray-300 bg-gray-50 px-2 py-1 tracking-wide uppercase dark:border-gray-600 dark:bg-gray-900"
 						>
 							{statusLabel(file.status)}
 						</span>

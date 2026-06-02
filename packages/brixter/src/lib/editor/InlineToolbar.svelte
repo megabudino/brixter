@@ -215,25 +215,25 @@
 
   .inline-toolbar button:hover {
     background-color: #f3f4f6;
-    color: #111827;
+    color: #1e1c18;
   }
 
   :global(.dark) .inline-toolbar button:hover {
-    background-color: #374151;
+    background-color: #444039;
     color: #f9fafb;
   }
 
   .inline-toolbar button.active {
-    background-color: #3b82f6 !important;
+    background-color: #facc15 !important;
     color: white !important;
-    border: 1px solid #3b82f6 !important;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    border: 1px solid #facc15 !important;
+    box-shadow: 0 2px 4px rgba(253, 224, 71, 0.3) !important;
   }
 
   .inline-toolbar button.active:hover {
-    background-color: #2563eb !important;
-    border-color: #2563eb !important;
-    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4) !important;
+    background-color: #fde047 !important;
+    border-color: #fde047 !important;
+    box-shadow: 0 4px 8px rgba(253, 224, 71, 0.4) !important;
   }
 </style>
 

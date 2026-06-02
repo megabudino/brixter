@@ -6,8 +6,49 @@
 @plugin '@tailwindcss/typography';
 @variant dark (&:where(.dark, .dark *));
 
-@theme {
+@font-face {
+	font-family: 'Docallisme On Street';
+	src: url('../../../packages/brixter/static/fonts/docallismeonstreet.otf') format('opentype');
+	font-display: swap;
+}
+
+:root {
+	--brixter-accent: #fde047;
+	--brixter-accent-hover: #fef08a;
+	--brixter-accent-focus: #facc15;
+	--brixter-accent-subtle: #fef9c3;
+	--brixter-brutal-stroke: var(--color-gray-300);
+}
+
+body.dark {
+	--brixter-accent: #fde047;
+	--brixter-accent-hover: #fef9c3;
+	--brixter-accent-focus: #facc15;
+	--brixter-accent-subtle: #422006;
+	--brixter-brutal-stroke: var(--color-gray-700);
+}
+
+@theme inline {
 	--font-display: 'DM Serif Display', serif;
+	--font-brand: 'Docallisme On Street', cursive;
+	--color-brick: #b5533c;
+	--color-accent: var(--brixter-accent);
+	--color-accent-hover: var(--brixter-accent-hover);
+	--color-accent-focus: var(--brixter-accent-focus);
+	--color-accent-subtle: var(--brixter-accent-subtle);
+
+	/* Warm stone/cream neutrals (replaces cool default gray) */
+	--color-gray-50: #fafaf5;
+	--color-gray-100: #f4f3ed;
+	--color-gray-200: #e6e4db;
+	--color-gray-300: #d5d2c8;
+	--color-gray-400: #a8a498;
+	--color-gray-500: #77736a;
+	--color-gray-600: #5a5650;
+	--color-gray-700: #444039;
+	--color-gray-800: #2d2a25;
+	--color-gray-900: #1e1c18;
+	--color-gray-950: #12100d;
 }
 
 body {
@@ -53,6 +94,70 @@ body.dark {
 	}
 }
 
-.prose :is(h1, h2, h3, h4, th) {
-	font-family: var(--font-display);
+@utility text-brand {
+	-webkit-text-fill-color: var(--brixter-accent);
+	color: var(--color-gray-900);
+	&:where(.dark, .dark *) {
+		color: var(--brixter-accent);
+	}
+}
+
+@utility btn-brutal {
+	cursor: pointer;
+	border-radius: 0;
+	border: 1px solid var(--brixter-brutal-stroke);
+	background-color: var(--color-accent);
+	color: var(--color-gray-900);
+	transition: background-color, border-color 150ms ease-in-out;
+	&:hover {
+		background-color: var(--color-accent-hover);
+	}
+	&:focus-visible {
+		outline: 2px solid var(--brixter-brutal-stroke);
+		outline-offset: 2px;
+	}
+	&:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+}
+
+@utility btn-brutal-flat {
+	cursor: pointer;
+	border-radius: 0;
+	border: 1px solid var(--brixter-brutal-stroke);
+	background-color: var(--color-accent);
+	color: var(--color-gray-900);
+	transition: background-color, border-color 150ms ease-in-out;
+	&:hover {
+		background-color: var(--color-accent-hover);
+	}
+	&:focus-visible {
+		outline: 2px solid var(--brixter-brutal-stroke);
+		outline-offset: 2px;
+	}
+	&:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+}
+
+@utility btn-brutal-icon {
+	cursor: pointer;
+	border-radius: 0;
+	border: 1px solid var(--brixter-brutal-stroke);
+	background-color: var(--color-accent);
+	color: var(--color-gray-900);
+	transition: background-color, border-color 150ms ease-in-out;
+	&:hover {
+		background-color: var(--color-accent-hover);
+	}
+	&:focus-visible {
+		outline: 2px solid var(--brixter-brutal-stroke);
+		outline-offset: 2px;
+	}
+	&:disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
 }

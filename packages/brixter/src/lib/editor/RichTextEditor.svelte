@@ -296,7 +296,7 @@
 				}),
 				Link.configure({
 					HTMLAttributes: {
-						class: 'text-blue-500 hover:underline'
+						class: 'text-yellow-500 hover:underline'
 					}
 				}),
 				CustomImage.configure({
@@ -379,7 +379,7 @@
 	}
 
 	.editor-content :global(.ProseMirror .img-wrapper.ProseMirror-selectednode) {
-		outline: 2px solid #2563eb;
+		outline: 2px solid #fde047;
 		border-radius: 0.5rem;
 	}
 
@@ -421,8 +421,8 @@
 	}
 
 	.editor-content :global(.ProseMirror .hr-wrapper.ProseMirror-selectednode) {
-		background-color: rgba(37, 99, 235, 0.1);
-		outline: 2px solid #2563eb;
+		background-color: rgba(253, 224, 71, 0.1);
+		outline: 2px solid #fde047;
 	}
 
 	.editor-content :global(.ProseMirror .hr-wrapper hr) {
@@ -434,14 +434,14 @@
 	/* HTML block */
 	.editor-content :global(.ProseMirror .html-block) {
 		background-color: #fefce8;
-		border: 1px dashed #ca8a04;
+		border: 1px dashed #fde047;
 		border-radius: 0.375rem;
 		padding: 0.5rem;
 		margin: 1rem 0;
 	}
 
 	.editor-content :global(.ProseMirror .html-block.ProseMirror-selectednode) {
-		outline: 2px solid #2563eb;
+		outline: 2px solid #fde047;
 		border-color: transparent;
 	}
 
@@ -460,7 +460,7 @@
 	}
 
 	.editor-content.prose-invert :global(.ProseMirror .html-block) {
-		background-color: rgba(202, 138, 4, 0.1);
+		background-color: rgba(253, 224, 71, 0.1);
 		border-color: #a16207;
 	}
 
@@ -476,7 +476,7 @@
 
 	/* Dark mode extras */
 	.editor-content.prose-invert :global(.ProseMirror .img-placeholder) {
-		background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+		background: linear-gradient(90deg, #2d2a25 25%, #444039 50%, #2d2a25 75%);
 		background-size: 200% 100%;
 	}
 
@@ -489,6 +489,6 @@
 	}
 
 	.editor-content.prose-invert :global(.ProseMirror p.is-editor-empty:first-child::before) {
-		color: oklch(44.6% 0.03 256.802);
+		color: oklch(44.6% 0.03 85);
 	}
 </style>
