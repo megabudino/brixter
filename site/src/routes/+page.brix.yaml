@@ -11,7 +11,7 @@ components:
         label: Prova contenteditable
         note: Visual editing, clean commits, SvelteKit-first.
         href: /admin
-      screenshot: /brix-builder-demo.gif
+      screenshot: ""
   - type: CoreOffer
     props:
       eyebrow: Launch smarter
