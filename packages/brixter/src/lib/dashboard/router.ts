@@ -19,13 +19,14 @@ import {
 	type RouteNode
 } from '../server/sveltekit-routes.ts';
 import {
-	getBranchBehindBy,
 	getBranchRouteSnapshot,
+	getBranchStatus,
 	invalidateBranchRouteCache
 } from './repo-cache.ts';
 import { marked } from 'marked';
+import { resolveLocalPath } from './api.ts';
 
-type DashboardPage = 'login' | 'setup' | 'settings' | 'branch';
+type DashboardPage = 'login' | 'setup' | 'settings' | 'branch' | 'media' | 'publish';
 
 interface PageMatch {
 	page: DashboardPage;
@@ -62,11 +63,20 @@ function matchPage(pathname: string): PageMatch {
 	if (path === 'login') return { page: 'login' };
 	if (path === 'setup') return { page: 'setup' };
 	if (path === 'settings') return { page: 'settings' };
+	if (path === 'publish') return { page: 'publish', branch: DRAFT_BRANCH };
 
 	const parts = path.split('/');
 	if (parts[0] === 'routes') {
 		return {
 			page: 'branch',
+			branch: DRAFT_BRANCH,
+			path: decodePathPart(parts.slice(1).join('/'))
+		};
+	}
+
+	if (parts[0] === 'media') {
+		return {
+			page: 'media',
 			branch: DRAFT_BRANCH,
 			path: decodePathPart(parts.slice(1).join('/'))
 		};
@@ -212,12 +222,13 @@ async function ensureDraftBranch(): Promise<void> {
 
 async function syncDraftWithDefaultBranch(defaultBranch: string): Promise<{
 	behindBy: number;
+	aheadBy: number;
 	syncError?: string;
 }> {
-	if (defaultBranch === DRAFT_BRANCH) return { behindBy: 0 };
+	if (defaultBranch === DRAFT_BRANCH) return { behindBy: 0, aheadBy: 0 };
 
-	const behindBy = await getBranchBehindBy(DRAFT_BRANCH, defaultBranch);
-	if (behindBy === 0) return { behindBy };
+	const status = await getBranchStatus(DRAFT_BRANCH, defaultBranch);
+	if (status.behindBy === 0) return status;
 
 	const octokit = getOctokit();
 	const repo = getRepo();
@@ -230,12 +241,13 @@ async function syncDraftWithDefaultBranch(defaultBranch: string): Promise<{
 			head: defaultBranch
 		});
 		invalidateBranchRouteCache(DRAFT_BRANCH);
-		return { behindBy: 0 };
+		const updated = await getBranchStatus(DRAFT_BRANCH, defaultBranch);
+		return { behindBy: updated.behindBy, aheadBy: updated.aheadBy };
 	} catch (err: unknown) {
 		const message =
 			(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
 			'Failed to update draft from main.';
-		return { behindBy, syncError: message };
+		return { behindBy: status.behindBy, aheadBy: status.aheadBy, syncError: message };
 	}
 }
 
@@ -327,10 +339,12 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 	let routeTree: RouteNode;
 	let behindBy = 0;
+	let aheadBy = 0;
 	let syncError: string | undefined;
 	try {
 		const sync = await syncDraftWithDefaultBranch(defaultBranch);
 		behindBy = sync.behindBy;
+		aheadBy = sync.aheadBy;
 		syncError = sync.syncError;
 		({ routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot));
 	} catch (err: unknown) {
@@ -378,6 +392,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 			childDirNames: [],
 			childPageNames: [],
 			behindBy,
+			aheadBy,
 			syncError
 		};
 	}
@@ -397,7 +412,149 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		childDirNames: childDirNames(routeTree, currentRouteDir),
 		childPageNames: childPageNames(routeTree, currentRouteDir),
 		behindBy,
+		aheadBy,
 		syncError
+	};
+}
+
+async function loadPublish({ locals }: RequestEvent, match: PageMatch) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+	if (match.branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
+
+	const repo = getRepo();
+	const defaultBranch = repo.defaultBranch;
+	const branch = DRAFT_BRANCH;
+	await ensureDraftBranch();
+
+	const { aheadBy, behindBy } = await getBranchStatus(branch, defaultBranch);
+	if (aheadBy === 0) throw redirect(302, '/admin/routes');
+
+	const octokit = getOctokit();
+	let comparison: {
+		total_commits: number;
+		files?: Array<{
+			filename: string;
+			status: string;
+			additions: number;
+			deletions: number;
+			patch?: string;
+		}>;
+	};
+
+	try {
+		const { data } = await octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
+			owner: repo.owner,
+			repo: repo.name,
+			basehead: `${defaultBranch}...${branch}`
+		});
+		comparison = data;
+	} catch (err: unknown) {
+		const e = err as {
+			status?: number;
+			response?: { status?: number; data?: { message?: string } };
+		};
+		if (e.status) throw err;
+		throw error(
+			e.response?.status ?? 500,
+			e.response?.data?.message ?? 'Failed to load comparison'
+		);
+	}
+
+	const files = (comparison.files ?? []).map((file) => ({
+		filename: file.filename,
+		status: file.status,
+		additions: file.additions,
+		deletions: file.deletions,
+		patch: file.patch ?? ''
+	}));
+
+	return {
+		repo: { name: repo.name, fullName: repo.fullName },
+		branch,
+		defaultBranch,
+		aheadBy,
+		behindBy,
+		totalCommits: comparison.total_commits,
+		files
+	};
+}
+
+async function loadMedia({ locals }: RequestEvent, match: PageMatch) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
+	const repo = getRepo();
+	const defaultBranch = repo.defaultBranch;
+	await ensureDraftBranch();
+
+	const branch = DRAFT_BRANCH;
+	const currentPath = normalizeRepoPath(match.path ? `${mediaDir}/${match.path}` : mediaDir);
+
+	if (mediaDir && !isWithinRepoRoot(currentPath, mediaDir)) {
+		throw error(403, 'Access denied');
+	}
+
+	const octokit = getOctokit();
+	let entries: any[] = [];
+	let loadError = '';
+
+	try {
+		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+			owner: repo.owner,
+			repo: repo.name,
+			path: currentPath,
+			ref: branch
+		});
+
+		if (Array.isArray(data)) {
+			entries = data
+				.map((item) => ({
+					name: item.name,
+					path: item.path,
+					type: item.type as 'file' | 'dir',
+					downloadUrl: item.download_url as string | null,
+					sha: item.sha
+				}))
+				.filter((item) => {
+					if (item.name === '.gitkeep') return false;
+					if (item.type === 'dir') {
+						return !mediaDir || isWithinRepoRoot(item.path, mediaDir);
+					}
+					return !mediaDir || isWithinRepoRoot(item.path, mediaDir);
+				})
+				.sort((a, b) => {
+					if (a.type === b.type) return a.name.localeCompare(b.name);
+					return a.type === 'dir' ? -1 : 1;
+				});
+		}
+	} catch (err: any) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		if (e.response?.status !== 404) {
+			loadError = e.response?.data?.message ?? 'Failed to load media files.';
+		}
+	}
+
+	const relativeSegments = match.path ? match.path.split('/').filter(Boolean) : [];
+	const breadcrumbs = [
+		{ label: 'Media', path: '' },
+		...relativeSegments.map((segment, index) => {
+			const subPath = relativeSegments.slice(0, index + 1).join('/');
+			return {
+				label: segment,
+				path: subPath
+			};
+		})
+	];
+
+	return {
+		repo: { name: repo.name, fullName: repo.fullName, mediaPath: mediaDir },
+		branch,
+		defaultBranch,
+		currentPath,
+		relativePath: match.path ?? '',
+		entries,
+		breadcrumbs,
+		loadError
 	};
 }
 
@@ -422,6 +579,12 @@ export async function loadDashboard(event: RequestEvent) {
 			break;
 		case 'branch':
 			pageData = await loadBranch(event, match);
+			break;
+		case 'media':
+			pageData = await loadMedia(event, match);
+			break;
+		case 'publish':
+			pageData = await loadPublish(event, match);
 			break;
 	}
 
@@ -808,6 +971,268 @@ components: []
 	throw redirect(303, routesHref(routePageUrlPath(routesRoot, directoryPath)));
 }
 
+async function createMediaDirectoryAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'media' || !match.branch)
+		return fail(404, { createDirectoryError: 'Not found.' });
+
+	const formData = await request.formData();
+	const name = formData.get('directory_name')?.toString().trim() ?? '';
+	const validationError = validateDirectoryName(name);
+	if (validationError)
+		return fail(400, { createDirectoryError: validationError, directoryName: name });
+
+	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
+	const currentPath = normalizeRepoPath(match.path ? `${mediaDir}/${match.path}` : mediaDir);
+	if (mediaDir && !isWithinRepoRoot(currentPath, mediaDir)) {
+		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
+	}
+
+	const targetDir = `${currentPath}/${name}`;
+	const targetPath = normalizeRepoPath(`${targetDir}/.gitkeep`);
+	if (mediaDir && !isWithinRepoRoot(targetPath, mediaDir)) {
+		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
+	}
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	try {
+		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+			owner: repo.owner,
+			repo: repo.name,
+			path: targetPath,
+			message: `Create directory ${name}`,
+			content: Buffer.from('').toString('base64'),
+			branch: match.branch
+		});
+
+		if (process.env.NODE_ENV !== 'production') {
+			try {
+				const fs = await import('node:fs/promises');
+				const pathLib = await import('node:path');
+				const localPath = await resolveLocalPath(targetPath);
+				await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
+				await fs.writeFile(localPath, '');
+			} catch (fsErr) {
+				console.error('Failed to create local directory:', fsErr);
+			}
+		}
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			createDirectoryError: e.response?.data?.message ?? 'Failed to create directory.',
+			directoryName: name
+		});
+	}
+
+	return { createDirectorySuccess: true };
+}
+
+async function uploadMediaAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'media' || !match.branch)
+		return fail(404, { uploadError: 'Not found.' });
+
+	const formData = await request.formData();
+	const files = formData.getAll('files');
+	if (files.length === 0) {
+		return fail(400, { uploadError: 'No files provided.' });
+	}
+
+	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
+	const currentPath = normalizeRepoPath(match.path ? `${mediaDir}/${match.path}` : mediaDir);
+	if (mediaDir && !isWithinRepoRoot(currentPath, mediaDir)) {
+		return fail(403, { uploadError: 'Access denied.' });
+	}
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	for (const file of files) {
+		if (!file || typeof (file as any).arrayBuffer !== 'function') {
+			continue;
+		}
+
+		const fileName = (file as any).name;
+		if (!fileName) continue;
+
+		const targetPath = normalizeRepoPath(`${currentPath}/${fileName}`);
+		if (mediaDir && !isWithinRepoRoot(targetPath, mediaDir)) {
+			return fail(403, { uploadError: `Access denied for ${fileName}.` });
+		}
+
+		try {
+			const arrayBuffer = await (file as any).arrayBuffer();
+			const base64Content = Buffer.from(arrayBuffer).toString('base64');
+
+			await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+				owner: repo.owner,
+				repo: repo.name,
+				path: targetPath,
+				message: `Upload ${fileName}`,
+				content: base64Content,
+				branch: match.branch
+			});
+
+			if (process.env.NODE_ENV !== 'production') {
+				try {
+					const fs = await import('node:fs/promises');
+					const pathLib = await import('node:path');
+					const localPath = await resolveLocalPath(targetPath);
+					await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
+					await fs.writeFile(localPath, Buffer.from(arrayBuffer));
+				} catch (fsErr) {
+					console.error('Failed to write uploaded file locally:', fsErr);
+				}
+			}
+		} catch (err: any) {
+			const e = err as { response?: { status?: number; data?: { message?: string } } };
+			return fail(e.response?.status ?? 500, {
+				uploadError: e.response?.data?.message ?? `Upload failed for ${fileName}.`
+			});
+		}
+	}
+
+	return { uploadSuccess: true };
+}
+
+async function deleteMediaAction({ request, locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'media' || !match.branch)
+		return fail(404, { deleteError: 'Not found.' });
+
+	const formData = await request.formData();
+	const itemPath = normalizeRepoPath(formData.get('itemPath')?.toString() ?? '');
+	const isDir = formData.get('isDir')?.toString() === 'true';
+	const sha = formData.get('sha')?.toString();
+
+	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
+	if (!itemPath) {
+		return fail(400, { deleteError: 'Item path is required.' });
+	}
+	if (mediaDir && !isWithinRepoRoot(itemPath, mediaDir)) {
+		return fail(403, { deleteError: 'Access denied.' });
+	}
+
+	const pathToDelete = isDir ? normalizeRepoPath(`${itemPath}/.gitkeep`) : itemPath;
+	const octokit = getOctokit();
+	const repo = getRepo();
+
+	let fileSha = sha;
+	if (!fileSha) {
+		try {
+			const { data: fileData } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+				owner: repo.owner,
+				repo: repo.name,
+				path: pathToDelete,
+				ref: match.branch
+			});
+			if (!Array.isArray(fileData)) {
+				fileSha = fileData.sha;
+			}
+		} catch (err) {
+			// ignore
+		}
+	}
+
+	if (!fileSha && !isDir) {
+		return fail(400, { deleteError: 'Failed to retrieve file SHA.' });
+	}
+
+	try {
+		if (fileSha) {
+			await octokit.request('DELETE /repos/{owner}/{repo}/contents/{path}', {
+				owner: repo.owner,
+				repo: repo.name,
+				path: pathToDelete,
+				message: `Delete ${pathToDelete.split('/').pop()}`,
+				sha: fileSha,
+				branch: match.branch
+			});
+		}
+
+		if (process.env.NODE_ENV !== 'production') {
+			try {
+				const fs = await import('node:fs/promises');
+				const localPath = await resolveLocalPath(itemPath);
+				await fs.rm(localPath, { recursive: true, force: true });
+			} catch (fsErr) {
+				console.error('Failed to delete local file/directory:', fsErr);
+			}
+		}
+	} catch (err: any) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			deleteError: e.response?.data?.message ?? 'Delete failed.'
+		});
+	}
+
+	return { deleteSuccess: true };
+}
+
+async function publishAction({ locals, url }: RequestEvent) {
+	if (!locals.user) throw redirect(302, '/admin/login');
+	if (locals.user.role !== 'admin') return fail(403, { publishError: 'Only admins can publish.' });
+
+	const match = matchPage(url.pathname);
+	if (match.page !== 'publish') return fail(404, { publishError: 'Not found.' });
+
+	const octokit = getOctokit();
+	const repo = getRepo();
+	const defaultBranch = repo.defaultBranch;
+	const branch = DRAFT_BRANCH;
+
+	const { aheadBy } = await getBranchStatus(branch, defaultBranch);
+	if (aheadBy === 0) throw redirect(302, '/admin/routes');
+
+	try {
+		const { data: pr } = await octokit.request('POST /repos/{owner}/{repo}/pulls', {
+			owner: repo.owner,
+			repo: repo.name,
+			title: 'Publish draft changes',
+			head: branch,
+			base: defaultBranch
+		});
+
+		const { data: mergeResult } = await octokit.request(
+			'PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge',
+			{
+				owner: repo.owner,
+				repo: repo.name,
+				pull_number: pr.number,
+				merge_method: 'squash'
+			}
+		);
+
+		const mergeSha = mergeResult.sha;
+		if (!mergeSha) return fail(500, { publishError: 'Merge did not return a commit SHA.' });
+
+		await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{ref}', {
+			owner: repo.owner,
+			repo: repo.name,
+			ref: branch,
+			sha: mergeSha,
+			force: true
+		});
+
+		invalidateBranchRouteCache(branch);
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			publishError: e.response?.data?.message ?? 'Publish failed.'
+		});
+	}
+
+	throw redirect(302, '/admin/routes');
+}
+
 export const dashboardActions: Actions = {
 	login: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
@@ -842,5 +1267,23 @@ export const dashboardActions: Actions = {
 	createPage: async (event) => {
 		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 		return createPageAction(event);
+	},
+	createMediaDirectory: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return createMediaDirectoryAction(event);
+	},
+	uploadMedia: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return uploadMediaAction(event);
+	},
+	deleteMedia: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		return deleteMediaAction(event);
+	},
+	publish: async (event) => {
+		if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
+		const match = matchPage(event.url.pathname);
+		if (match.page !== 'publish') throw error(405, 'Method not allowed');
+		return publishAction(event);
 	}
 };
