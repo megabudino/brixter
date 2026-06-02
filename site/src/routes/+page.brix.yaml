@@ -12,6 +12,81 @@ components:
         note: Visual editing, clean commits, SvelteKit-first.
         href: /admin
       screenshot: /brix-builder-demo.gif
+  - type: CoreOffer
+    props:
+      eyebrow: Launch smarter
+      headline: Build better pages faster
+      description: A focused preview with realistic content so you can recognize this brik.
+      cta:
+        label: Get started
+        href: /admin
+      features:
+        - icon: |
+            <!-- @license lucide-static v0.477.0 - ISC -->
+            <svg
+              class="lucide lucide-alarm-clock-minus"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="13" r="8" />
+              <path d="M5 3 2 6" />
+              <path d="m22 6-3-3" />
+              <path d="M6.38 18.7 4 21" />
+              <path d="M17.64 18.67 20 21" />
+              <path d="M9 13h6" />
+            </svg>
+          title: Build better pages faster
+          text: A focused preview with realistic content so you can recognize this brik.
+        - icon: >
+            <!-- @license lucide-static v0.477.0 - ISC -->
+
+            <svg
+              class="lucide lucide-award"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
+              <circle cx="12" cy="8" r="6" />
+            </svg>
+          title: Build better pages faster
+          text: A focused preview with realistic content so you can recognize this brik.
+        - icon: |
+            <!-- @license lucide-static v0.477.0 - ISC -->
+            <svg
+              class="lucide lucide-alarm-clock-off"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M6.87 6.87a8 8 0 1 0 11.26 11.26" />
+              <path d="M19.9 14.25a8 8 0 0 0-9.15-9.15" />
+              <path d="m22 6-3-3" />
+              <path d="M6.26 18.67 4 21" />
+              <path d="m2 2 20 20" />
+              <path d="M4 4 2 6" />
+            </svg>
+          title: Build better pages faster
+          text: A focused preview with realistic content so you can recognize this brik.
   - type: PainPoints
     props:
       eyebrow: Why it exists
@@ -41,13 +116,25 @@ components:
         label: Try Brixter
         href: /admin
       features:
-        - title: Componentized briks
+        - icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9
+            17l-5-5"/></svg>
+          title: Componentized briks
           text: Every section is a Svelte component. Layout, style, and behavior stay
             readable.
-        - title: Editable props
+        - icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9
+            17l-5-5"/></svg>
+          title: Editable props
           text: Content flows through props and fields declared in markup. Less schema,
             more page.
-        - title: Commits in the repository
+        - icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9
+            17l-5-5"/></svg>
+          title: Commits in the repository
           text: Changes become tracked files. Review, branches, and rollback stay in the
             natural workflow.
   - type: Reviews
