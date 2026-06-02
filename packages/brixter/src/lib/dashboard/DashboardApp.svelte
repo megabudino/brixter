@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { page as pageStore } from '$app/stores';
-	import { Compass, Settings, Sun, Moon, Monitor } from 'lucide-svelte';
+	import { Compass, Settings, Sun, Moon, Monitor, Image as ImageIcon } from 'lucide-svelte';
 	import LoginPage from './pages/LoginPage.svelte';
 	import SetupPage from './pages/SetupPage.svelte';
 	import SettingsPage from './pages/SettingsPage.svelte';
 	import RoutesPage from './pages/RoutesPage.svelte';
+	import PublishPage from './pages/PublishPage.svelte';
+	import MediaPage from './pages/MediaPage.svelte';
 	import ThemeController from '../ThemeController.svelte';
 	import {
 		themePreference,
@@ -19,6 +21,9 @@
 	const currentPublicPath = $derived(currentPath as string);
 	const routesActive = $derived(
 		currentPublicPath === '/admin' || currentPublicPath.startsWith('/admin/routes')
+	);
+	const mediaActive = $derived(
+		currentPublicPath === '/admin/media' || currentPublicPath.startsWith('/admin/media/')
 	);
 	const pageData = $derived({ ...(data.pageData ?? {}), isAdmin: data.isAdmin });
 
@@ -40,6 +45,10 @@
 		<SettingsPage data={pageData} {form} />
 	{:else if data.page === 'branch'}
 		<RoutesPage data={pageData} {form} />
+	{:else if data.page === 'publish'}
+		<PublishPage data={pageData} {form} />
+	{:else if data.page === 'media'}
+		<MediaPage data={pageData} {form} />
 	{/if}
 {/snippet}
 
@@ -57,6 +66,14 @@
 							: 'text-secondary hover:text-heading'}"
 					>
 						<Compass size={16} /> Routes
+					</a>
+					<a
+						href="/admin/media"
+						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {mediaActive
+							? 'font-medium text-heading'
+							: 'text-secondary hover:text-heading'}"
+					>
+						<ImageIcon size={16} /> Media
 					</a>
 					<a
 						href="/admin/settings"

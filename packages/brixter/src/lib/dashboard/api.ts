@@ -6,7 +6,7 @@ import { isWithinRepoRoot, normalizeRepoPath } from '../server/sveltekit-routes.
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 
-async function resolveLocalPath(repoRelativePath: string): Promise<string> {
+export async function resolveLocalPath(repoRelativePath: string): Promise<string> {
 	const fs = await import('node:fs/promises');
 	const pathLib = await import('node:path');
 	
@@ -132,6 +132,61 @@ async function mediaPicker(event: RequestEvent) {
 				}
 
 				return json({ success: true });
+			} else if (action === 'delete') {
+				const itemPath = normalizeRepoPath(formData.get('itemPath')?.toString() ?? '');
+				const isDir = formData.get('isDir')?.toString() === 'true';
+				const sha = formData.get('sha')?.toString();
+
+				if (!itemPath) {
+					return json({ error: 'Item path is required' }, { status: 400 });
+				}
+				if (mediaRoot && !isWithinRepoRoot(itemPath, mediaRoot)) {
+					return json({ error: 'Access denied' }, { status: 403 });
+				}
+
+				const pathToDelete = isDir ? normalizeRepoPath(`${itemPath}/.gitkeep`) : itemPath;
+				let fileSha = sha;
+				if (!fileSha) {
+					try {
+						const { data: fileData } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+							owner: repo.owner,
+							repo: repo.name,
+							path: pathToDelete,
+							ref: branch
+						});
+						if (!Array.isArray(fileData)) {
+							fileSha = fileData.sha;
+						}
+					} catch (err) {
+						// Ignore and attempt delete anyway if we might be in some other state,
+						// but typically we need it.
+					}
+				}
+
+				if (fileSha) {
+					await octokit.request('DELETE /repos/{owner}/{repo}/contents/{path}', {
+						owner: repo.owner,
+						repo: repo.name,
+						path: pathToDelete,
+						message: `Delete ${pathToDelete.split('/').pop()}`,
+						sha: fileSha,
+						branch
+					});
+				} else if (!isDir) {
+					return json({ error: 'Failed to retrieve file SHA' }, { status: 400 });
+				}
+
+				if (process.env.NODE_ENV !== 'production') {
+					try {
+						const fs = await import('node:fs/promises');
+						const localPath = await resolveLocalPath(itemPath);
+						await fs.rm(localPath, { recursive: true, force: true });
+					} catch (fsErr) {
+						console.error('Failed to delete local file/directory:', fsErr);
+					}
+				}
+
+				return json({ success: true });
 			} else {
 				return json({ error: 'Invalid action' }, { status: 400 });
 			}
@@ -145,6 +200,7 @@ async function mediaPicker(event: RequestEvent) {
 	}
 
 	const branch = url.searchParams.get('branch');
+	const all = url.searchParams.get('all') === 'true';
 	const { mediaDir } = getConfig();
 	const mediaRoot = normalizeRepoPath(mediaDir);
 	const path = normalizeRepoPath(url.searchParams.get('path') ?? mediaRoot);
@@ -172,15 +228,19 @@ async function mediaPicker(event: RequestEvent) {
 				name: item.name,
 				path: item.path,
 				type: item.type as 'file' | 'dir',
-				downloadUrl: item.download_url as string | null
+				downloadUrl: item.download_url as string | null,
+				sha: item.sha
 			}))
 			.filter((item) => {
+				if (item.name === '.gitkeep') return false;
 				if (item.type === 'dir') {
 					return !mediaRoot || isWithinRepoRoot(item.path, mediaRoot);
 				}
 
-				const ext = '.' + item.name.split('.').pop()?.toLowerCase();
-				if (!IMAGE_EXTENSIONS.includes(ext)) return false;
+				if (!all) {
+					const ext = '.' + item.name.split('.').pop()?.toLowerCase();
+					if (!IMAGE_EXTENSIONS.includes(ext)) return false;
+				}
 				return !mediaRoot || isWithinRepoRoot(item.path, mediaRoot);
 			})
 			.sort((a, b) => {

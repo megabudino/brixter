@@ -21,8 +21,13 @@ interface RouteCacheEntry {
 
 const routeCache = new Map<string, RouteCacheEntry>();
 const inflightRouteFetches = new Map<string, Promise<BranchRouteSnapshot>>();
-const branchStatusCache = new Map<string, { expiresAt: number; behindBy: number }>();
-const inflightBranchStatusFetches = new Map<string, Promise<number>>();
+export interface BranchStatus {
+	behindBy: number;
+	aheadBy: number;
+}
+
+const branchStatusCache = new Map<string, { expiresAt: number; status: BranchStatus }>();
+const inflightBranchStatusFetches = new Map<string, Promise<BranchStatus>>();
 
 function normalizeTreeEntries(tree: Array<{ path?: string; type?: string }>): TreeEntry[] {
 	return tree
@@ -111,13 +116,16 @@ export function invalidateBranchRouteCache(branch?: string): void {
 	}
 }
 
-export async function getBranchBehindBy(branch: string, defaultBranch: string): Promise<number> {
-	if (branch === defaultBranch) return 0;
+export async function getBranchStatus(
+	branch: string,
+	defaultBranch: string
+): Promise<BranchStatus> {
+	if (branch === defaultBranch) return { behindBy: 0, aheadBy: 0 };
 
 	const key = branchStatusCacheKey(branch, defaultBranch);
 	const now = Date.now();
 	const cached = branchStatusCache.get(key);
-	if (cached && cached.expiresAt > now) return cached.behindBy;
+	if (cached && cached.expiresAt > now) return cached.status;
 
 	const inflight = inflightBranchStatusFetches.get(key);
 	if (inflight) return inflight;
@@ -131,17 +139,20 @@ export async function getBranchBehindBy(branch: string, defaultBranch: string): 
 				{
 					owner: repo.owner,
 					repo: repo.name,
-					basehead: `${branch}...${defaultBranch}`
+					basehead: `${defaultBranch}...${branch}`
 				}
 			);
-			const behindBy = comparison.ahead_by;
+			const status: BranchStatus = {
+				aheadBy: comparison.ahead_by,
+				behindBy: comparison.behind_by
+			};
 			branchStatusCache.set(key, {
 				expiresAt: Date.now() + BRANCH_STATUS_CACHE_TTL_MS,
-				behindBy
+				status
 			});
-			return behindBy;
+			return status;
 		} catch {
-			return 0;
+			return { behindBy: 0, aheadBy: 0 };
 		}
 	})().finally(() => {
 		inflightBranchStatusFetches.delete(key);
@@ -149,6 +160,11 @@ export async function getBranchBehindBy(branch: string, defaultBranch: string): 
 
 	inflightBranchStatusFetches.set(key, promise);
 	return promise;
+}
+
+export async function getBranchBehindBy(branch: string, defaultBranch: string): Promise<number> {
+	const status = await getBranchStatus(branch, defaultBranch);
+	return status.behindBy;
 }
 
 export async function getBranchRouteSnapshot(

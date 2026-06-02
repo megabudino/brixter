@@ -736,6 +736,24 @@
 		</p>
 	</div>
 {:else}
+	{#if data.aheadBy > 0}
+		<div
+			class="sticky top-0 z-40 border-b border-blue-400 bg-blue-50 px-5 py-3 dark:border-blue-600 dark:bg-blue-950"
+		>
+			<div class="mx-auto flex max-w-2xl items-center justify-between gap-3">
+				<p class="text-sm font-medium text-blue-900 dark:text-blue-100">
+					You have {data.aheadBy} unpublished commit{data.aheadBy > 1 ? 's' : ''} ready to publish.
+				</p>
+				<a
+					href="/admin/publish"
+					class="inline-flex shrink-0 cursor-pointer items-center gap-2 bg-[#2563EB] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#3B82F6] dark:bg-[#3B82F6] dark:hover:bg-[#2563EB]"
+				>
+					Review & Publish
+				</a>
+			</div>
+		</div>
+	{/if}
+
 	{#if data.behindBy > 0}
 		<div
 			class="sticky top-0 z-40 border-b border-amber-400 bg-amber-50 px-5 py-3 dark:border-amber-600 dark:bg-amber-950"
