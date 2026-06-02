@@ -1008,8 +1008,8 @@ function createImageFallback(): string {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
 	<defs>
 		<linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
-			<stop stop-color="#2563EB"/>
-			<stop offset="1" stop-color="#93C5FD"/>
+			<stop stop-color="#FDE047"/>
+			<stop offset="1" stop-color="#FACC15"/>
 		</linearGradient>
 	</defs>
 	<rect width="960" height="540" fill="url(#g)"/>

@@ -163,7 +163,7 @@
 							type="text"
 							placeholder="Search icons..."
 							bind:value={searchFilter}
-							class="w-full border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100"
+							class="w-full border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
 						/>
 					</div>
 				{/if}
@@ -190,7 +190,7 @@
 							{#if entry.type === 'dir'}
 								<button
 									onclick={() => handleEntryClick(entry)}
-									class="flex items-center gap-3 border border-gray-200 bg-white p-4 text-left text-sm text-gray-700 hover:border-[#2563EB] hover:bg-gray-55 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-[#3B82F6] dark:hover:bg-gray-800/80"
+									class="flex items-center gap-3 border border-gray-200 bg-white p-4 text-left text-sm text-gray-700 hover:border-[#FDE047] hover:bg-gray-55 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-[#FACC15] dark:hover:bg-gray-800/80"
 								>
 									<Folder class="h-6 w-6 text-yellow-500 shrink-0" />
 									<span class="font-medium truncate">{entry.name}</span>
@@ -204,7 +204,7 @@
 						{#if currentPath}
 							<button
 								onclick={navigateToParent}
-								class="flex flex-col items-center justify-center border border-gray-200 bg-white p-3 text-center hover:border-[#2563EB] hover:bg-gray-55 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-[#3B82F6] dark:hover:bg-gray-800/80"
+								class="flex flex-col items-center justify-center border border-gray-200 bg-white p-3 text-center hover:border-[#FDE047] hover:bg-gray-55 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-[#FACC15] dark:hover:bg-gray-800/80"
 							>
 								<Folder class="h-6 w-6 text-gray-400 dark:text-gray-500" />
 								<span class="mt-1.5 block w-full truncate text-[10px] text-gray-500 dark:text-gray-400">
@@ -216,7 +216,7 @@
 							{#if entry.type !== 'dir'}
 								<button
 									onclick={() => handleEntryClick(entry)}
-									class="flex flex-col items-center justify-center border border-gray-200 bg-white p-3 text-center hover:border-[#2563EB] hover:bg-gray-55 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-[#3B82F6] dark:hover:bg-gray-800/80"
+									class="flex flex-col items-center justify-center border border-gray-200 bg-white p-3 text-center hover:border-[#FDE047] hover:bg-gray-55 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-[#FACC15] dark:hover:bg-gray-800/80"
 									title={entry.name.replace('.svg', '')}
 								>
 									{#if entry.downloadUrl}

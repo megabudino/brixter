@@ -59,7 +59,7 @@
 		<div class="mt-12 grid gap-4 md:grid-cols-3">
 			{#each reviews as review}
 				<figure
-					class="border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-[#1f2937]"
+					class="border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
 					data-builder-collection-item="reviews"
 				>
 					<blockquote

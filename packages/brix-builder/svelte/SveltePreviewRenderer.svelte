@@ -244,7 +244,7 @@
 					</div>
 					{#if activeBlockId === block.id && !previewMode}
 						<div
-							class="pointer-events-none absolute inset-px z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
+							class="pointer-events-none absolute inset-px z-30 border-2 border-[#FDE047] dark:border-[#FACC15]"
 						></div>
 					{/if}
 
@@ -256,11 +256,11 @@
 									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 								>
 									<div
-										class="collection-outline absolute inset-0 outline outline-1 outline-[#2563EB] transition outline-dashed dark:outline-[#3B82F6] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										class="collection-outline absolute inset-0 outline outline-1 outline-[#FDE047] transition outline-dashed dark:outline-[#FACC15] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
 									></div>
 									<button
 										type="button"
-										class="collection-add-button pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										class="collection-add-button btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
@@ -280,14 +280,14 @@
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'}
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
 									></div>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'
-											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
+											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
+											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
 									>
 										<button
 											type="button"
@@ -377,7 +377,7 @@
 					</div>
 					{#if activeBlockId === block.id && !previewMode}
 						<div
-							class="pointer-events-none absolute inset-px z-30 border-2 border-[#2563EB] dark:border-[#3B82F6]"
+							class="pointer-events-none absolute inset-px z-30 border-2 border-[#FDE047] dark:border-[#FACC15]"
 						></div>
 					{/if}
 
@@ -389,11 +389,11 @@
 									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 								>
 									<div
-										class="collection-outline absolute inset-0 outline outline-1 outline-[#2563EB] transition outline-dashed dark:outline-[#3B82F6] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										class="collection-outline absolute inset-0 outline outline-1 outline-[#FDE047] transition outline-dashed dark:outline-[#FACC15] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
 									></div>
 									<button
 										type="button"
-										class="collection-add-button pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] shadow-sm transition hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#1f2937] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										class="collection-add-button btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
@@ -413,14 +413,14 @@
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#2563EB] transition dark:outline-[#3B82F6]'}
+											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
 									></div>
 									<div
 										class={hoveredCollectionItem ===
 										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'
-											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100'}
+											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
+											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
 									>
 										<button
 											type="button"

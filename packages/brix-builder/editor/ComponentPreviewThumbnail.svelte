@@ -92,7 +92,7 @@ body,
 
 body {
 	background: transparent;
-	color: #111827;
+	color: #1e1c18;
 	overflow: hidden;
 }
 
@@ -119,8 +119,8 @@ body.dark {
 	background:
 		linear-gradient(90deg, rgba(15, 23, 42, 0.07) 1px, transparent 1px),
 		linear-gradient(0deg, rgba(15, 23, 42, 0.07) 1px, transparent 1px),
-		radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 34%),
-		linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+		radial-gradient(circle at top left, rgba(253, 224, 71, 0.18), transparent 34%),
+		linear-gradient(135deg, #fafaf5 0%, #fef9c3 100%);
 	background-size:
 		24px 24px,
 		24px 24px,
@@ -132,8 +132,8 @@ body.dark {
 	background:
 		linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
 		linear-gradient(0deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-		radial-gradient(circle at top left, rgba(59, 130, 246, 0.24), transparent 34%),
-		linear-gradient(135deg, #0f1623 0%, #1e293b 100%);
+		radial-gradient(circle at top left, rgba(253, 224, 71, 0.24), transparent 34%),
+		linear-gradient(135deg, #12100d 0%, #2d2a25 100%);
 	background-size:
 		24px 24px,
 		24px 24px,
@@ -185,7 +185,7 @@ body.dark {
 </script>
 
 <div
-	class="relative h-48 w-full overflow-hidden border border-gray-200 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,#f8fafc_0%,#e0e7ff_100%)] dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.24),transparent_34%),linear-gradient(135deg,#0f1623_0%,#1e293b_100%)]"
+	class="relative h-48 w-full overflow-hidden border border-gray-200 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.18),transparent_34%),linear-gradient(135deg,#fafaf5_0%,#fef9c3_100%)] dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.24),transparent_34%),linear-gradient(135deg,#12100d_0%,#2d2a25_100%)]"
 >
 	<iframe
 		use:thumbnailFrame

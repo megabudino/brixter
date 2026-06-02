@@ -13,7 +13,7 @@
 <input
 	id={inputId}
 	{name}
-	class="block w-full border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6] {className}"
+	class="block w-full border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent-focus dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 {className}"
 	{...rest}
 />
 </div>

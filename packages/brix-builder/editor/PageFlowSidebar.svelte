@@ -95,7 +95,7 @@
 	}
 </script>
 
-<aside class="flex h-full min-h-0 w-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]" aria-label="Page flow" onclick={(event) => { if (!(event.target as Element).closest('[data-page-flow-block]')) onDeselectBlock(); }}>
+<aside class="flex h-full min-h-0 w-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" aria-label="Page flow" onclick={(event) => { if (!(event.target as Element).closest('[data-page-flow-block]')) onDeselectBlock(); }}>
 	<div class="min-h-0 flex-1 overflow-y-auto py-2">
 		{#if blocks.length === 0}
 			<p class="text-muted mx-3 border border-dashed border-gray-300 px-4 py-6 text-sm dark:border-gray-600">
@@ -109,7 +109,7 @@
 				<div
 					data-page-flow-block
 					class={activeBlockId === block.id
-						? 'relative flex items-center gap-2 border-l-4 border-[#2563EB] bg-blue-50 px-3 py-2 text-gray-900 dark:border-[#3B82F6] dark:bg-[#1e293b] dark:text-gray-100'
+						? 'relative flex items-center gap-2 border-l-4 border-[#FDE047] bg-yellow-50 px-3 py-2 text-gray-900 dark:border-[#FACC15] dark:bg-yellow-950/40 dark:text-gray-100'
 						: 'relative flex items-center gap-2 border-l-4 border-transparent px-3 py-2 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700'}
 					role="listitem"
 					draggable={true}
@@ -119,9 +119,9 @@
 					ondrop={() => dropBlock(block.id)}
 					ondragend={endDrag}>
 					{#if dropPlacement === 'before'}
-						<div class="pointer-events-none absolute -top-0.5 right-2 left-2 z-30 h-0.5 bg-[#2563EB] shadow-[0_0_0_1px_rgba(37,99,235,0.15)] dark:bg-[#3B82F6]"></div>
+						<div class="pointer-events-none absolute -top-0.5 right-2 left-2 z-30 h-0.5 bg-[#FDE047] shadow-[0_0_0_1px_rgba(253,224,71,0.15)] dark:bg-[#FACC15]"></div>
 					{:else if dropPlacement === 'after'}
-						<div class="pointer-events-none absolute right-2 -bottom-0.5 left-2 z-30 h-0.5 bg-[#2563EB] shadow-[0_0_0_1px_rgba(37,99,235,0.15)] dark:bg-[#3B82F6]"></div>
+						<div class="pointer-events-none absolute right-2 -bottom-0.5 left-2 z-30 h-0.5 bg-[#FDE047] shadow-[0_0_0_1px_rgba(253,224,71,0.15)] dark:bg-[#FACC15]"></div>
 					{/if}
 					<button
 						type="button"
@@ -135,7 +135,7 @@
 					<div class="relative z-20 shrink-0">
 						<button
 							type="button"
-							class="flex h-7 w-7 items-center justify-center border border-transparent text-gray-700 transition-colors hover:border-gray-300 hover:bg-white dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-[#1f2937]"
+							class="flex h-7 w-7 items-center justify-center border border-transparent text-gray-700 transition-colors hover:border-gray-300 hover:bg-white dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-800"
 							aria-label={`Azioni per ${block.type}`}
 							aria-expanded={openActionBlockId === block.id}
 							onclick={(event) => toggleActionMenu(block.id, event)}>
@@ -154,7 +154,7 @@
 								onclick={(event) => closeActionMenu(event)}></button>
 
 							<div
-								class="absolute right-0 z-50 mt-1 grid min-w-48 gap-1 border border-gray-200 bg-white p-1.5 text-sm shadow-lg dark:border-gray-700 dark:bg-[#1f2937]">
+								class="absolute right-0 z-50 mt-1 grid min-w-48 gap-1 border border-gray-200 bg-white p-1.5 text-sm shadow-lg dark:border-gray-700 dark:bg-gray-800">
 								<button
 									type="button"
 									class="flex items-center gap-3 px-3.5 py-2 text-left text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"

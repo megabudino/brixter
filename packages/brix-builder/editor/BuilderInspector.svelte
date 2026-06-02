@@ -45,7 +45,7 @@
 </script>
 
 <aside
-	class="flex h-full min-h-0 w-full flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-[#111827]"
+	class="flex h-full min-h-0 w-full flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
 	onclick={(event) => {
 		if (!(event.target as Element).closest('section')) onDeselectBlock();
 	}}
@@ -64,7 +64,7 @@
 						<span class="text-label mb-1 block text-sm font-medium">Contenuto markdown</span>
 						<textarea
 							value={typeof activeBlock.props.content === 'string' ? activeBlock.props.content : ''}
-							class="min-h-48 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] focus:outline-none dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+							class="min-h-48 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 							oninput={(event) => onFieldChange(activeBlock, 'content', event.currentTarget.value)}
 							placeholder="Scrivi markdown..."
 						></textarea>
@@ -102,7 +102,7 @@
 						<span class="text-label mb-1 block text-sm font-medium">Page Title</span>
 						<input
 							value={title}
-							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] focus:outline-none dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 							placeholder="Page Title"
 							oninput={(event) => onTitleChange(event.currentTarget.value)}
 						/>
@@ -111,7 +111,7 @@
 						<span class="text-label mb-1 block text-sm font-medium">Description</span>
 						<input
 							value={description}
-							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] focus:outline-none dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 							placeholder="Description for the frontmatter"
 							oninput={(event) => onDescriptionChange(event.currentTarget.value)}
 						/>

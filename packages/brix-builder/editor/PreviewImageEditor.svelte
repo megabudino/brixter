@@ -150,7 +150,7 @@
 		background-color: #fff;
 		font-size: 0.75rem;
 		line-height: 1rem;
-		color: #111827;
+		color: #1e1c18;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 		opacity: 0;
 		pointer-events: none;
@@ -164,7 +164,7 @@
 
 	:global(.dark) .builder-preview-image-toolbar {
 		border-color: #4b5563;
-		background-color: #1f2937;
+		background-color: #2d2a25;
 		color: #f3f4f6;
 	}
 
@@ -192,11 +192,11 @@
 	}
 
 	:global(.dark) .toolbar-btn {
-		border-right-color: #374151;
+		border-right-color: #444039;
 	}
 
 	:global(.dark) .toolbar-btn:hover {
-		background-color: #374151;
+		background-color: #444039;
 	}
 
 	.toolbar-btn-danger {

@@ -22,7 +22,7 @@
 <div class="pointer-events-auto relative mx-auto flex w-max justify-center">
 		<button
 			type="button"
-			class="relative flex h-8 w-8 cursor-pointer items-center justify-center border border-[#2563EB] bg-white text-lg leading-none text-[#2563EB] shadow-sm transition-colors hover:bg-[#2563EB] hover:text-white dark:border-[#3B82F6] dark:bg-[#0f1623] dark:text-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white"
+			class="btn-brutal-icon relative flex h-8 w-8 items-center justify-center text-lg leading-none"
 			aria-label="Aggiungi componente"
 			onclick={(event) => {
 				event.stopPropagation();

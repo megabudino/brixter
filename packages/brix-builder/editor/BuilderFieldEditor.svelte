@@ -121,7 +121,7 @@
 			<p class="text-heading text-sm font-semibold">{label}</p>
 			<button
 				type="button"
-				class="border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
+				class="border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onAddItem(path)}>
 				+ Add {field.itemLabel ?? 'item'}
 			</button>
@@ -132,7 +132,7 @@
 		{/if}
 
 		{#each arrayItems as item, index (`${path}-${index}`)}
-			<div class="space-y-3 border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-[#1f2937]">
+			<div class="space-y-3 border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
 				<div class="flex items-center justify-between gap-3">
 					<p class="text-heading text-sm font-medium">{getItemLabel(item, index)}</p>
 					<div class="flex flex-wrap gap-2">
@@ -208,7 +208,7 @@
 		<input
 			type="number"
 			value={numberValue}
-			class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+			class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 			oninput={(event) => updateNumber(event.currentTarget.value)} />
 	</label>
 {:else if fieldKind === 'image'}
@@ -224,11 +224,11 @@
 			<input
 				type="text"
 				value={stringValue}
-				class="min-w-0 flex-1 border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+				class="min-w-0 flex-1 border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 				oninput={(event) => updateText(event.currentTarget.value)} />
 			<button
 				type="button"
-				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
+				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onQueueFileEdit(path)}>
 				File
 			</button>
@@ -238,7 +238,7 @@
 	<label class="block">
 		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
 		<div class="flex flex-wrap gap-2">
-			<div class="min-w-0 flex-1 flex items-center justify-center h-[46px] border border-gray-300 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100">
+			<div class="min-w-0 flex-1 flex items-center justify-center h-[46px] border border-gray-300 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
 				{#if stringValue}
 					<span class="inline-block h-6 w-6 text-gray-700 dark:text-gray-300">
 						{@html stringValue}
@@ -249,7 +249,7 @@
 			</div>
 			<button
 				type="button"
-				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:bg-gray-700"
+				class="border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 				onclick={() => onQueueFileEdit(path)}>
 				Choose
 			</button>
@@ -261,13 +261,13 @@
 		{#if multiline}
 			<textarea
 				value={stringValue}
-				class="min-h-24 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+				class="min-h-24 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 				oninput={(event) => updateText(event.currentTarget.value)}></textarea>
 		{:else}
 			<input
 				type="text"
 				value={stringValue}
-				class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB] dark:border-gray-700 dark:bg-[#1f2937] dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]"
+				class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
 				oninput={(event) => updateText(event.currentTarget.value)} />
 		{/if}
 	</label>

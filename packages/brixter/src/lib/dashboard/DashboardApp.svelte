@@ -56,8 +56,9 @@
 	{#if data.isAdmin}
 		<div class="flex">
 			<aside
-				class="sticky top-0 flex h-svh w-56 shrink-0 flex-col border-r border-gray-300 bg-white px-3 py-6 dark:border-gray-700 dark:bg-[#1f2937]"
+				class="sticky top-0 flex h-svh w-56 shrink-0 flex-col border-r border-gray-300 bg-white px-3 py-6 dark:border-gray-700 dark:bg-gray-800"
 			>
+				<p class="font-brand mb-6 px-3 text-4xl leading-none text-black dark:text-yellow-300">Brixter</p>
 				<nav class="space-y-1">
 					<a
 						href="/admin/routes"

@@ -818,7 +818,7 @@
 >
 	{#if chrome === 'standalone'}
 		<header
-			class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-[#111827]"
+			class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
 			onclick={(event) => { if (!(event.target as Element).closest('button, input, a')) deselectBlock(); }}
 		>
 			<div class="flex items-center gap-2">
@@ -830,8 +830,8 @@
 				<button
 					type="button"
 					class={pageFlowOpen
-					? 'group relative flex h-9 w-9 items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
-					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+					? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
+					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-accent dark:hover:bg-accent-hover dark:hover:text-gray-900'}
 					aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
 					aria-pressed={pageFlowOpen}
 					onclick={togglePageFlow}
@@ -843,12 +843,12 @@
 						/>
 					</svg>
 					<span
-						class="pointer-events-none absolute top-full left-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						class="pointer-events-none absolute top-full left-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-300 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
 					>
 						<span class="font-semibold">Page flow</span>
 						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
 							<span
-								class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{#if pageFlowShortcutModifier === 'command'}
 									<svg class="h-3 w-3" viewBox="0 0 16 16" aria-hidden="true">
@@ -863,7 +863,7 @@
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
 							<span
-								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{pageFlowShortcutKey}
 							</span>
@@ -872,7 +872,7 @@
 				</button>
 				<button
 					type="button"
-					class="flex h-9 w-9 items-center justify-center bg-[#2563EB] text-xl leading-none text-white transition-colors hover:bg-[#3B82F6]"
+					class="btn-brutal-icon flex h-9 w-9 items-center justify-center text-xl leading-none"
 					onclick={() => definitions[0] && addBlock(definitions[0].type)}
 					aria-label="Aggiungi brik"
 				>
@@ -883,12 +883,12 @@
 			</div>
 
 			<!-- Center Device Selection -->
-			<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 z-10 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+			<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 z-10 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-inner">
 				<button
 					type="button"
 					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'desktop'
 						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
 					onclick={() => viewportSize = 'desktop'}
 					title="Desktop (100%)"
 				>
@@ -898,7 +898,7 @@
 					type="button"
 					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'tablet'
 						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
 					onclick={() => viewportSize = 'tablet'}
 					title="Tablet (768px)"
 				>
@@ -908,7 +908,7 @@
 					type="button"
 					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'mobile'
 						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
 					onclick={() => viewportSize = 'mobile'}
 					title="Mobile (375px)"
 				>
@@ -918,12 +918,12 @@
 
 			<div class="flex items-center gap-2">
 				<!-- Mode Selector -->
-				<div class="group relative inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+				<div class="group relative inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-inner">
 					<button
 						type="button"
 						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {!previewMode
 							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
 						onclick={() => previewMode = false}
 					>
 						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -933,7 +933,7 @@
 						type="button"
 						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {previewMode
 							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'}"
+							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
 						onclick={() => {
 							previewMode = true;
 							deselectBlock();
@@ -943,12 +943,12 @@
 						<span>Preview</span>
 					</button>
 					<span
-						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-300 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
 					>
 						<span class="font-semibold">Preview</span>
 						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
 							<span
-								class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{#if pageFlowShortcutModifier === 'command'}
 									<svg class="h-3 w-3" viewBox="0 0 16 16" aria-hidden="true">
@@ -963,7 +963,7 @@
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
 							<span
-								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium uppercase text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium uppercase text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{previewShortcutKey}
 							</span>
@@ -973,7 +973,7 @@
 
 				<button
 					type="button"
-					class="bg-[#2563EB] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3B82F6] cursor-pointer"
+					class="btn-brutal-flat cursor-pointer px-3 py-1.5 text-xs font-medium"
 					onclick={copyMdsvex}
 				>
 					{controller?.copied ? 'Copiato' : 'Copia export'}
@@ -981,8 +981,8 @@
 				<button
 					type="button"
 					class={inspectorOpen
-					? 'group relative flex h-9 w-9 items-center justify-center border border-[#2563EB] bg-[#2563EB] text-white transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6] dark:border-[#3B82F6] dark:bg-[#3B82F6] dark:text-white dark:hover:border-[#2563EB] dark:hover:bg-[#2563EB]'
-					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:bg-[#1f2937] dark:text-gray-100 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6] dark:hover:text-white'}
+					? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
+					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-accent dark:hover:bg-accent-hover dark:hover:text-gray-900'}
 					aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
 					aria-pressed={inspectorOpen}
 					onclick={toggleInspector}
@@ -992,12 +992,12 @@
 						<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
 					</svg>
 					<span
-						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-300 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
 					>
 						<span class="font-semibold">Inspector</span>
 						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
 							<span
-								class="inline-flex h-5 items-center gap-1 border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{#if pageFlowShortcutModifier === 'command'}
 									<svg class="h-3 w-3" viewBox="0 0 16 16" aria-hidden="true">
@@ -1011,10 +1011,10 @@
 								{/if}
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-							<span class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Shift</span>
+							<span class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">Shift</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
 							<span
-								class="inline-flex h-5 items-center border border-gray-300 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{inspectorShortcutKey}
 							</span>
@@ -1044,13 +1044,13 @@
 					onDrop={handleDrop}
 				/>
 				<div
-					class="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#2563EB]/30 dark:hover:bg-[#3B82F6]/30"
+					class="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#FDE047]/30 dark:hover:bg-[#FACC15]/30"
 					onmousedown={(e) => startResize('pageFlow', e)}
 				/>
 			</div>
 		{/if}
 
-		<main class="min-w-0 flex-1 overflow-hidden bg-white dark:bg-[#0f1623]">
+		<main class="min-w-0 flex-1 overflow-hidden bg-white dark:bg-[#12100d]">
 			<div class="h-full min-h-0 w-full">
 				<BuilderPreviewFrame {...previewProps} onKeydown={handleWindowKeydown} />
 			</div>
@@ -1078,7 +1078,7 @@
 					onDeselectBlock={deselectBlock}
 				/>
 				<div
-					class="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#2563EB]/30 dark:hover:bg-[#3B82F6]/30"
+					class="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#FDE047]/30 dark:hover:bg-[#FACC15]/30"
 					onmousedown={(e) => startResize('inspector', e)}
 				/>
 			</div>
@@ -1095,7 +1095,7 @@
 			onclick={closeInserterModal}
 		></button>
 		<div
-			class="relative flex max-h-[min(760px,calc(100vh-3rem))] w-full max-w-5xl flex-col border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-[#111827]"
+			class="relative flex max-h-[min(760px,calc(100vh-3rem))] w-full max-w-5xl flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
 			role="dialog"
 			aria-modal="true"
 			aria-label="Choose component to add"
@@ -1119,7 +1119,7 @@
 				</div>
 				<button
 					type="button"
-					class="flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:border-[#2563EB] hover:bg-[#2563EB] hover:text-white dark:border-gray-600 dark:text-gray-200 dark:hover:border-[#3B82F6] dark:hover:bg-[#3B82F6]"
+					class="flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:text-gray-200 dark:hover:border-accent dark:hover:bg-accent-hover"
 					aria-label="Close"
 					onclick={closeInserterModal}
 				>
@@ -1132,7 +1132,7 @@
 					{#each definitions as definition (definition.type)}
 						<button
 							type="button"
-							class="group overflow-hidden border border-gray-200 bg-white text-left transition-colors hover:border-[#2563EB] hover:bg-blue-50/50 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/30 focus:outline-none dark:border-gray-700 dark:bg-[#1f2937] dark:hover:border-[#3B82F6] dark:hover:bg-[#1e293b] dark:focus:border-[#3B82F6] dark:focus:ring-[#3B82F6]/30"
+							class="group overflow-hidden border border-gray-300 bg-white text-left transition-colors hover:border-[#FDE047] hover:bg-yellow-50/50 focus:border-[#FDE047] focus:ring-2 focus:ring-[#FDE047]/30 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:hover:border-[#FACC15] dark:hover:bg-yellow-950/40 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]/30"
 							onclick={() => insertFromModal(definition.type)}
 						>
 							<ComponentPreviewThumbnail {definition} />
@@ -1159,7 +1159,7 @@
 			onclick={closeReorderModal}
 		></button>
 		<div
-			class="relative w-full max-w-3xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-[#111827]"
+			class="relative w-full max-w-3xl border border-gray-300 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-900"
 			role="dialog"
 			aria-modal="true"
 			aria-label={`Riordina ${activeReorderContext.collection.label}`}
@@ -1177,7 +1177,7 @@
 
 				<button
 					type="button"
-					class="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"
+					class="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-700"
 					onclick={closeReorderModal}
 				>
 					Chiudi
@@ -1187,7 +1187,7 @@
 			<div class="mt-6 space-y-3" role="list">
 				{#each activeReorderContext.items as item, itemIndex}
 					<div
-						class="flex cursor-move flex-wrap items-center justify-between gap-4 border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-[#1f2937]"
+						class="flex cursor-move flex-wrap items-center justify-between gap-4 border-2 border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
 						role="listitem"
 						draggable={true}
 						ondragstart={() =>
@@ -1201,7 +1201,7 @@
 					>
 						<div class="flex min-w-0 items-center gap-4">
 							<div
-								class="text-muted flex h-12 w-12 items-center justify-center border border-gray-200 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-[#111827]"
+								class="text-muted flex h-12 w-12 items-center justify-center border border-gray-300 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-gray-900"
 							>
 								{itemIndex + 1}
 							</div>
@@ -1219,7 +1219,7 @@
 						<div class="flex flex-wrap items-center gap-2 text-sm">
 							<button
 								type="button"
-								class="border border-gray-300 px-3 py-1.5 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+								class="border border-gray-300 px-3 py-1.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 								onclick={() =>
 									moveItem(
 										activeReorderContext.block,
@@ -1232,7 +1232,7 @@
 							</button>
 							<button
 								type="button"
-								class="border border-gray-300 px-3 py-1.5 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
+								class="border border-gray-300 px-3 py-1.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
 								onclick={() =>
 									moveItem(
 										activeReorderContext.block,
@@ -1275,7 +1275,7 @@
 	}
 
 	:global(.builder-app *::-webkit-scrollbar-thumb:hover) {
-		background: #2563eb;
+		background: #fde047;
 		background-clip: padding-box;
 	}
 
@@ -1293,7 +1293,7 @@
 	}
 
 	:global(.dark .builder-app *::-webkit-scrollbar-thumb:hover) {
-		background: #3b82f6;
+		background: #facc15;
 		background-clip: padding-box;
 	}
 </style>

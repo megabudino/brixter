@@ -144,7 +144,7 @@
 		border-radius: 8px;
 		padding: 4px;
 		font-size: 0.75rem;
-		color: #1f2937;
+		color: #2d2a25;
 		box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 		min-width: 140px;
 		animation: popover-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
@@ -190,7 +190,7 @@
 	}
 
 	:global(.dark) .menu-item:hover {
-		background-color: #374151;
+		background-color: #444039;
 	}
 
 	.menu-item-danger {
