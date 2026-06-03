@@ -644,7 +644,7 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 	<iframe
 		use:previewFrame
 		title="Preview"
-		class="block h-full border-0 bg-white dark:bg-[#12100d] transition-all duration-300 ease-in-out"
+		class="block h-full border-0 transition-all duration-300 ease-in-out"
 		class:w-full={viewportSize === 'desktop'}
 		class:shadow-2xl={viewportSize !== 'desktop'}
 		class:border={viewportSize !== 'desktop'}
