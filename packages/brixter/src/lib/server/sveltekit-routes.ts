@@ -55,8 +55,19 @@ export interface RouteUrlPath {
 	dirPath: string;
 }
 
+export function isRouteGroupSegment(segment: string): boolean {
+	return segment.startsWith('(') && segment.endsWith(')');
+}
+
+function publicSegmentsForDirPath(root: string, dirPath: string): string[] {
+	return relativeToRepoRoot(dirPath, root)
+		.split('/')
+		.filter(Boolean)
+		.filter((segment) => !isRouteGroupSegment(segment));
+}
+
 export function routeDirUrlPath(root: string, dirPath: string): string {
-	return relativeToRepoRoot(dirPath, root);
+	return publicSegmentsForDirPath(root, dirPath).join('/');
 }
 
 export function routePageUrlPath(root: string, dirPath: string): string {
@@ -66,6 +77,102 @@ export function routePageUrlPath(root: string, dirPath: string): string {
 export function pageFileUrlPath(root: string, filePath: string): string {
 	const dirPath = filePath.split('/').slice(0, -1).join('/');
 	return routePageUrlPath(root, dirPath);
+}
+
+function resolveVisibleRouteNodes(node: RouteNode, segments: string[]): RouteNode[] {
+	if (segments.length === 0) return [node];
+
+	const [segment, ...rest] = segments;
+	const matches: RouteNode[] = [];
+
+	for (const child of node.children) {
+		if (isRouteGroupSegment(child.segment)) {
+			matches.push(...resolveVisibleRouteNodes(child, segments));
+			continue;
+		}
+		if (child.segment === segment) {
+			matches.push(...resolveVisibleRouteNodes(child, rest));
+		}
+	}
+
+	return matches;
+}
+
+function pageCarrierNodes(node: RouteNode): RouteNode[] {
+	const matches: RouteNode[] = [];
+	if (node.page) matches.push(node);
+
+	for (const child of node.children) {
+		if (!isRouteGroupSegment(child.segment)) continue;
+		matches.push(...pageCarrierNodes(child));
+	}
+
+	return matches;
+}
+
+function visibleChildren(node: RouteNode): RouteNode[] {
+	const matches: RouteNode[] = [];
+
+	for (const child of node.children) {
+		if (isRouteGroupSegment(child.segment)) {
+			matches.push(...visibleChildren(child));
+			continue;
+		}
+		matches.push(child);
+	}
+
+	return matches.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function publicPageNodeForFile(
+	node: RouteNode,
+	filePath: string,
+	currentPublicNode: RouteNode = node
+): RouteNode | null {
+	if (node.pages.some((page) => page.filePath === filePath)) return currentPublicNode;
+
+	for (const child of node.children) {
+		const nextPublicNode = isRouteGroupSegment(child.segment) ? currentPublicNode : child;
+		const match = publicPageNodeForFile(child, filePath, nextPublicNode);
+		if (match) return match;
+	}
+
+	return null;
+}
+
+export function resolveRouteUrlPath(root: RouteNode, routePath: string): RouteUrlPath {
+	const path = normalizeRepoPath(routePath);
+	const parts = path ? path.split('/') : [];
+	const pageMarkerIndex = parts.indexOf('+page');
+
+	if (pageMarkerIndex !== -1 && pageMarkerIndex !== parts.length - 1) {
+		throw new Error('Page marker must be the last route segment.');
+	}
+
+	const kind: RouteUrlPath['kind'] = pageMarkerIndex === -1 ? 'route' : 'page';
+	const dirParts = kind === 'page' ? parts.slice(0, -1) : parts;
+	const routeMatches = resolveVisibleRouteNodes(root, dirParts);
+
+	if (routeMatches.length === 0) {
+		throw new Error('Route not found.');
+	}
+	if (routeMatches.length > 1) {
+		throw new Error(`Ambiguous route path "${path}".`);
+	}
+
+	if (kind === 'route') {
+		return { kind, path, dirPath: routeMatches[0].dirPath };
+	}
+
+	const pageMatches = pageCarrierNodes(routeMatches[0]);
+	if (pageMatches.length === 0) {
+		throw new Error('Page not found.');
+	}
+	if (pageMatches.length > 1) {
+		throw new Error(`Ambiguous page path "${path}".`);
+	}
+
+	return { kind, path, dirPath: pageMatches[0].dirPath };
 }
 
 export function routeUrlPathToDirPath(root: string, routePath: string): RouteUrlPath {
@@ -101,7 +208,7 @@ export function isPageFilePath(path: string): boolean {
 
 function routeLabel(name: string): string {
 	if (name.startsWith('+page.')) return 'index';
-	if (name.startsWith('(') && name.endsWith(')')) return name.slice(1, -1);
+	if (isRouteGroupSegment(name)) return name.slice(1, -1);
 	return name;
 }
 
@@ -237,20 +344,19 @@ export function findPageFile(root: RouteNode, filePath: string): PageFile | null
 export function childRoute(root: RouteNode, currentDir: string, segment: string): RouteNode | null {
 	const node = findRouteNode(root, currentDir);
 	return (
-		node?.children.find((child) => child.segment.toLowerCase() === segment.toLowerCase()) ?? null
+		visibleChildren(node ?? root).find((child) => child.segment.toLowerCase() === segment.toLowerCase()) ??
+		null
 	);
 }
 
 export function childDirNames(root: RouteNode, currentDir: string): string[] {
-	return findRouteNode(root, currentDir)?.children.map((child) => child.segment) ?? [];
+	return visibleChildren(findRouteNode(root, currentDir) ?? root).map((child) => child.segment);
 }
 
 export function childPageNames(root: RouteNode, currentDir: string): string[] {
-	return (
-		findRouteNode(root, currentDir)
-			?.children.filter((child) => child.page)
-			.map((child) => child.segment) ?? []
-	);
+	return visibleChildren(findRouteNode(root, currentDir) ?? root)
+		.filter((child) => pageCarrierNodes(child).length > 0)
+		.map((child) => child.segment);
 }
 
 export function getExplorerListing(root: RouteNode, currentDir: string): ExplorerEntry[] {
@@ -258,43 +364,46 @@ export function getExplorerListing(root: RouteNode, currentDir: string): Explore
 	if (!node) return [];
 
 	const entries: ExplorerEntry[] = [];
-	if (node.page && node.dirPath === root.dirPath) {
+	const currentPageNode = pageCarrierNodes(node)[0];
+	if (currentPageNode && node.dirPath === root.dirPath) {
 		entries.push({
 			kind: 'page',
-			label: pageDisplayName(node, node.page, 'index'),
-			path: pageFileUrlPath(root.dirPath, node.page.filePath),
-			filePath: node.page.filePath,
+			label: pageDisplayName(node, currentPageNode.page!, 'index'),
+			path: pageFileUrlPath(root.dirPath, currentPageNode.page!.filePath),
+			filePath: currentPageNode.page!.filePath,
 			routeDirPath: node.dirPath,
 			downloadUrl: null,
 			hasPage: true,
-			fileTypeLabel: pageTypeLabel(node.page),
-			disabled: !isEditablePage(node.page)
+			fileTypeLabel: pageTypeLabel(currentPageNode.page!),
+			disabled: !isEditablePage(currentPageNode.page!)
 		});
 	}
 
-	for (const child of node.children) {
-		if (child.page) {
+	for (const child of visibleChildren(node)) {
+		const childPageNode = pageCarrierNodes(child)[0];
+		const hasVisibleChildren = visibleChildren(child).length > 0;
+		if (childPageNode?.page) {
 			entries.push({
 				kind: 'page',
-				label: pageDisplayName(child, child.page, 'segment'),
-				path: pageFileUrlPath(root.dirPath, child.page.filePath),
-				filePath: child.page.filePath,
+				label: pageDisplayName(child, childPageNode.page, 'segment'),
+				path: pageFileUrlPath(root.dirPath, childPageNode.page.filePath),
+				filePath: childPageNode.page.filePath,
 				routeDirPath: child.dirPath,
 				downloadUrl: null,
 				hasPage: true,
-				fileTypeLabel: pageTypeLabel(child.page),
-				disabled: !isEditablePage(child.page)
+				fileTypeLabel: pageTypeLabel(childPageNode.page),
+				disabled: !isEditablePage(childPageNode.page)
 			});
 		}
 
-		if (child.children.length > 0 || !child.page) {
+		if (hasVisibleChildren || !childPageNode?.page) {
 			entries.push({
 				kind: 'route',
 				label: child.label,
 				path: routeDirUrlPath(root.dirPath, child.dirPath),
 				routeDirPath: child.dirPath,
 				downloadUrl: null,
-				hasPage: !!child.page
+				hasPage: !!childPageNode?.page
 			});
 		}
 	}
@@ -303,10 +412,8 @@ export function getExplorerListing(root: RouteNode, currentDir: string): Explore
 }
 
 function routeBreadcrumbsForDir(root: RouteNode, dirPath: string): ExplorerBreadcrumb[] {
-	const relativePath = relativeToRepoRoot(dirPath, root.dirPath);
-	if (!relativePath) return [];
-
-	const parts = relativePath.split('/');
+	const parts = publicSegmentsForDirPath(root.dirPath, dirPath);
+	if (parts.length === 0) return [];
 	return parts.map((part, index) => ({
 		label: routeLabel(part),
 		path: parts.slice(0, index + 1).join('/')
@@ -317,8 +424,8 @@ export function routeBreadcrumbs(root: RouteNode, path: string): ExplorerBreadcr
 	const page = findPageFile(root, path);
 	if (!page) return routeBreadcrumbsForDir(root, path);
 
-	const dirPath = page.filePath.split('/').slice(0, -1).join('/');
-	const node = findRouteNode(root, dirPath);
+	const node = publicPageNodeForFile(root, page.filePath);
+	const dirPath = node?.dirPath ?? page.filePath.split('/').slice(0, -1).join('/');
 	return [
 		...routeBreadcrumbsForDir(root, dirPath),
 		{

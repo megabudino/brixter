@@ -212,6 +212,8 @@ async function initEmbedded(context) {
 	ensureBrixterPackage(context);
 	ensureRouteShims(context, 'src/routes');
 	ensureSiteRouteGroup(context, 'src/routes');
+	promoteSiteChromeToRouteGroup(context, 'src/routes');
+	finalizeRootLayoutIsolation(context, 'src/routes');
 	ensureHooks(context);
 	ensureVitePlugin(context);
 	ensureSvelteExtensions(context);
@@ -510,18 +512,35 @@ function ensureRouteShims(context, routesRoot = 'src/routes') {
 }
 
 function ensureBrixterLayout(context, routesRoot = 'src/routes') {
-	createFile(
-		context,
-		`${routesRoot}/__brixter/+layout.svelte`,
-		`<script lang="ts">
+	const layoutContents = `<script lang="ts">
 	import 'brixter/styles.css';
 
 	let { children } = $props();
 </script>
 
 {@render children()}
-`
-	);
+`;
+	const layoutAtPath = `${routesRoot}/__brixter/+layout@.svelte`;
+	const legacyLayoutPath = `${routesRoot}/__brixter/+layout.svelte`;
+	const legacyFile = path.join(context.cwd, legacyLayoutPath);
+	const layoutAtFile = path.join(context.cwd, layoutAtPath);
+
+	if (existsSync(legacyFile) && !existsSync(layoutAtFile)) {
+		if (context.dryRun) {
+			context.changes.push(`${legacyLayoutPath} → ${layoutAtPath}`);
+		} else {
+			renameSync(legacyFile, layoutAtFile);
+			context.changes.push(`${legacyLayoutPath} → ${layoutAtPath}`);
+		}
+		return;
+	}
+
+	if (existsSync(legacyFile) && existsSync(layoutAtFile) && !context.dryRun) {
+		rmSync(legacyFile, { force: true });
+		context.changes.push(`removed legacy ${legacyLayoutPath}`);
+	}
+
+	createFile(context, layoutAtPath, layoutContents);
 }
 
 function ensureHooks(context) {
@@ -846,13 +865,7 @@ function ensureSiteRouteGroup(context, routesRoot = 'src/routes') {
 	createFile(
 		context,
 		`${siteGroupRelative}/+layout.svelte`,
-		`<script lang="ts">
-	let { children } = $props();
-</script>
-
-<!-- Site chrome (navbar, footer, etc.) -->
-{@render children()}
-`
+		defaultSiteGroupLayoutContents()
 	);
 
 	const routesDir = path.join(context.cwd, routesRoot);
@@ -873,6 +886,132 @@ function ensureSiteRouteGroup(context, routesRoot = 'src/routes') {
 	}
 
 	ensureMinimalRootLayout(context, routesRoot);
+}
+
+function passThroughRootLayoutContents() {
+	return `<script lang="ts">
+	let { children } = $props();
+</script>
+
+{@render children()}
+`;
+}
+
+function defaultSiteGroupLayoutContents() {
+	return `<script lang="ts">
+	import '../layout.css';
+
+	let { children } = $props();
+</script>
+
+<!-- Site chrome (navbar, footer, etc.) -->
+{@render children()}
+`;
+}
+
+function isInitSiteGroupLayout(contents) {
+	return (
+		contents.includes('Site chrome') &&
+		contents.includes('{@render children()}') &&
+		!contents.includes('layout.css')
+	);
+}
+
+function promoteSiteChromeToRouteGroup(context, routesRoot = 'src/routes') {
+	const rootLayoutPath = path.join(context.cwd, routesRoot, '+layout.svelte');
+	const siteLayoutPath = path.join(context.cwd, routesRoot, '(site)', '+layout.svelte');
+	if (!existsSync(rootLayoutPath)) return;
+
+	const rootContents = read(rootLayoutPath);
+	if (isPassThroughRootLayout(rootContents)) {
+		context.skipped.push(`${routesRoot}/+layout.svelte already pass-through`);
+		return;
+	}
+
+	const siteRelative = `${routesRoot}/(site)/+layout.svelte`;
+	const siteContents = existsSync(siteLayoutPath) ? read(siteLayoutPath) : '';
+	const siteIsPlaceholder = !siteContents || isInitSiteGroupLayout(siteContents);
+
+	if (!siteIsPlaceholder) {
+		context.manual.push(
+			`keep ${routesRoot}/+layout.svelte minimal (global CSS only) and move site chrome into ${siteRelative}`
+		);
+		return;
+	}
+
+	if (context.dryRun) {
+		context.changes.push(
+			`would move site chrome from ${routesRoot}/+layout.svelte → ${siteRelative} and reset root layout`
+		);
+		return;
+	}
+
+	mkdirSync(path.dirname(siteLayoutPath), { recursive: true });
+	write(context, siteRelative, rootContents);
+	write(context, `${routesRoot}/+layout.svelte`, passThroughRootLayoutContents());
+	context.changes.push(`moved site chrome into ${siteRelative}`);
+	context.changes.push(`${routesRoot}/+layout.svelte reset to pass-through root layout`);
+}
+
+function finalizeRootLayoutIsolation(context, routesRoot = 'src/routes') {
+	const rootRelative = `${routesRoot}/+layout.svelte`;
+	const siteRelative = `${routesRoot}/(site)/+layout.svelte`;
+	const rootPath = path.join(context.cwd, rootRelative);
+	const sitePath = path.join(context.cwd, siteRelative);
+	if (!existsSync(rootPath)) return;
+
+	const rootContents = read(rootPath);
+	if (isPassThroughRootLayout(rootContents)) {
+		context.skipped.push(`${rootRelative} already pass-through (CMS isolated from site styles)`);
+		return;
+	}
+
+	const siteContents = existsSync(sitePath) ? read(sitePath) : defaultSiteGroupLayoutContents();
+	const mergedSiteLayout = mergeSiteLayoutWithRootGlobals(rootContents, siteContents);
+
+	if (context.dryRun) {
+		context.changes.push(
+			`would move global site imports from ${rootRelative} → ${siteRelative} and reset root to pass-through`
+		);
+		return;
+	}
+
+	mkdirSync(path.dirname(sitePath), { recursive: true });
+	write(context, siteRelative, mergedSiteLayout);
+	write(context, rootRelative, passThroughRootLayoutContents());
+	context.changes.push(`moved global site imports into ${siteRelative}`);
+	context.changes.push(`${rootRelative} reset to pass-through for CMS isolation`);
+}
+
+function mergeSiteLayoutWithRootGlobals(rootContents, siteContents) {
+	let site = siteContents;
+	const scriptMatch = site.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+	const rootScriptMatch = rootContents.match(/<script[^>]*>([\s\S]*?)<\/script>/);
+	const rootScript = rootScriptMatch?.[1] ?? '';
+
+	for (const line of rootScript.split('\n')) {
+		const trimmed = line.trim();
+		if (!trimmed.startsWith('import ')) continue;
+		if (!/layout\.css|favicon|\.svg/.test(trimmed)) continue;
+		if (site.includes(trimmed)) continue;
+		if (scriptMatch) {
+			site = site.replace(scriptMatch[0], scriptMatch[0].replace(/<\/script>/, `\t${line}\n</script>`));
+		}
+	}
+
+	const headBlocks = rootContents.match(/<svelte:head>[\s\S]*?<\/svelte:head>/g) ?? [];
+	for (const block of headBlocks) {
+		if (!site.includes(block)) {
+			const renderIndex = site.indexOf('{@render children()}');
+			if (renderIndex === -1) {
+				site += `\n${block}\n`;
+			} else {
+				site = `${site.slice(0, renderIndex)}${block}\n${site.slice(renderIndex)}`;
+			}
+		}
+	}
+
+	return site;
 }
 
 function isReservedRouteEntry(name) {
@@ -907,39 +1046,45 @@ function ensureMinimalRootLayout(context, routesRoot = 'src/routes') {
 	const relativePath = `${routesRoot}/+layout.svelte`;
 	const file = path.join(context.cwd, relativePath);
 	if (!existsSync(file)) {
-		createFile(
-			context,
-			relativePath,
-			`<script lang="ts">
-	import './layout.css';
-
-	let { children } = $props();
-</script>
-
-{@render children()}
-`
-		);
+		createFile(context, relativePath, passThroughRootLayoutContents());
 		return;
 	}
 
 	const contents = read(file);
+	if (isPassThroughRootLayout(contents)) {
+		context.skipped.push(`${relativePath} already pass-through`);
+		return;
+	}
+
 	if (isMinimalRootLayout(contents)) {
-		context.skipped.push(`${relativePath} already minimal`);
+		context.manual.push(
+			`move site-only imports (layout.css, favicon, chrome) from ${relativePath} into ${routesRoot}/(site)/+layout.svelte — root must stay pass-through so /admin does not inherit site styles`
+		);
 		return;
 	}
 
 	context.manual.push(
-		`keep ${relativePath} minimal (global CSS only) and move site chrome into ${routesRoot}/(site)/+layout.svelte`
+		`keep ${relativePath} pass-through only and move site chrome into ${routesRoot}/(site)/+layout.svelte`
 	);
 }
 
+function isPassThroughRootLayout(contents) {
+	if (!contents.includes('{@render children()}')) return false;
+	if (/layout\.css/.test(contents)) return false;
+	if (/favicon/i.test(contents) || /\$lib\/assets\//.test(contents)) return false;
+	return true;
+}
+
 function isMinimalRootLayout(contents) {
-	const withoutComments = contents.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\/.*$/gm, '');
-	const lines = withoutComments
-		.split('\n')
-		.map((line) => line.trim())
-		.filter(Boolean);
-	return lines.length <= 12 && contents.includes('{@render children()}');
+	if (!isPassThroughRootLayout(contents) && contents.includes('{@render children()}')) {
+		const withoutComments = contents.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\/.*$/gm, '');
+		const lines = withoutComments
+			.split('\n')
+			.map((line) => line.trim())
+			.filter(Boolean);
+		return lines.length <= 14;
+	}
+	return isPassThroughRootLayout(contents);
 }
 
 function resolveGitRepoRoot(cwd) {

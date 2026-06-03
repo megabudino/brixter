@@ -5,9 +5,12 @@
 
 export {
 	configureBrixter,
+	getAdminPath,
 	getConfig,
+	getCoreConfigIssues,
 	type BrixterConfig,
 	type BrixterGitHubConfig,
+	type CoreConfigIssue,
 	type ResolvedBrixterConfig
 } from './config.ts';
 

@@ -1,6 +1,7 @@
 import { error, fail, redirect, type Actions, type RequestEvent } from '@sveltejs/kit';
 import { getAuth } from '../server/auth.ts';
-import { getConfig } from '../server/config.ts';
+import { getConfig, getCoreConfigIssues } from '../server/config.ts';
+import { isSetupComplete } from '../server/setup.ts';
 import { getDb } from '../server/db.ts';
 import { getOctokit, getRepo } from '../server/github.ts';
 import {
@@ -14,7 +15,7 @@ import {
 	routeDirUrlPath,
 	routeBreadcrumbs,
 	routePageUrlPath,
-	routeUrlPathToDirPath,
+	resolveRouteUrlPath,
 	type RouteNode,
 	type TreeEntry
 } from '../server/sveltekit-routes.ts';
@@ -26,7 +27,14 @@ import {
 import { marked } from 'marked';
 import { resolveLocalPath } from './api.ts';
 
-type DashboardPage = 'login' | 'setup' | 'accounts' | 'branch' | 'media' | 'publish';
+type DashboardPage =
+	| 'login'
+	| 'setup'
+	| 'config-error'
+	| 'accounts'
+	| 'branch'
+	| 'media'
+	| 'publish';
 
 interface PageMatch {
 	page: DashboardPage;
@@ -62,6 +70,7 @@ function matchPage(pathname: string): PageMatch {
 	if (!path) throw redirect(302, '/admin/routes');
 	if (path === 'login') return { page: 'login' };
 	if (path === 'setup') return { page: 'setup' };
+	if (path === 'config-error') return { page: 'config-error' };
 	if (path === 'settings') throw redirect(302, '/admin/routes');
 	if (path === 'accounts') return { page: 'accounts' };
 	if (path === 'publish') return { page: 'publish', branch: DRAFT_BRANCH };
@@ -99,6 +108,7 @@ function matchPage(pathname: string): PageMatch {
 }
 
 async function loadLogin({ locals }: RequestEvent) {
+	if (!isSetupComplete()) throw redirect(302, '/admin/setup');
 	if (locals.user) throw redirect(302, '/admin/routes');
 	return {};
 }
@@ -327,15 +337,6 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	const repo = getRepo();
 	const defaultBranch = repo.defaultBranch;
 	await ensureDraftBranch();
-	let routeRequest: ReturnType<typeof routeUrlPathToDirPath>;
-	try {
-		routeRequest = routeUrlPathToDirPath(routesRoot, match.path ?? '');
-	} catch {
-		throw error(404, 'Not found');
-	}
-	const currentRouteDir = routeRequest.dirPath;
-
-	if (!isWithinRepoRoot(currentRouteDir, routesRoot)) throw error(403, 'Access denied');
 
 	let routeTree: RouteNode;
 	let behindBy = 0;
@@ -355,6 +356,16 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		if (e.status) throw err;
 		throw error(e.response?.status ?? 500, e.response?.data?.message ?? 'Failed to load contents');
 	}
+
+	let routeRequest: ReturnType<typeof resolveRouteUrlPath>;
+	try {
+		routeRequest = resolveRouteUrlPath(routeTree, match.path ?? '');
+	} catch {
+		throw error(404, 'Not found');
+	}
+	const currentRouteDir = routeRequest.dirPath;
+
+	if (!isWithinRepoRoot(currentRouteDir, routesRoot)) throw error(403, 'Access denied');
 
 	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath: mediaDir, routesRoot };
 
@@ -561,7 +572,29 @@ async function loadMedia({ locals }: RequestEvent, match: PageMatch) {
 export async function loadDashboard(event: RequestEvent) {
 	if (event.url.pathname.startsWith('/__brixter')) throw error(404, 'Not found');
 
+	const configIssues = getCoreConfigIssues();
+	if (configIssues.length > 0) {
+		return {
+			page: 'config-error' as const,
+			showNav: false,
+			pageData: { issues: configIssues }
+		};
+	}
+
 	const match = matchPage(event.url.pathname);
+
+	if (match.page === 'config-error') {
+		throw redirect(302, '/admin/routes');
+	}
+
+	if (!isSetupComplete() && match.page !== 'setup') {
+		throw redirect(302, '/admin/setup');
+	}
+
+	if (isSetupComplete() && match.page === 'setup') {
+		throw redirect(302, '/admin/routes');
+	}
+
 	const isPublic = match.page === 'login' || match.page === 'setup';
 
 	if (!isPublic && !event.locals.user) throw redirect(302, '/admin/login');
@@ -595,34 +628,46 @@ export async function loadDashboard(event: RequestEvent) {
 	};
 }
 
-function applySetCookieHeaders(headers: Headers, cookies: RequestEvent['cookies']) {
+function getSetCookieHeaders(headers: Headers): string[] {
+	const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+	const values = getSetCookie?.call(headers);
+	if (values?.length) return values;
+
 	const header = headers.get('set-cookie');
-	if (!header) return;
+	if (!header) return [];
+	return header.split(/,(?=\s*[^;,=\s]+=)/).map((value) => value.trim());
+}
 
-	const [pair, ...attributes] = header.split(';').map((part) => part.trim());
-	const separator = pair.indexOf('=');
-	if (separator === -1) return;
+function applySetCookieHeaders(headers: Headers, cookies: RequestEvent['cookies']) {
+	const setCookieHeaders = getSetCookieHeaders(headers);
+	for (const header of setCookieHeaders) {
+		const [pair, ...attributes] = header.split(';').map((part) => part.trim());
+		const separator = pair.indexOf('=');
+		if (separator === -1) continue;
 
-	const name = pair.slice(0, separator);
-	const value = pair.slice(separator + 1);
-	const options: Parameters<typeof cookies.set>[2] = {
-		path: '/',
-		encode: (cookieValue) => cookieValue
-	};
+		const name = pair.slice(0, separator);
+		const value = pair.slice(separator + 1);
+		const options: Parameters<typeof cookies.set>[2] = {
+			path: '/',
+			encode: (cookieValue) => cookieValue
+		};
 
-	for (const attribute of attributes) {
-		const [rawKey, rawValue] = attribute.split('=');
-		const key = rawKey.toLowerCase();
-		if (key === 'httponly') options.httpOnly = true;
-		if (key === 'secure') options.secure = true;
-		if (key === 'path' && rawValue) options.path = rawValue;
-		if (key === 'max-age' && rawValue) options.maxAge = Number(rawValue);
-		if (key === 'samesite' && rawValue) {
-			options.sameSite = rawValue.toLowerCase() as 'strict' | 'lax' | 'none';
+		for (const attribute of attributes) {
+			const [rawKey, rawValue] = attribute.split('=');
+			const key = rawKey.toLowerCase();
+			if (key === 'httponly') options.httpOnly = true;
+			if (key === 'secure') options.secure = true;
+			if (key === 'path' && rawValue) options.path = rawValue;
+			if (key === 'max-age' && rawValue) options.maxAge = Number(rawValue);
+			if (key === 'domain' && rawValue) options.domain = rawValue;
+			if (key === 'expires' && rawValue) options.expires = new Date(rawValue);
+			if (key === 'samesite' && rawValue) {
+				options.sameSite = rawValue.toLowerCase() as 'strict' | 'lax' | 'none';
+			}
 		}
-	}
 
-	cookies.set(name, value, options);
+		cookies.set(name, value, options);
+	}
 }
 
 async function loginAction({ request, cookies }: RequestEvent) {
@@ -747,10 +792,20 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 	const brixYaml = formData.get('brixYaml')?.toString() ?? '';
 	const sha = formData.get('sha')?.toString() ?? '';
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
+	let routeTree: RouteNode;
 
-	let routeRequest: ReturnType<typeof routeUrlPathToDirPath>;
 	try {
-		routeRequest = routeUrlPathToDirPath(routesRoot, match.path ?? '');
+		({ routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot));
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			saveError: e.response?.data?.message ?? 'Failed to resolve page.'
+		});
+	}
+
+	let routeRequest: ReturnType<typeof resolveRouteUrlPath>;
+	try {
+		routeRequest = resolveRouteUrlPath(routeTree, match.path ?? '');
 	} catch {
 		return fail(404, { saveError: 'Not found.' });
 	}
@@ -763,17 +818,9 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 	}
 
 	let filePath: string;
-	try {
-		const { routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot);
-		const pageFile = findRouteNode(routeTree, routeRequest.dirPath)?.page;
-		if (!pageFile) return fail(404, { saveError: 'Not found.' });
-		filePath = pageFile.filePath;
-	} catch (err: unknown) {
-		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, {
-			saveError: e.response?.data?.message ?? 'Failed to resolve page.'
-		});
-	}
+	const pageFile = findRouteNode(routeTree, routeRequest.dirPath)?.page;
+	if (!pageFile) return fail(404, { saveError: 'Not found.' });
+	filePath = pageFile.filePath;
 
 	const fileContent = isBrixYamlFile(filePath)
 		? brixYaml
@@ -818,12 +865,24 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 		return fail(400, { createDirectoryError: validationError, directoryName: name });
 
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
-	let routeRequest: ReturnType<typeof routeUrlPathToDirPath>;
+	let routeTree: RouteNode;
 	try {
-		routeRequest = routeUrlPathToDirPath(routesRoot, match.path ?? '');
+		({ routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot));
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			createDirectoryError: e.response?.data?.message ?? 'Failed to check directory.',
+			directoryName: name
+		});
+	}
+
+	let routeRequest: ReturnType<typeof resolveRouteUrlPath>;
+	try {
+		routeRequest = resolveRouteUrlPath(routeTree, match.path ?? '');
 	} catch {
 		return fail(404, { createDirectoryError: 'Not found.', directoryName: name });
 	}
+
 	const currentPath = routeRequest.dirPath;
 	if (!isWithinRepoRoot(currentPath, routesRoot)) {
 		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
@@ -901,12 +960,25 @@ async function createPageAction({ request, locals, url }: RequestEvent) {
 	if (validationError) return fail(400, { createPageError: validationError, pageName: name });
 
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
-	let routeRequest: ReturnType<typeof routeUrlPathToDirPath>;
+	let routeTree: RouteNode;
+	let tree: TreeEntry[];
 	try {
-		routeRequest = routeUrlPathToDirPath(routesRoot, match.path ?? '');
+		({ routeTree, tree } = await getBranchRouteSnapshot(match.branch, routesRoot));
+	} catch (err: unknown) {
+		const e = err as { response?: { status?: number; data?: { message?: string } } };
+		return fail(e.response?.status ?? 500, {
+			createPageError: e.response?.data?.message ?? 'Failed to check route.',
+			pageName: name
+		});
+	}
+
+	let routeRequest: ReturnType<typeof resolveRouteUrlPath>;
+	try {
+		routeRequest = resolveRouteUrlPath(routeTree, match.path ?? '');
 	} catch {
 		return fail(404, { createPageError: 'Not found.', pageName: name });
 	}
+
 	const currentPath = routeRequest.dirPath;
 	if (!isWithinRepoRoot(currentPath, routesRoot)) {
 		return fail(403, { createPageError: 'Access denied.', pageName: name });
@@ -920,30 +992,19 @@ async function createPageAction({ request, locals, url }: RequestEvent) {
 	const octokit = getOctokit();
 	const repo = getRepo();
 
-	try {
-		const { routeTree, tree } = await getBranchRouteSnapshot(match.branch, routesRoot);
-		const existingRoute = childRoute(routeTree, currentPath, name);
-		const existingBlob = tree.find(
-			(entry) => entry.type === 'blob' && entry.path === directoryPath
-		);
+	const existingRoute = childRoute(routeTree, currentPath, name);
+	const existingBlob = tree.find((entry) => entry.type === 'blob' && entry.path === directoryPath);
 
-		if (existingBlob) {
-			return fail(409, {
-				createPageError: `A file named "${name}" already exists.`,
-				pageName: name
-			});
-		}
+	if (existingBlob) {
+		return fail(409, {
+			createPageError: `A file named "${name}" already exists.`,
+			pageName: name
+		});
+	}
 
-		if (existingRoute?.page) {
-			return fail(409, {
-				createPageError: `Route "${name}" already has a page.`,
-				pageName: name
-			});
-		}
-	} catch (err: unknown) {
-		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, {
-			createPageError: e.response?.data?.message ?? 'Failed to check route.',
+	if (existingRoute?.page) {
+		return fail(409, {
+			createPageError: `Route "${name}" already has a page.`,
 			pageName: name
 		});
 	}

@@ -3,6 +3,7 @@
 	import { Compass, Sun, Moon, Monitor, Image as ImageIcon, Users } from 'lucide-svelte';
 	import LoginPage from './pages/LoginPage.svelte';
 	import SetupPage from './pages/SetupPage.svelte';
+	import ConfigErrorPage from './pages/ConfigErrorPage.svelte';
 	import AccountsPage from './pages/AccountsPage.svelte';
 	import RoutesPage from './pages/RoutesPage.svelte';
 	import PublishPage from './pages/PublishPage.svelte';
@@ -39,11 +40,22 @@
 	};
 </script>
 
+<svelte:head>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link
+		rel="stylesheet"
+		href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap"
+	/>
+</svelte:head>
+
 {#snippet renderPage()}
 	{#if data.page === 'login'}
 		<LoginPage {form} />
 	{:else if data.page === 'setup'}
 		<SetupPage {form} />
+	{:else if data.page === 'config-error'}
+		<ConfigErrorPage issues={pageData.issues ?? []} />
 	{:else if data.page === 'accounts'}
 		<AccountsPage data={pageData} {form} />
 	{:else if data.page === 'branch'}

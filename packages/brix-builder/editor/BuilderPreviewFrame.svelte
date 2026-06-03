@@ -143,15 +143,10 @@ body {
 }
 
 body {
-	background: #ffffff;
-	color: #1e1c18;
+	background: transparent;
+	color: inherit;
 	overflow-x: hidden;
 	overflow-y: auto;
-}
-
-body.dark {
-	background: #12100d;
-	color: #f3f4f6;
 }
 
 #builder-preview-root {

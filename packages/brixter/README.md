@@ -27,8 +27,15 @@ Where should Brixter run?
 ```
 
 **Same app (embedded)** — one deploy. Admin mounts at `/admin` via SvelteKit
-`reroute`. Init creates a `(site)` [route group](https://svelte.dev/docs/kit/advanced-routing#Group)
+`reroute` (URL only; layout selection follows the rerouted route under
+`__brixter/`). Init creates a `(site)` [route group](https://svelte.dev/docs/kit/advanced-routing#Group)
 and moves your pages there so site chrome does not wrap the CMS.
+
+**Layout isolation:** SvelteKit always applies the root `+layout.svelte`; `+layout@`
+on `__brixter/` only skips intermediate layouts (e.g. `(site)`), not the root.
+Keep the root layout pass-through (`{@render children()}` only). Put Tailwind,
+favicon, and site chrome in `(site)/+layout.svelte`. Brixter styles live in
+`__brixter/+layout@.svelte` (imports `brixter/styles.css`).
 
 **Separate CMS routes (split)** — still **one SvelteKit app**, but two build
 variants selected by `BRIXTER_VARIANT`:

@@ -2,19 +2,20 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { building } from '$app/environment';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import {
+	isAuthApiPath,
+	isBrixterAdminPath,
+	isConfigErrorPath,
+	isLoginPath,
+	isSetupPath
+} from './admin-paths.ts';
 import { getAuth } from './auth.ts';
-import { getCoreConfig } from './config.ts';
+import { getAdminPath, getCoreConfig, getCoreConfigIssues } from './config.ts';
 import { isSetupComplete } from './setup.ts';
 import { getOctokit, getRepo } from './github.ts';
 import { Buffer } from 'node:buffer';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
-
-function isBrixterAdminPath(path: string, adminPath: string): boolean {
-	if (path === adminPath || path.startsWith(`${adminPath}/`)) return true;
-	if (path === '/__brixter' || path.startsWith('/__brixter/')) return true;
-	return false;
-}
 
 /**
  * SvelteKit handle that wires brixter's auth + setup-wizard flow.
@@ -27,6 +28,7 @@ function isBrixterAdminPath(path: string, adminPath: string): boolean {
  * Responsibilities:
  * - delegates to BetterAuth's SvelteKit adapter for `<adminPath>/api/auth/*`
  *   and the login page
+ * - redirects CMS routes to a config error page when required env is missing
  * - forces the setup wizard at `<adminPath>/setup` while there are no users
  *   (only when the request targets CMS routes under `<adminPath>` or `/__brixter`)
  * - blocks the setup page after an admin exists
@@ -34,6 +36,19 @@ function isBrixterAdminPath(path: string, adminPath: string): boolean {
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
+	const adminPath = getAdminPath();
+
+	if (!isBrixterAdminPath(path, adminPath)) {
+		return resolve(event);
+	}
+
+	const configIssues = getCoreConfigIssues();
+	if (configIssues.length > 0) {
+		if (!isConfigErrorPath(path, adminPath)) {
+			throw redirect(302, `${adminPath}/config-error`);
+		}
+		return resolve(event);
+	}
 
 	// Serve draft branch images from GitHub if not found locally
 	const ext = '.' + path.split('.').pop()?.toLowerCase();
@@ -79,27 +94,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const { adminPath } = getCoreConfig();
-	const loginPath = `${adminPath}/login`;
-	const setupPath = `${adminPath}/setup`;
+	const { adminPath: configuredAdminPath } = getCoreConfig();
+	const setupPath = `${configuredAdminPath}/setup`;
 	const auth = getAuth();
 
-	if (path.startsWith(`${adminPath}/api/auth`) || path.startsWith(loginPath)) {
+	if (isAuthApiPath(path, configuredAdminPath)) {
 		return svelteKitHandler({ event, resolve, auth, building });
 	}
 
-	if (!isSetupComplete()) {
-		if (!isBrixterAdminPath(path, adminPath)) {
-			return resolve(event);
-		}
-		if (!path.startsWith(setupPath)) {
+	if (isLoginPath(path, configuredAdminPath)) {
+		if (!isSetupComplete()) {
 			throw redirect(302, setupPath);
 		}
 		return svelteKitHandler({ event, resolve, auth, building });
 	}
 
-	if (path.startsWith(setupPath)) {
-		throw redirect(302, adminPath);
+	if (!isSetupComplete()) {
+		if (!isSetupPath(path, configuredAdminPath)) {
+			throw redirect(302, setupPath);
+		}
+		return svelteKitHandler({ event, resolve, auth, building });
+	}
+
+	if (isSetupPath(path, configuredAdminPath)) {
+		throw redirect(302, configuredAdminPath);
 	}
 
 	const session = await auth.api.getSession({ headers: event.request.headers });

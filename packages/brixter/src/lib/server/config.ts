@@ -46,6 +46,11 @@ export interface ResolvedBrixterConfig {
 
 export type ResolvedBrixterCoreConfig = Omit<ResolvedBrixterConfig, 'github'>;
 
+export interface CoreConfigIssue {
+	key: string;
+	description: string;
+}
+
 interface BuildRepoInfo {
 	repo: string | undefined;
 	repoOwner: string | undefined;
@@ -146,6 +151,81 @@ export function configureBrixter(config: BrixterConfig): void {
 	cached = null;
 	envFile = null;
 	envFileSource = null;
+}
+
+/** CMS mount path without requiring the full core config to resolve. */
+export function getAdminPath(): string {
+	return overrides.adminPath ?? present(envValue('BRIXTER_ADMIN_PATH')) ?? '/admin';
+}
+
+/** Missing values required before auth, setup, or the database can run. */
+export function getCoreConfigIssues(): CoreConfigIssue[] {
+	const issues: CoreConfigIssue[] = [];
+	const gh = overrides.github ?? {};
+	const buildRepo = getBuildRepoInfo();
+	const authSecret = present(overrides.authSecret ?? envValue('BRIXTER_AUTH_SECRET'));
+
+	if (!present(overrides.origin ?? envValue('ORIGIN'))) {
+		issues.push({
+			key: 'ORIGIN',
+			description: 'Public origin of the app (Better Auth base URL).'
+		});
+	}
+
+	if (!authSecret) {
+		issues.push({
+			key: 'BRIXTER_AUTH_SECRET',
+			description: 'Secret used to sign sessions and tokens.'
+		});
+	} else if (authSecret === 'change-me') {
+		issues.push({
+			key: 'BRIXTER_AUTH_SECRET',
+			description: 'Replace the generated placeholder with a real secret.'
+		});
+	}
+
+	addMissingIssue(
+		issues,
+		'GITHUB_APP_ID',
+		present(gh.appId) ?? present(envValue('GITHUB_APP_ID')),
+		'GitHub App ID used to authenticate Brixter.'
+	);
+	addMissingIssue(
+		issues,
+		'GITHUB_PRIVATE_KEY',
+		present(gh.privateKey) ?? present(envValue('GITHUB_PRIVATE_KEY')),
+		'Private key for the GitHub App installation.'
+	);
+	addMissingIssue(
+		issues,
+		'GITHUB_INSTALLATION_ID',
+		present(gh.installationId) ?? present(envValue('GITHUB_INSTALLATION_ID')),
+		'GitHub App installation ID for the target repository.'
+	);
+	addMissingIssue(
+		issues,
+		'GITHUB_REPO_OWNER',
+		present(gh.repoOwner) ?? present(envValue('GITHUB_REPO_OWNER')) ?? buildRepo.repoOwner,
+		'Repository owner, or provide BRIXTER_SOURCE_REPO as owner/name.'
+	);
+	addMissingIssue(
+		issues,
+		'GITHUB_REPO_NAME',
+		present(gh.repoName) ?? present(envValue('GITHUB_REPO_NAME')) ?? buildRepo.repoName,
+		'Repository name, or provide BRIXTER_SOURCE_REPO as owner/name.'
+	);
+
+	return issues;
+}
+
+function addMissingIssue(
+	issues: CoreConfigIssue[],
+	key: string,
+	value: string | undefined,
+	description: string
+): void {
+	if (value) return;
+	issues.push({ key, description });
 }
 
 function required(value: string | undefined, name: string): string {
