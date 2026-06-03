@@ -70,15 +70,26 @@ let overrides: BrixterConfig = {};
 let cachedCore: ResolvedBrixterCoreConfig | null = null;
 let cached: ResolvedBrixterConfig | null = null;
 let envFile: Record<string, string> | null = null;
+let envFileSource: string | null = null;
 
-function loadEnvFile(): Record<string, string> {
-	if (envFile) return envFile;
-	envFile = {};
+function envFilePath(): string {
+	const cwd = process.cwd();
+	const variant = process.env.BRIXTER_VARIANT;
+	if (variant === 'cms') {
+		const cmsPath = resolve(cwd, '.env.cms');
+		if (existsSync(cmsPath)) return cmsPath;
+	}
+	if (variant === 'site') {
+		const sitePath = resolve(cwd, '.env.site');
+		if (existsSync(sitePath)) return sitePath;
+	}
+	return resolve(cwd, '.env');
+}
 
-	const path = resolve(process.cwd(), '.env');
-	if (!existsSync(path)) return envFile;
+function parseEnvFileContents(contents: string): Record<string, string> {
+	const env: Record<string, string> = {};
+	const lines = contents.split(/\r?\n/);
 
-	const lines = readFileSync(path, 'utf-8').split(/\r?\n/);
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		if (!line || line.trimStart().startsWith('#')) continue;
@@ -98,15 +109,30 @@ function loadEnvFile(): Record<string, string> {
 			value = value.replace(/\\n/g, '\n');
 		}
 
-		envFile[key] = value;
+		env[key] = value;
 	}
 
+	return env;
+}
+
+function loadEnvFile(): Record<string, string> {
+	const path = envFilePath();
+	if (envFile && envFileSource === path) return envFile;
+
+	envFile = {};
+	envFileSource = path;
+	if (!existsSync(path)) return envFile;
+
+	envFile = parseEnvFileContents(readFileSync(path, 'utf-8'));
 	return envFile;
 }
 
 function envValue(key: string): string | undefined {
+	const fileEnv = loadEnvFile();
+	if (fileEnv[key] !== undefined) return fileEnv[key];
+
 	const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
-	return viteEnv?.[key] ?? process.env[key] ?? loadEnvFile()[key];
+	return viteEnv?.[key] ?? process.env[key];
 }
 
 /**
@@ -118,6 +144,8 @@ export function configureBrixter(config: BrixterConfig): void {
 	overrides = config;
 	cachedCore = null;
 	cached = null;
+	envFile = null;
+	envFileSource = null;
 }
 
 function required(value: string | undefined, name: string): string {

@@ -23,17 +23,41 @@ On first run, init asks where Brixter should live:
 Where should Brixter run?
 
   1) Same app as my site (default)
-  2) Separate CMS app
+  2) Separate CMS routes
 ```
 
-**Same app (embedded)** — current default. Admin mounts at `/admin` inside your
-site via SvelteKit `reroute`. One deploy, one database.
+**Same app (embedded)** — one deploy. Admin mounts at `/admin` via SvelteKit
+`reroute`. Init creates a `(site)` [route group](https://svelte.dev/docs/kit/advanced-routing#Group)
+and moves your pages there so site chrome does not wrap the CMS.
 
-**Separate CMS app (split)** — your site keeps the Vite page builder only (no
-admin routes, hooks, or database). Init also scaffolds a sibling `cms/` app with
-the full admin UI, auth, and migrations. Point the site at the CMS with
-`BRIXTER_CMS_URL`. The CMS Vite plugin uses `appRoot` so the route explorer
-still targets your site's `src/routes` in GitHub.
+**Separate CMS routes (split)** — still **one SvelteKit app**, but two build
+variants selected by `BRIXTER_VARIANT`:
+
+| Variant | Env | Routes | Hooks |
+|---------|-----|--------|-------|
+| `site` | `.env.site` | `src/routes-site/` | pass-through (no DB) |
+| `cms` | `.env.cms` | `src/routes-cms/` | full brixter auth |
+
+Runtime and `brixter migrate` both resolve env from `.env.cms` / `.env.site` when
+`BRIXTER_VARIANT` is set (not from `.env`). Split init also patches `vite.config`
+so Vite sees the same values at dev time.
+
+Each variant is a separate process / Docker Compose stack with its own route
+tree (`kit.files.routes`). Site pages live directly under `src/routes-site/`
+(flat — no route group); CMS admin lives under `src/routes-cms/__brixter/`
+(public URL `/admin`).
+
+```sh
+npm run dev:site    # port 5173
+npm run dev:cms     # port 5174
+
+docker compose -f docker-compose.site.yml up
+docker compose -f docker-compose.cms.yml up
+```
+
+Docker builds use `Dockerfile.brixter` with `BRIXTER_VARIANT=site|cms`. For
+production containers, switch to `@sveltejs/adapter-node` (the template expects
+a `build/` Node server).
 
 Useful options:
 
@@ -41,7 +65,6 @@ Useful options:
 brixter init --dry-run
 brixter init --layout embedded
 brixter init --layout split
-brixter init --cms-dir ./apps/cms
 brixter init --cwd ./apps/web
 brixter init --admin-path /admin
 brixter init --skip-install
@@ -56,24 +79,52 @@ To re-run database migrations (Better Auth schema + brixter SQL):
 
 ```sh
 npx brixter migrate
+# split layout: npm run db:migrate  (uses .env.cms via BRIXTER_VARIANT=cms)
 ```
 
 ## Host app layout
 
-Brixter mounts at `/admin` via SvelteKit `reroute` and renders inside your app
-tree. To keep your site's navbar, footer, and global CSS from wrapping the
-dashboard, use a minimal root layout and move site chrome into a route group:
+### Embedded (one variant)
 
 ```
 src/routes/
-  +layout.svelte              # slot only — your global Tailwind import lives here
+  +layout.svelte              # minimal — global Tailwind import
+  layout.css
   (site)/
     +layout.svelte            # navbar, footer, marketing shell
     +page.svelte
   __brixter/
-    +layout.svelte            # created by `brixter init`; imports brixter/styles.css
+    +layout.svelte            # imports brixter/styles.css
     [...path]/+page.svelte
 ```
+
+Route groups use parentheses and do not affect URLs — `(site)/+page.svelte` is
+still served at `/`.
+
+### Split (two variants, one package)
+
+```
+src/routes-site/              # BRIXTER_VARIANT=site
+  +layout.svelte              # site shell + layout.css
+  layout.css
+  +page.brix.yaml
+src/routes-cms/               # BRIXTER_VARIANT=cms
+  __brixter/
+    [...path]/
+src/hooks.site.ts             # site client hooks (empty)
+src/hooks.cms.ts              # cms client hooks (empty)
+src/hooks.universal.site.ts   # site universal hooks (empty)
+src/hooks.universal.cms.ts    # reroute /admin → /__brixter
+src/hooks.server.site.ts      # site server hooks (pass-through)
+src/hooks.server.cms.ts       # brixter auth handle
+```
+
+`reroute` is a **universal** hook in SvelteKit — it must live in
+`hooks.universal.cms.ts`, not `hooks.cms.ts`. Split init archives legacy
+`src/hooks.ts` so variant hooks are not overridden.
+
+Run **`npm run dev:cms`** (port 5174) for `/admin`, not `npm run dev` — the
+default dev script uses the site variant, which has no CMS routes.
 
 Admin styles ship in `brixter/styles.css` and scope theme tokens to
 `.brixter-root`, so they do not override your site's palette or toggle dark
@@ -83,31 +134,24 @@ Your host app needs:
 
 - `@tailwindcss/vite` in `vite.config` (before `sveltekit()`)
 - `@import 'tailwindcss'` in your own global stylesheet (for site pages)
-- `src/routes/__brixter/+layout.svelte` importing `brixter/styles.css` (created
-  by `brixter init`)
+- `__brixter/+layout.svelte` importing `brixter/styles.css` (created by init)
 
 Import `brixter/styles.css` from the `__brixter` layout, not your root layout.
-That file carries Brixter's Tailwind `@source` entries, font faces, utilities
-(`font-brand`, `font-display`, `text-heading`, `btn-brutal`, accent colors),
-and warm gray tokens for the admin UI.
 
 Upgrade to **0.0.5** or later if fonts or accent colors look wrong — earlier
 0.0.4 builds did not run Brixter CSS through Tailwind correctly.
 
 ## Explorer
 
-The dashboard explorer is SvelteKit-first: it starts from the app's
-`src/routes` directory and shows route pages instead of arbitrary repository
-folders. If the SvelteKit app lives below the repository root, Brixter infers
-that from Vite's `root` and uses a repo-relative routes root such as
-`site/src/routes`.
+The dashboard explorer is SvelteKit-first: it starts from the app's routes
+directory and shows route pages instead of arbitrary repository folders. In
+split layout the Vite plugin sets `routesRoot` to your `routes-site` tree so the
+CMS still edits the site's GitHub routes.
 
 You can override discovery explicitly:
 
 ```ts
-brixter({ appRoot: 'site' });
-// or
-brixter({ routesRoot: 'site/src/routes' });
+brixter({ appRoot: 'site', routesRoot: 'site/src/routes-site' });
 ```
 
 ## `.brix.yaml` Pages
@@ -117,18 +161,6 @@ pages. The generated component exports `metadata`, exposes valid metadata keys
 such as `title` and `description` as local variables, renders components from
 `$lib/brixter/brix`, and wraps content in a layout from
 `$lib/brixter/layouts` when `layout` is set.
-
-```yaml
-title: About Us
-description: Learn more about our team
-layout: default
-
-components:
-  - type: hero
-    props:
-      heading: Welcome
-      subtitle: We build great things
-```
 
 For SvelteKit route discovery, make sure the app's `svelte.config` includes:
 
@@ -142,17 +174,19 @@ Start a development server:
 
 ```sh
 npm run dev
+# split layout:
+npm run dev:site
+npm run dev:cms
 ```
 
 ## Building
 
-To create a production version of your app:
-
 ```sh
 npm run build
+# split layout:
+npm run build:site
+npm run build:cms
 ```
-
-You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 

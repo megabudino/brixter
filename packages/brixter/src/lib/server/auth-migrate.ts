@@ -77,6 +77,20 @@ export async function migrateAuth(options: AuthMigrateOptions = {}): Promise<Aut
 	const addedTables = toBeAdded.map((t) => t.table);
 
 	if (createdTables.length === 0 && addedTables.length === 0) {
+		const dbPath = resolveDatabasePath(options);
+		const db = new Database(dbPath);
+		const userTable = db
+			.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user' LIMIT 1")
+			.get();
+		db.close();
+
+		if (!userTable) {
+			log('▶  Better Auth: schema missing, applying migrations');
+			await runMigrations();
+			log('✅ Better Auth migrations applied.');
+			return { applied: true, createdTables, addedTables };
+		}
+
 		log('✅ Better Auth schema is up to date.');
 		return { applied: false, createdTables, addedTables };
 	}

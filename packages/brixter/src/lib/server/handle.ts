@@ -10,6 +10,12 @@ import { Buffer } from 'node:buffer';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 
+function isBrixterAdminPath(path: string, adminPath: string): boolean {
+	if (path === adminPath || path.startsWith(`${adminPath}/`)) return true;
+	if (path === '/__brixter' || path.startsWith('/__brixter/')) return true;
+	return false;
+}
+
 /**
  * SvelteKit handle that wires brixter's auth + setup-wizard flow.
  * Mount in your `hooks.server.ts`:
@@ -22,6 +28,7 @@ const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
  * - delegates to BetterAuth's SvelteKit adapter for `<adminPath>/api/auth/*`
  *   and the login page
  * - forces the setup wizard at `<adminPath>/setup` while there are no users
+ *   (only when the request targets CMS routes under `<adminPath>` or `/__brixter`)
  * - blocks the setup page after an admin exists
  * - hydrates `event.locals.{session,user}` from the active session
  */
@@ -82,6 +89,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (!isSetupComplete()) {
+		if (!isBrixterAdminPath(path, adminPath)) {
+			return resolve(event);
+		}
 		if (!path.startsWith(setupPath)) {
 			throw redirect(302, setupPath);
 		}
