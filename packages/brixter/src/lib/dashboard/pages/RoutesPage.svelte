@@ -31,7 +31,7 @@
 		MediaPicker,
 		IconPicker
 	} from 'brixter/editor';
-	import TurndownService from 'turndown';
+	import TurndownService from 'turndown/lib/turndown.browser.es.js';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 
