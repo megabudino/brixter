@@ -7,7 +7,6 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { betterAuth } from 'better-auth';
 import type { BetterAuthOptions } from 'better-auth';
-import Database from 'better-sqlite3';
 
 export interface AuthMigrateOptions {
 	/** SQLite path. Defaults to `process.env.DATABASE_URL` or `data/brixter.db`. */
@@ -25,6 +24,17 @@ export interface AuthMigrateResult {
 	addedTables: string[];
 }
 
+type BetterSqlite3Module = typeof import('better-sqlite3');
+
+let sqliteModule: BetterSqlite3Module | null = null;
+
+function getSqliteModule(): BetterSqlite3Module {
+	if (!sqliteModule) {
+		sqliteModule = require('better-sqlite3') as BetterSqlite3Module;
+	}
+	return sqliteModule;
+}
+
 function resolveDatabasePath(options: AuthMigrateOptions): string {
 	const raw = options.databaseUrl ?? process.env.DATABASE_URL ?? 'data/brixter.db';
 	if (isAbsolute(raw)) return raw;
@@ -36,6 +46,7 @@ function resolveDatabasePath(options: AuthMigrateOptions): string {
 export function createAuthOptions(options: AuthMigrateOptions = {}): BetterAuthOptions {
 	const databaseUrl = resolveDatabasePath(options);
 	mkdirSync(dirname(databaseUrl), { recursive: true });
+	const Database = getSqliteModule();
 
 	return {
 		baseURL: options.origin ?? process.env.ORIGIN ?? 'http://localhost:5173',
@@ -78,6 +89,7 @@ export async function migrateAuth(options: AuthMigrateOptions = {}): Promise<Aut
 
 	if (createdTables.length === 0 && addedTables.length === 0) {
 		const dbPath = resolveDatabasePath(options);
+		const Database = getSqliteModule();
 		const db = new Database(dbPath);
 		const userTable = db
 			.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user' LIMIT 1")

@@ -9,9 +9,9 @@
  * from plain Node CLIs and the `brixter` bin).
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
 import { migrateAuth, type AuthMigrateOptions } from './auth-migrate.js';
 
 export interface MigrateOptions extends AuthMigrateOptions {
@@ -32,6 +32,18 @@ export interface MigrateResult {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+type BetterSqlite3Module = typeof import('better-sqlite3');
+
+let sqliteModule: BetterSqlite3Module | null = null;
+
+function getSqliteModule(): BetterSqlite3Module {
+	if (!sqliteModule) {
+		sqliteModule = require('better-sqlite3') as BetterSqlite3Module;
+	}
+	return sqliteModule;
+}
 
 function defaultMigrationsDir(): string {
 	const candidates = [
@@ -75,6 +87,7 @@ async function migrateBrixterTables(
 	const migrationsDir = options.migrationsDir ?? defaultMigrationsDir();
 	const log = options.log ?? ((m: string) => console.log(m));
 
+	const Database = getSqliteModule();
 	const db = new Database(options.databaseUrl);
 	db.pragma('journal_mode = WAL');
 	db.pragma('foreign_keys = ON');
