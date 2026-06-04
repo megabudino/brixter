@@ -13,7 +13,6 @@ const config = {
 			'brixter/server': 'src/lib/server/index.ts',
 			'brixter/editor': 'src/lib/editor/index.ts',
 			'brixter/ui': 'src/lib/ui/index.ts',
-			'brixter/sveltekit': 'src/lib/sveltekit/index.ts',
 			'brixter/sveltekit/server': 'src/lib/sveltekit/server.ts',
 			'brixter/sveltekit/api': 'src/lib/sveltekit/api.ts',
 			'brixter/styles.css': 'styles.css'

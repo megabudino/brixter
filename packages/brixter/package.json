@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.0.20",
+	"version": "0.0.21",
 	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
@@ -60,8 +60,8 @@
 			"default": "./src/lib/ui/index.ts"
 		},
 		"./sveltekit": {
-			"types": "./src/lib/sveltekit/index.ts",
-			"svelte": "./src/lib/sveltekit/index.ts",
+			"types": "./src/lib/sveltekit/index.d.ts",
+			"svelte": "./src/lib/sveltekit/component.ts",
 			"default": "./src/lib/sveltekit/index.ts"
 		},
 		"./sveltekit/server": {
@@ -157,7 +157,7 @@
 		"@tiptap/extension-underline": "^3.20.1",
 		"@tiptap/extensions": "^3.20.1",
 		"@tiptap/starter-kit": "^3.20.1",
-		"better-auth": "^1.5.5",
+		"better-auth": "1.6.11",
 		"better-sqlite3": "^12.6.2",
 		"lucide-static": "^0.477.0",
 		"lucide-svelte": "^1.0.1",

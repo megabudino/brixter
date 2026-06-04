@@ -27,7 +27,6 @@ const config = {
 			'brixter/ui': '../packages/brixter/src/lib/ui/index.ts',
 			'brixter/sveltekit/server': '../packages/brixter/src/lib/sveltekit/server.ts',
 			'brixter/sveltekit/api': '../packages/brixter/src/lib/sveltekit/api.ts',
-			'brixter/sveltekit': '../packages/brixter/src/lib/sveltekit/index.ts',
 			'brixter/styles.css': '../packages/brixter/styles.css'
 		}
 	}
