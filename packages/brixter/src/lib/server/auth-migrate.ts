@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { betterAuth } from 'better-auth';
 import type { BetterAuthOptions } from 'better-auth';
 
+const require = createRequire(import.meta.url);
+
 export interface AuthMigrateOptions {
 	/** SQLite path. Defaults to `process.env.DATABASE_URL` or `data/brixter.db`. */
 	databaseUrl?: string;
