@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.0.26",
+	"version": "0.0.27",
 	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
@@ -46,8 +46,16 @@
 			"default": "./src/lib/index.ts"
 		},
 		"./server": {
-			"types": "./src/lib/server/index.ts",
-			"default": "./src/lib/server/index.ts"
+			"types": "./dist/server/index.d.ts",
+			"default": "./dist/server/index.js"
+		},
+		"./server/migrate": {
+			"types": "./dist/server/migrate.d.ts",
+			"default": "./dist/server/migrate.js"
+		},
+		"./server/auth-migrate": {
+			"types": "./dist/server/auth-migrate.d.ts",
+			"default": "./dist/server/auth-migrate.js"
 		},
 		"./editor": {
 			"types": "./src/lib/editor/index.ts",

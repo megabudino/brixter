@@ -1,8 +1,9 @@
 import { betterAuth } from 'better-auth';
+import type { Auth } from 'better-auth/types';
 import { getCoreConfig } from './config.ts';
 import { getDb } from './db.ts';
 
-function build() {
+function build(): Auth {
 	const { origin, authSecret } = getCoreConfig();
 	return betterAuth({
 		baseURL: origin,
@@ -23,10 +24,10 @@ function build() {
 			}
 		},
 		plugins: []
-	});
+	}) as unknown as Auth;
 }
 
-export type BrixterAuth = ReturnType<typeof build>;
+export type BrixterAuth = Auth;
 
 let instance: BrixterAuth | null = null;
 
