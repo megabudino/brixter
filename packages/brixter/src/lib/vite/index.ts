@@ -298,7 +298,12 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 					__BRIXTER_BUILD_MEDIA_DIR__: defineValue(build.mediaDir)
 				},
 				ssr: {
-					noExternal: ['brixter', '@brixter/brix-builder', 'lucide-svelte']
+					// Keep the package source bundled for Svelte/lucide compatibility, but
+					// leave native SQLite loading to Node. Bundling `better-sqlite3`
+					// pulls in `bindings`, which relies on CommonJS globals like
+					// `__filename` and crashes in ESM server chunks.
+					noExternal: ['brixter', '@brixter/brix-builder', 'lucide-svelte'],
+					external: ['better-sqlite3', 'bindings']
 				}
 			};
 		},
