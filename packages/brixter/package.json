@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.0.22",
+	"version": "0.0.23",
 	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
@@ -62,7 +62,11 @@
 		"./sveltekit": {
 			"types": "./src/lib/sveltekit/index.d.ts",
 			"svelte": "./src/lib/sveltekit/component.ts",
-			"default": "./src/lib/sveltekit/index.ts"
+			"default": "./src/lib/sveltekit/component.ts"
+		},
+		"./sveltekit/reroute": {
+			"types": "./src/lib/sveltekit/reroute.ts",
+			"default": "./src/lib/sveltekit/reroute.ts"
 		},
 		"./sveltekit/server": {
 			"types": "./src/lib/sveltekit/server.ts",

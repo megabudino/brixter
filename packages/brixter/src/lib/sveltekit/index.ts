@@ -1,1 +1,1 @@
-export { reroute } from '../dashboard/reroute.ts';
+export { default } from './component.ts';

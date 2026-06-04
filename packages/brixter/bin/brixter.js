@@ -548,10 +548,10 @@ function ensureHooks(context) {
 	ensureServerHooks(context);
 }
 
-function ensureClientHooks(context) {
-	const relativePath = 'src/hooks.ts';
+function ensureRerouteHook(context, relativePath) {
 	const file = path.join(context.cwd, relativePath);
-	const brixterExport = "export { reroute } from 'brixter/sveltekit';\n";
+	const brixterExport = "export { reroute } from 'brixter/sveltekit/reroute';\n";
+	const legacyRerouteExport = /export\s*\{\s*reroute\s*\}\s*from\s*['"]brixter\/sveltekit['"];\s*/;
 
 	if (!existsSync(file)) {
 		write(context, file, brixterExport);
@@ -560,8 +560,14 @@ function ensureClientHooks(context) {
 	}
 
 	const contents = read(file);
-	if (contents.includes('brixter/sveltekit')) {
+	if (contents.includes('brixter/sveltekit/reroute')) {
 		context.skipped.push(`${relativePath} already uses brixter reroute`);
+		return;
+	}
+
+	if (legacyRerouteExport.test(contents)) {
+		write(context, file, contents.replace(legacyRerouteExport, brixterExport));
+		context.changes.push(`${relativePath} updated brixter reroute import`);
 		return;
 	}
 
@@ -572,8 +578,12 @@ function ensureClientHooks(context) {
 	}
 
 	context.manual.push(
-		`${relativePath} already defines reroute; compose it with reroute from 'brixter/sveltekit'`
+		`${relativePath} already defines reroute; compose it with reroute from 'brixter/sveltekit/reroute'`
 	);
+}
+
+function ensureClientHooks(context) {
+	ensureRerouteHook(context, 'src/hooks.ts');
 }
 
 function ensureServerHooks(context) {
@@ -1246,11 +1256,7 @@ function ensureVariantHooks(context) {
 	createFile(context, 'src/hooks.site.ts', '/** Site variant: no client hooks */\n');
 	createFile(context, 'src/hooks.cms.ts', '/** CMS variant: no client hooks */\n');
 	createFile(context, 'src/hooks.universal.site.ts', '/** Site variant: no universal hooks */\n');
-	createFile(
-		context,
-		'src/hooks.universal.cms.ts',
-		"export { reroute } from 'brixter/sveltekit';\n"
-	);
+	ensureRerouteHook(context, 'src/hooks.universal.cms.ts');
 	createFile(
 		context,
 		'src/hooks.server.site.ts',

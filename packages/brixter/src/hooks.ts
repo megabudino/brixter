@@ -1,1 +1,1 @@
-export { reroute } from 'brixter/sveltekit';
+export { reroute } from 'brixter/sveltekit/reroute';
