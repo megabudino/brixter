@@ -95,7 +95,9 @@
 	const duplicatePage = $derived(
 		trimmedPageName.length > 0 && existingPageNames.has(trimmedPageName.toLowerCase())
 	);
-	const routesRoot = $derived(normalizeRoutesRoot(data.repo?.routesRoot ?? data.explorerRoot ?? ''));
+	const routesRoot = $derived(
+		normalizeRoutesRoot(data.repo?.routesRoot ?? data.explorerRoot ?? '')
+	);
 	const trimmedRenameName = $derived(renameName.trim());
 	const renameOldSegment = $derived(
 		renameTarget ? routeSegmentName(renameTarget.routeDirPath) : ''
@@ -352,9 +354,7 @@
 
 	function transformGithubUrlToRelative(src: string): string {
 		if (/^https:\/\/raw\.githubusercontent\.com\//.test(src)) {
-			const match = src.match(
-				/^https:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/
-			);
+			const match = src.match(/^https:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/);
 			let repoPath = match ? match[1].split('?')[0] : src;
 			if (mediaPrefix && repoPath.startsWith(mediaPrefix)) {
 				repoPath = repoPath.slice(mediaPrefix.length);
@@ -476,7 +476,7 @@
 				<button
 					type="submit"
 					disabled={saving || !isDirty}
-					class="inline-flex cursor-pointer items-center gap-2 btn-brutal-flat px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+					class="btn-brutal-flat inline-flex cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					{#if saving}
 						<Spinner /> Committing…
@@ -548,7 +548,6 @@
 			</div>
 		{/if}
 
-
 		{#if toastMessage}
 			<div
 				class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2"
@@ -576,7 +575,9 @@
 	<div class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900">
 		<div
 			class="relative z-30 flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
-			onclick={(event) => { if (!(event.target as Element).closest('button, input, a')) builderActiveBlockId = null; }}
+			onclick={(event) => {
+				if (!(event.target as Element).closest('button, input, a')) builderActiveBlockId = null;
+			}}
 		>
 			<div class="flex items-center gap-3">
 				<button
@@ -591,7 +592,7 @@
 						type="button"
 						class={pageFlowOpen
 							? 'btn-brutal-icon group relative inline-flex h-10 w-10 items-center justify-center'
-							: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-accent dark:hover:bg-accent-hover dark:hover:text-gray-900'}
+							: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 						aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
 						aria-pressed={pageFlowOpen}
 						onclick={() => (pageFlowOpen = !pageFlowOpen)}
@@ -602,10 +603,14 @@
 								fill="currentColor"
 							/>
 						</svg>
-						<span class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 whitespace-nowrap border-2 border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+						<span
+							class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border-2 border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						>
 							<span class="font-semibold">Page flow</span>
 							<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-								<span class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">
+								<span
+									class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+								>
 									{#if pageFlowShortcutModifier === 'command'}
 										<Command size={12} strokeWidth={2} />
 									{:else}
@@ -613,7 +618,9 @@
 									{/if}
 								</span>
 								<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-								<span class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">
+								<span
+									class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+								>
 									{SHORTCUTS.togglePageFlow.key}
 								</span>
 							</span>
@@ -623,33 +630,52 @@
 			</div>
 
 			<!-- Center Device Selection -->
-			<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 z-10 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+			<div
+				class="absolute top-1/2 left-1/2 z-10 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 border-2 border-gray-200/50 bg-gray-100 p-0.5 shadow-inner dark:border-gray-700/50 dark:bg-gray-800/80"
+			>
 				<button
 					type="button"
-					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize === 'desktop'
-						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-					onclick={() => builderViewportSize = 'desktop'}
+					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize ===
+					'desktop'
+						? 'bg-white font-medium text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+						: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+					onclick={() => (builderViewportSize = 'desktop')}
 					title="Desktop (100%)"
 				>
 					<Monitor size={18} />
 				</button>
 				<button
 					type="button"
-					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize === 'tablet'
-						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-					onclick={() => builderViewportSize = 'tablet'}
+					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize ===
+					'tablet'
+						? 'bg-white font-medium text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+						: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+					onclick={() => (builderViewportSize = 'tablet')}
 					title="Tablet (768px)"
 				>
-					<svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="18" x2="18.01" y1="12" y2="12"/></svg>
+					<svg
+						class="h-[18px] w-[18px]"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><rect x="2" y="4" width="20" height="16" rx="2" ry="2" /><line
+							x1="18"
+							x2="18.01"
+							y1="12"
+							y2="12"
+						/></svg
+					>
 				</button>
 				<button
 					type="button"
-					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize === 'mobile'
-						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-					onclick={() => builderViewportSize = 'mobile'}
+					class="inline-flex h-9 w-9 cursor-pointer items-center justify-center transition-all duration-150 {builderViewportSize ===
+					'mobile'
+						? 'bg-white font-medium text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+						: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+					onclick={() => (builderViewportSize = 'mobile')}
 					title="Mobile (375px)"
 				>
 					<Smartphone size={18} />
@@ -657,13 +683,15 @@
 			</div>
 			<div class="flex items-center gap-2">
 				<!-- Mode Selector -->
-				<div class="group relative inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+				<div
+					class="group relative inline-flex items-center gap-0.5 border-2 border-gray-200/50 bg-gray-100 p-0.5 shadow-inner dark:border-gray-700/50 dark:bg-gray-800/80"
+				>
 					<button
 						type="button"
 						class="inline-flex h-9 cursor-pointer items-center gap-2 px-3 text-sm font-medium transition-all duration-150 {!builderPreviewMode
 							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-						onclick={() => builderPreviewMode = false}
+							: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+						onclick={() => (builderPreviewMode = false)}
 					>
 						<Edit2 size={16} />
 						<span>Editor</span>
@@ -672,7 +700,7 @@
 						type="button"
 						class="inline-flex h-9 cursor-pointer items-center gap-2 px-3 text-sm font-medium transition-all duration-150 {builderPreviewMode
 							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
+							: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
 						onclick={() => {
 							builderPreviewMode = true;
 							builderActiveBlockId = null;
@@ -682,11 +710,13 @@
 						<span>Preview</span>
 					</button>
 					<span
-						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border-2 border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border-2 border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
 					>
 						<span class="font-semibold">Preview</span>
 						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-							<span class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">
+							<span
+								class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+							>
 								{#if pageFlowShortcutModifier === 'command'}
 									<Command size={12} strokeWidth={2} />
 								{:else}
@@ -694,7 +724,9 @@
 								{/if}
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-							<span class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium uppercase text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">
+							<span
+								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 uppercase dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+							>
 								{SHORTCUTS.togglePreview.key}
 							</span>
 						</span>
@@ -706,21 +738,31 @@
 						type="button"
 						class={inspectorOpen
 							? 'btn-brutal-icon group relative inline-flex h-10 w-10 items-center justify-center'
-							: 'group relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-accent dark:hover:bg-accent-hover dark:hover:text-gray-900'}
+							: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 						aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
 						aria-pressed={inspectorOpen}
 						onclick={() => (inspectorOpen = !inspectorOpen)}
 					>
 						<svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-							<rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-							<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
+							<rect
+								x="2"
+								y="2"
+								width="12"
+								height="12"
+								rx="1.5"
+								stroke="currentColor"
+								stroke-width="1.25"
+							/>
+							<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25" />
 						</svg>
 						<span
 							class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border-2 border-gray-200 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
 						>
 							<span class="font-semibold">Inspector</span>
 							<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-								<span class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">
+								<span
+									class="inline-flex h-5 items-center gap-1 border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+								>
 									{#if pageFlowShortcutModifier === 'command'}
 										<Command size={12} strokeWidth={2} />
 									{:else}
@@ -728,9 +770,14 @@
 									{/if}
 								</span>
 								<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-								<span class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">Shift</span>
+								<span
+									class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+									>Shift</span
+								>
 								<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-								<span class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">
+								<span
+									class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+								>
 									{SHORTCUTS.toggleInspector.key}
 								</span>
 							</span>
@@ -926,9 +973,7 @@
 			</a>
 		{/if}
 
-		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
-			Routes
-		</h1>
+		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">Routes</h1>
 		<p class="text-secondary mb-8">{data.repo.fullName}</p>
 
 		{#if breadcrumbs.length > 0}
@@ -1085,10 +1130,7 @@
 										</a>
 									{/if}
 									{#if canShowEntryMenu(entry)}
-										<div
-											class="relative flex shrink-0 items-center pr-3"
-											data-entry-menu
-										>
+										<div class="relative flex shrink-0 items-center pr-3" data-entry-menu>
 											<button
 												type="button"
 												onclick={(e) => {
@@ -1122,7 +1164,7 @@
 														type="button"
 														role="menuitem"
 														onclick={() => beginDelete(entry)}
-														class="text-error hover:bg-red-50 dark:hover:bg-red-950/30 flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+														class="text-error flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
 													>
 														<Trash2 size={14} />
 														Delete
@@ -1234,7 +1276,10 @@
 	</div>
 
 	{#if toastMessage}
-		<div class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2" transition:fly={{ y: 16, duration: 200 }}>
+		<div
+			class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2"
+			transition:fly={{ y: 16, duration: 200 }}
+		>
 			<div
 				class="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg {toastMessage.type ===
 				'success'

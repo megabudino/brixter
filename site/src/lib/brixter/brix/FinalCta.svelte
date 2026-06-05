@@ -30,7 +30,7 @@
 
 <section class="bg-gray-50 px-6 py-20 dark:bg-gray-900">
 	<div
-		class="mx-auto max-w-5xl border border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-700 dark:bg-gray-900 md:px-12"
+		class="mx-auto max-w-5xl border border-gray-300 bg-white px-6 py-12 text-center md:px-12 dark:border-gray-700 dark:bg-gray-900"
 	>
 		<h2
 			class="font-display text-heading mx-auto max-w-2xl text-3xl md:text-4xl"
@@ -52,11 +52,7 @@
 
 		{#if cta}
 			<div class="mt-8">
-				<a
-					href={cta.href}
-					class="inline-block max-w-full bg-[#FDE047] px-[24px] py-[15px] text-center font-sans text-base font-bold text-gray-900 shadow-md transition-all duration-200 ease-in-out hover:bg-[#FACC15] focus:ring-2 focus:ring-[#FDE047] focus:ring-offset-2 focus:ring-offset-white focus:outline-none active:translate-y-[2px] dark:bg-[#FDE047] dark:text-gray-900 dark:shadow-xl dark:hover:bg-[#FACC15] dark:focus:ring-[#FACC15] dark:focus:ring-offset-[#030712]"
-					data-builder-field="cta.label"
-				>
+				<a href={cta.href} class="btn-site-primary" data-builder-field="cta.label">
 					{cta.label}
 				</a>
 				{#if cta.note}

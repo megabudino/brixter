@@ -3,6 +3,7 @@
 	import type { BrikDefinition } from '../svelte/adapter.js';
 	import SveltePreviewRenderer from '../svelte/SveltePreviewRenderer.svelte';
 	import type { BuilderAppPreviewProps } from './contracts.js';
+	import { syncPreviewHeadAssets, syncPreviewTheme } from './preview-frame-support.js';
 
 	let {
 		definitions,
@@ -70,10 +71,13 @@
 		rendererProps.viewportSize = viewportSize;
 	}
 
-	function previewFrame(node: HTMLIFrameElement): { destroy: () => void } {
+	function previewFrame(node: HTMLIFrameElement): { update: () => void; destroy: () => void } {
 		let renderer: Record<string, unknown> | null = null;
 		let cleanupFrameDocument: (() => void) | null = null;
+		let cleanupHeadAssets: (() => void) | null = null;
+		let cleanupThemeSync: (() => void) | null = null;
 		let destroyed = false;
+		const sourceDocument = node.ownerDocument;
 
 		void initialize();
 
@@ -109,6 +113,8 @@
 
 			syncRendererProps();
 			cleanupFrameDocument = setupFrameDocument(frameDocument);
+			cleanupHeadAssets = syncPreviewHeadAssets(frameDocument, sourceDocument, true);
+			cleanupThemeSync = syncPreviewTheme(frameDocument);
 			renderer = mount(SveltePreviewRenderer, {
 				target,
 				props: rendererProps
@@ -116,8 +122,20 @@
 		}
 
 		return {
+			update() {
+				const frameDocument = node.contentDocument;
+				if (!frameDocument) {
+					return;
+				}
+
+				syncRendererProps();
+			},
 			destroy() {
 				destroyed = true;
+				cleanupHeadAssets?.();
+				cleanupHeadAssets = null;
+				cleanupThemeSync?.();
+				cleanupThemeSync = null;
 				cleanupFrameDocument?.();
 				cleanupFrameDocument = null;
 				if (renderer) {
@@ -432,62 +450,13 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 `;
 		frameDocument.head.append(styleElement);
 
-		let cleanupHeadSync: (() => void) | null = syncHeadAssets(frameDocument);
 		const removeKeydownListener = syncFrameKeydown(frameDocument);
-		const removeThemeSync = syncThemeClass(frameDocument);
 		const removeOverflowDiagnostic = syncPreviewOverflow(frameDocument);
 
 		return () => {
-			cleanupHeadSync?.();
-			cleanupHeadSync = null;
 			removeKeydownListener();
-			removeThemeSync();
 			removeOverflowDiagnostic();
-		};
-	}
-
-	function syncHeadAssets(frameDocument: Document): () => void {
-		let syncQueued = false;
-
-		function sync(): void {
-			syncQueued = false;
-			for (const node of Array.from(
-				frameDocument.head.querySelectorAll('[data-builder-preview-head-asset="true"]')
-			)) {
-				node.remove();
-			}
-
-			for (const asset of document.head.querySelectorAll(
-				'link[rel="stylesheet"], link[rel="preconnect"], style'
-			)) {
-				const clone = asset.cloneNode(true) as HTMLElement;
-				clone.dataset.builderPreviewHeadAsset = 'true';
-				if (asset instanceof HTMLLinkElement && clone instanceof HTMLLinkElement && asset.href) {
-					clone.href = asset.href;
-				}
-				frameDocument.head.append(clone);
-			}
-		}
-
-		function queueSync(): void {
-			if (syncQueued) {
-				return;
-			}
-			syncQueued = true;
-			requestAnimationFrame(sync);
-		}
-
-		const observer = new MutationObserver(queueSync);
-		observer.observe(document.head, {
-			attributes: true,
-			characterData: true,
-			childList: true,
-			subtree: true
-		});
-		sync();
-
-		return () => {
-			observer.disconnect();
+			styleElement.remove();
 		};
 	}
 
@@ -499,25 +468,6 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 
 		return () => {
 			frameDocument.removeEventListener('keydown', handler);
-		};
-	}
-
-	function syncThemeClass(frameDocument: Document): () => void {
-		function applyThemeClass(): void {
-			const isDark =
-				document.documentElement.classList.contains('dark') ||
-				document.body.classList.contains('dark');
-			frameDocument.documentElement.classList.toggle('dark', isDark);
-			frameDocument.body.classList.toggle('dark', isDark);
-		}
-
-		const observer = new MutationObserver(applyThemeClass);
-		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-		observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-		applyThemeClass();
-
-		return () => {
-			observer.disconnect();
 		};
 	}
 
@@ -651,6 +601,10 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 		class:border-gray-200={viewportSize !== 'desktop'}
 		class:dark:border-gray-800={viewportSize !== 'desktop'}
 		class:rounded-md={viewportSize !== 'desktop'}
-		style={viewportSize === 'tablet' ? 'width: 768px;' : viewportSize === 'mobile' ? 'width: 375px;' : ''}
+		style={viewportSize === 'tablet'
+			? 'width: 768px;'
+			: viewportSize === 'mobile'
+				? 'width: 375px;'
+				: ''}
 	></iframe>
 </div>

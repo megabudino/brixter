@@ -10,7 +10,16 @@
 import Database from 'better-sqlite3';
 import { hashPassword, verifyPassword } from 'better-auth/crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, copyFileSync, renameSync, rmSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+	readdirSync,
+	copyFileSync,
+	renameSync,
+	rmSync
+} from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { Writable } from 'node:stream';
@@ -214,6 +223,7 @@ async function initEmbedded(context) {
 	ensureSiteRouteGroup(context, 'src/routes');
 	promoteSiteChromeToRouteGroup(context, 'src/routes');
 	finalizeRootLayoutIsolation(context, 'src/routes');
+	ensureBrixterTheme(context);
 	ensureHooks(context);
 	ensureVitePlugin(context);
 	ensureSvelteExtensions(context);
@@ -223,6 +233,7 @@ async function initEmbedded(context) {
 		addIconPack(context, context.icons);
 	}
 	ensureBrixterLayout(context, 'src/routes');
+	ensureBrixterLayoutCss(context, 'src/routes');
 	await setupDatabase(context);
 }
 
@@ -230,9 +241,11 @@ async function initSplit(context) {
 	ensureBrixterPackage(context);
 	migrateLegacyRoutesToVariants(context);
 	ensureVariantSvelteConfig(context);
+	ensureBrixterTheme(context);
 	ensureFlatSiteRoutes(context);
 	ensureRouteShims(context, 'src/routes-cms');
 	ensureBrixterLayout(context, 'src/routes-cms');
+	ensureBrixterLayoutCss(context, 'src/routes-cms');
 	ensureCmsRootRedirect(context);
 	ensureVariantHooks(context);
 	ensureVitePlugin(context, { routesRoot: resolveSiteRoutesRoot(context) });
@@ -259,7 +272,9 @@ function ensureCmsEnvForMigrate(context) {
 
 	const cmsEnv = existsSync(cmsEnvPath) ? readEnvFile(cmsEnvPath) : {};
 	const needsCmsEnv =
-		!existsSync(cmsEnvPath) || !present(cmsEnv.DATABASE_URL) || !present(cmsEnv.BRIXTER_AUTH_SECRET);
+		!existsSync(cmsEnvPath) ||
+		!present(cmsEnv.DATABASE_URL) ||
+		!present(cmsEnv.BRIXTER_AUTH_SECRET);
 
 	if (!needsCmsEnv) return;
 
@@ -514,6 +529,7 @@ function ensureRouteShims(context, routesRoot = 'src/routes') {
 function ensureBrixterLayout(context, routesRoot = 'src/routes') {
 	const layoutContents = `<script lang="ts">
 	import 'brixter/styles.css';
+	import './layout.css';
 
 	let { children } = $props();
 </script>
@@ -541,6 +557,18 @@ function ensureBrixterLayout(context, routesRoot = 'src/routes') {
 	}
 
 	createFile(context, layoutAtPath, layoutContents);
+}
+
+function ensureBrixterLayoutCss(context, routesRoot = 'src/routes') {
+	const relativePath = `${routesRoot}/__brixter/layout.css`;
+	createFile(
+		context,
+		relativePath,
+		`@import 'tailwindcss';
+@import '../../lib/brixter/theme.css';
+@plugin '@tailwindcss/typography';
+`
+	);
 }
 
 function ensureHooks(context) {
@@ -859,12 +887,22 @@ function ensureSiteRootLayout(context, routesRoot = 'src/routes-site') {
 	);
 }
 
+function ensureBrixterTheme(context) {
+	createFile(
+		context,
+		'src/lib/brixter/theme.css',
+		`@variant dark (&:where(.dark, .dark *));
+`
+	);
+}
+
 function ensureSiteLayoutCss(context, routesRoot = 'src/routes-site') {
 	const relativePath = `${routesRoot}/layout.css`;
 	createFile(
 		context,
 		relativePath,
 		`@import 'tailwindcss';
+@import '../lib/brixter/theme.css';
 @plugin '@tailwindcss/typography';
 `
 	);
@@ -872,11 +910,7 @@ function ensureSiteLayoutCss(context, routesRoot = 'src/routes-site') {
 
 function ensureSiteRouteGroup(context, routesRoot = 'src/routes') {
 	const siteGroupRelative = `${routesRoot}/(site)`;
-	createFile(
-		context,
-		`${siteGroupRelative}/+layout.svelte`,
-		defaultSiteGroupLayoutContents()
-	);
+	createFile(context, `${siteGroupRelative}/+layout.svelte`, defaultSiteGroupLayoutContents());
 
 	const routesDir = path.join(context.cwd, routesRoot);
 	if (!existsSync(routesDir)) {
@@ -1005,7 +1039,10 @@ function mergeSiteLayoutWithRootGlobals(rootContents, siteContents) {
 		if (!/layout\.css|favicon|\.svg/.test(trimmed)) continue;
 		if (site.includes(trimmed)) continue;
 		if (scriptMatch) {
-			site = site.replace(scriptMatch[0], scriptMatch[0].replace(/<\/script>/, `\t${line}\n</script>`));
+			site = site.replace(
+				scriptMatch[0],
+				scriptMatch[0].replace(/<\/script>/, `\t${line}\n</script>`)
+			);
 		}
 	}
 
@@ -1130,7 +1167,13 @@ function migrateLegacyRoutesToVariants(context) {
 	for (const entry of legacyEntries) {
 		const name = entry.name;
 		if (name === '__brixter') {
-			movePath(context, path.join(legacyDir, name), path.join(cmsDir, name), 'src/routes/__brixter', 'src/routes-cms/__brixter');
+			movePath(
+				context,
+				path.join(legacyDir, name),
+				path.join(cmsDir, name),
+				'src/routes/__brixter',
+				'src/routes-cms/__brixter'
+			);
 			continue;
 		}
 		if (name === '(site)') {
@@ -1172,7 +1215,9 @@ function migrateLegacyRoutesToVariants(context) {
 			renameSync(legacyDir, path.join(context.cwd, 'src/routes.legacy.brixter'));
 			context.changes.push('renamed empty src/routes → src/routes.legacy.brixter');
 		} catch {
-			context.manual.push('remove or archive src/routes now that variants use src/routes-site and src/routes-cms');
+			context.manual.push(
+				'remove or archive src/routes now that variants use src/routes-site and src/routes-cms'
+			);
 		}
 	} else if (remaining.length > 0) {
 		context.manual.push('review remaining files in src/routes after variant migration');
@@ -1243,7 +1288,9 @@ function ensureVariantSvelteConfig(context) {
 \t\t},\n`;
 
 	if (!/kit:\s*\{/.test(contents)) {
-		context.manual.push(`${relativePath} has no kit config; add BRIXTER_VARIANT files block manually`);
+		context.manual.push(
+			`${relativePath} has no kit config; add BRIXTER_VARIANT files block manually`
+		);
 		return;
 	}
 
@@ -1284,7 +1331,10 @@ function archiveLegacyHookFiles(context) {
 		const file = path.join(context.cwd, relativePath);
 		if (!existsSync(file)) continue;
 
-		const archivePath = path.join(context.cwd, `${relativePath.replace(/\//g, '.')}.legacy.brixter`);
+		const archivePath = path.join(
+			context.cwd,
+			`${relativePath.replace(/\//g, '.')}.legacy.brixter`
+		);
 		if (existsSync(archivePath)) {
 			context.skipped.push(`${relativePath} already archived`);
 			continue;
@@ -1703,12 +1753,16 @@ async function setupDatabase(context) {
 	}
 
 	if (context.dryRun) {
-		context.changes.push('would run Better Auth and brixter database migrations (.env.cms for split layout)');
+		context.changes.push(
+			'would run Better Auth and brixter database migrations (.env.cms for split layout)'
+		);
 		return;
 	}
 
 	if (!findInstalledBrixterPackageJson(context.cwd)) {
-		throw new Error('brixter is not installed in node_modules; run init without --skip-install first');
+		throw new Error(
+			'brixter is not installed in node_modules; run init without --skip-install first'
+		);
 	}
 
 	if (context.layout === 'split') {
@@ -1776,7 +1830,10 @@ function addIconPack(context, packName) {
 		} catch (innerErr) {
 			sourceDir = path.resolve(import.meta.dirname, '../node_modules/lucide-static/icons');
 			if (!existsSync(sourceDir)) {
-				sourceDir = path.resolve(import.meta.dirname, '../../../../node_modules/lucide-static/icons');
+				sourceDir = path.resolve(
+					import.meta.dirname,
+					'../../../../node_modules/lucide-static/icons'
+				);
 			}
 		}
 	}

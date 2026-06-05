@@ -299,7 +299,13 @@
 	}
 
 	function queueFileEdit(blockId: string, path: string): void {
-		console.log('queueFileEdit called in BuilderApp:', blockId, path, 'onpickImage is:', !!onpickImage);
+		console.log(
+			'queueFileEdit called in BuilderApp:',
+			blockId,
+			path,
+			'onpickImage is:',
+			!!onpickImage
+		);
 		if (!controller) return;
 
 		const block = controller.document.blocks.find((b) => b.id === blockId);
@@ -819,7 +825,9 @@
 	{#if chrome === 'standalone'}
 		<header
 			class="flex h-[60px] shrink-0 items-center justify-between border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-			onclick={(event) => { if (!(event.target as Element).closest('button, input, a')) deselectBlock(); }}
+			onclick={(event) => {
+				if (!(event.target as Element).closest('button, input, a')) deselectBlock();
+			}}
 		>
 			<div class="flex items-center gap-2">
 				<div
@@ -830,8 +838,8 @@
 				<button
 					type="button"
 					class={pageFlowOpen
-					? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
-					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-accent dark:hover:bg-accent-hover dark:hover:text-gray-900'}
+						? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
+						: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 					aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
 					aria-pressed={pageFlowOpen}
 					onclick={togglePageFlow}
@@ -883,67 +891,136 @@
 			</div>
 
 			<!-- Center Device Selection -->
-			<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 z-10 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+			<div
+				class="absolute top-1/2 left-1/2 z-10 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 border-2 border-gray-200/50 bg-gray-100 p-0.5 shadow-inner dark:border-gray-700/50 dark:bg-gray-800/80"
+			>
 				<button
 					type="button"
-					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'desktop'
-						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-					onclick={() => viewportSize = 'desktop'}
+					class="flex h-8 w-8 cursor-pointer items-center justify-center transition-all duration-150 {viewportSize ===
+					'desktop'
+						? 'bg-white font-medium text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+						: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+					onclick={() => (viewportSize = 'desktop')}
 					title="Desktop (100%)"
 				>
-					<svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+					<svg
+						class="h-4.5 w-4.5"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><rect width="20" height="14" x="2" y="3" rx="2" /><line
+							x1="8"
+							x2="16"
+							y1="21"
+							y2="21"
+						/><line x1="12" x2="12" y1="17" y2="21" /></svg
+					>
 				</button>
 				<button
 					type="button"
-					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'tablet'
-						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-					onclick={() => viewportSize = 'tablet'}
+					class="flex h-8 w-8 cursor-pointer items-center justify-center transition-all duration-150 {viewportSize ===
+					'tablet'
+						? 'bg-white font-medium text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+						: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+					onclick={() => (viewportSize = 'tablet')}
 					title="Tablet (768px)"
 				>
-					<svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="18" x2="18.01" y1="12" y2="12"/></svg>
+					<svg
+						class="h-4.5 w-4.5"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><rect x="2" y="4" width="20" height="16" rx="2" ry="2" /><line
+							x1="18"
+							x2="18.01"
+							y1="12"
+							y2="12"
+						/></svg
+					>
 				</button>
 				<button
 					type="button"
-					class="flex h-8 w-8 items-center justify-center cursor-pointer transition-all duration-150 {viewportSize === 'mobile'
-						? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white font-medium'
-						: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-					onclick={() => viewportSize = 'mobile'}
+					class="flex h-8 w-8 cursor-pointer items-center justify-center transition-all duration-150 {viewportSize ===
+					'mobile'
+						? 'bg-white font-medium text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+						: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+					onclick={() => (viewportSize = 'mobile')}
 					title="Mobile (375px)"
 				>
-					<svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+					<svg
+						class="h-4.5 w-4.5"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><line
+							x1="12"
+							x2="12.01"
+							y1="17"
+							y2="17"
+						/></svg
+					>
 				</button>
 			</div>
 
 			<div class="flex items-center gap-2">
 				<!-- Mode Selector -->
-				<div class="group relative inline-flex items-center gap-0.5 p-0.5 bg-gray-100 dark:bg-gray-800/80 border-2 border-gray-200/50 dark:border-gray-700/50 shadow-inner">
+				<div
+					class="group relative inline-flex items-center gap-0.5 border-2 border-gray-200/50 bg-gray-100 p-0.5 shadow-inner dark:border-gray-700/50 dark:bg-gray-800/80"
+				>
 					<button
 						type="button"
 						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {!previewMode
 							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
-						onclick={() => previewMode = false}
+							: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
+						onclick={() => (previewMode = false)}
 					>
-						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+						<svg
+							class="h-3.5 w-3.5"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg
+						>
 						<span>Editor</span>
 					</button>
 					<button
 						type="button"
 						class="inline-flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-medium transition-all duration-150 {previewMode
 							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-							: 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-transparent'}"
+							: 'bg-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}"
 						onclick={() => {
 							previewMode = true;
 							deselectBlock();
 						}}
 					>
-						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/><circle cx="12" cy="12" r="3"/></svg>
+						<svg
+							class="h-3.5 w-3.5"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							><path
+								d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"
+							/><circle cx="12" cy="12" r="3" /></svg
+						>
 						<span>Preview</span>
 					</button>
 					<span
-						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-300 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-300 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
 					>
 						<span class="font-semibold">Preview</span>
 						<span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
@@ -963,7 +1040,7 @@
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
 							<span
-								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium uppercase text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 uppercase dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
 							>
 								{previewShortcutKey}
 							</span>
@@ -981,15 +1058,23 @@
 				<button
 					type="button"
 					class={inspectorOpen
-					? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
-					: 'group relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-accent dark:hover:bg-accent-hover dark:hover:text-gray-900'}
+						? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
+						: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 					aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
 					aria-pressed={inspectorOpen}
 					onclick={toggleInspector}
 				>
 					<svg class="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-						<rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-						<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25"/>
+						<rect
+							x="2"
+							y="2"
+							width="12"
+							height="12"
+							rx="1.5"
+							stroke="currentColor"
+							stroke-width="1.25"
+						/>
+						<path d="M10.5 2.5v11" stroke="currentColor" stroke-width="1.25" />
 					</svg>
 					<span
 						class="pointer-events-none absolute top-full right-0 z-50 mt-2 flex flex-col items-start gap-1.5 border border-gray-300 bg-white px-3 py-2 text-xs whitespace-nowrap text-gray-900 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
@@ -1011,7 +1096,10 @@
 								{/if}
 							</span>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
-							<span class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200">Shift</span>
+							<span
+								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
+								>Shift</span
+							>
 							<span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">+</span>
 							<span
 								class="inline-flex h-5 items-center border-2 border-gray-200 bg-gray-50 px-1.5 text-[11px] font-medium text-gray-700 dark:border-gray-500 dark:bg-gray-800 dark:text-gray-200"
@@ -1113,13 +1201,14 @@
 				<div>
 					<h2 class="text-heading text-lg font-semibold">Add component</h2>
 					<p class="text-muted mt-1 text-sm">
-						Choose the component to insert {inserterModal.placement === 'before' ? 'before' : 'after'} this
-						section.
+						Choose the component to insert {inserterModal.placement === 'before'
+							? 'before'
+							: 'after'} this section.
 					</p>
 				</div>
 				<button
 					type="button"
-					class="flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:border-accent hover:bg-accent-hover hover:text-gray-900 dark:border-gray-700 dark:text-gray-200 dark:hover:border-accent dark:hover:bg-accent-hover"
+					class="hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:text-gray-900 dark:border-gray-700 dark:text-gray-200"
 					aria-label="Close"
 					onclick={closeInserterModal}
 				>

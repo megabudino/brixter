@@ -1,4 +1,4 @@
 @import 'tailwindcss';
-@source "../../../packages/brix-builder/dist";
-@source "../lib/brixter/brix";
+@import '../lib/brixter/theme.css';
+@source '../lib/brixter/brix';
 @plugin '@tailwindcss/typography';

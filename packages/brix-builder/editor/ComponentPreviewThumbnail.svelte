@@ -2,12 +2,14 @@
 	import { mount, unmount } from 'svelte';
 	import { createBuilderFallbackProps, normalizeBuilderPropsForRender } from '../core.js';
 	import type { BuilderRenderDefinition } from './contracts.js';
+	import { syncPreviewHeadAssets, syncPreviewTheme } from './preview-frame-support.js';
 
 	let { definition }: { definition: BuilderRenderDefinition } = $props();
 
 	function thumbnailFrame(node: HTMLIFrameElement): { update: () => void; destroy: () => void } {
 		let renderer: Record<string, unknown> | null = null;
 		let cleanupHeadSync: (() => void) | null = null;
+		let cleanupThemeSync: (() => void) | null = null;
 		let destroyed = false;
 		const sourceDocument = node.ownerDocument;
 
@@ -25,6 +27,8 @@
 			}
 			cleanupHeadSync?.();
 			cleanupHeadSync = null;
+			cleanupThemeSync?.();
+			cleanupThemeSync = null;
 
 			frameDocument.open();
 			frameDocument.write(`<!doctype html>
@@ -47,8 +51,9 @@
 				return;
 			}
 
-			setupFrameDocument(frameDocument, sourceDocument);
-			cleanupHeadSync = syncHeadAssets(frameDocument, sourceDocument);
+			setupFrameDocument(frameDocument);
+			cleanupHeadSync = syncPreviewHeadAssets(frameDocument, sourceDocument);
+			cleanupThemeSync = syncPreviewTheme(frameDocument);
 
 			const target = frameDocument.getElementById('component-preview-root');
 			if (!target) {
@@ -72,6 +77,8 @@
 				destroyed = true;
 				cleanupHeadSync?.();
 				cleanupHeadSync = null;
+				cleanupThemeSync?.();
+				cleanupThemeSync = null;
 				if (renderer) {
 					void unmount(renderer);
 					renderer = null;
@@ -80,7 +87,7 @@
 		};
 	}
 
-	function setupFrameDocument(frameDocument: Document, sourceDocument: Document): void {
+	function setupFrameDocument(frameDocument: Document): void {
 		const styleElement = frameDocument.createElement('style');
 		styleElement.textContent = `
 html,
@@ -146,33 +153,6 @@ body.dark {
 }
 `;
 		frameDocument.head.append(styleElement);
-		syncThemeClass(frameDocument, sourceDocument);
-	}
-
-	function syncHeadAssets(frameDocument: Document, sourceDocument: Document): () => void {
-		for (const asset of sourceDocument.head.querySelectorAll(
-			'link[rel="stylesheet"], link[rel="preconnect"], style'
-		)) {
-			const clone = asset.cloneNode(true) as HTMLElement;
-			if (asset instanceof HTMLLinkElement && clone instanceof HTMLLinkElement && asset.href) {
-				clone.href = asset.href;
-			}
-			frameDocument.head.append(clone);
-		}
-
-		return () => {
-			for (const asset of Array.from(frameDocument.head.children)) {
-				asset.remove();
-			}
-		};
-	}
-
-	function syncThemeClass(frameDocument: Document, sourceDocument: Document): void {
-		const isDark =
-			sourceDocument.documentElement.classList.contains('dark') ||
-			sourceDocument.body.classList.contains('dark');
-		frameDocument.documentElement.classList.toggle('dark', isDark);
-		frameDocument.body.classList.toggle('dark', isDark);
 	}
 
 	function escapeHtml(value: string): string {

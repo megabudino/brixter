@@ -4,6 +4,11 @@ Brixter CMS package for SvelteKit apps.
 
 ## Init
 
+If you want to wire Brixter manually instead of running `brixter init`, use these guides:
+
+- [Embedded configuration](./EMBEDDED_CONFIGURATION.md)
+- [Split configuration](./SPLIT_CONFIGURATION.md)
+
 From your SvelteKit app directory, run:
 
 ```sh
@@ -31,6 +36,8 @@ Where should Brixter run?
 `__brixter/`). Init creates a `(site)` [route group](https://svelte.dev/docs/kit/advanced-routing#Group)
 and moves your pages there so site chrome does not wrap the CMS.
 
+To build this layout manually, follow [Embedded configuration](./EMBEDDED_CONFIGURATION.md).
+
 **Layout isolation:** SvelteKit always applies the root `+layout.svelte`; `+layout@`
 on `__brixter/` only skips intermediate layouts (e.g. `(site)`), not the root.
 Keep the root layout pass-through (`{@render children()}` only). Put Tailwind,
@@ -40,10 +47,10 @@ favicon, and site chrome in `(site)/+layout.svelte`. Brixter styles live in
 **Separate CMS routes (split)** — still **one SvelteKit app**, but two build
 variants selected by `BRIXTER_VARIANT`:
 
-| Variant | Env | Routes | Hooks |
-|---------|-----|--------|-------|
-| `site` | `.env.site` | `src/routes-site/` | pass-through (no DB) |
-| `cms` | `.env.cms` | `src/routes-cms/` | full brixter auth |
+| Variant | Env         | Routes             | Hooks                |
+| ------- | ----------- | ------------------ | -------------------- |
+| `site`  | `.env.site` | `src/routes-site/` | pass-through (no DB) |
+| `cms`   | `.env.cms`  | `src/routes-cms/`  | full brixter auth    |
 
 Runtime and `brixter migrate` both resolve env from `.env.cms` / `.env.site` when
 `BRIXTER_VARIANT` is set (not from `.env`). Split init also patches `vite.config`
@@ -53,6 +60,8 @@ Each variant is a separate process / Docker Compose stack with its own route
 tree (`kit.files.routes`). Site pages live directly under `src/routes-site/`
 (flat — no route group); CMS admin lives under `src/routes-cms/__brixter/`
 (public URL `/admin`).
+
+To build this layout manually, follow [Split configuration](./SPLIT_CONFIGURATION.md).
 
 ```sh
 npm run dev:site    # port 5173
@@ -97,11 +106,14 @@ npx brixter migrate
 src/routes/
   +layout.svelte              # minimal — global Tailwind import
   layout.css
+  lib/brixter/
+    theme.css                 # host-owned brik render contract
   (site)/
     +layout.svelte            # navbar, footer, marketing shell
     +page.svelte
   __brixter/
-    +layout.svelte            # imports brixter/styles.css
+    +layout@.svelte           # imports brixter/styles.css + ./layout.css
+    layout.css                # imports ../../lib/brixter/theme.css
     [...path]/+page.svelte
 ```
 
@@ -115,8 +127,12 @@ src/routes-site/              # BRIXTER_VARIANT=site
   +layout.svelte              # site shell + layout.css
   layout.css
   +page.brix.yaml
+src/lib/brixter/
+  theme.css                   # host-owned brik render contract
 src/routes-cms/               # BRIXTER_VARIANT=cms
   __brixter/
+    +layout@.svelte
+    layout.css                # imports ../../lib/brixter/theme.css
     [...path]/
 src/hooks.site.ts             # site client hooks (empty)
 src/hooks.cms.ts              # cms client hooks (empty)
@@ -140,10 +156,12 @@ mode on `document.body`.
 Your host app needs:
 
 - `@tailwindcss/vite` in `vite.config` (before `sveltekit()`)
-- `@import 'tailwindcss'` in your own global stylesheet (for site pages)
-- `__brixter/+layout.svelte` importing `brixter/styles.css` (created by init)
+- a host-owned `src/lib/brixter/theme.css` that defines the brik render contract
+- `@import 'tailwindcss'` plus `@import '../lib/brixter/theme.css'` in your site stylesheet
+- `__brixter/+layout@.svelte` importing both `brixter/styles.css` and `./layout.css`
+- `__brixter/layout.css` importing `../../lib/brixter/theme.css`
 
-Import `brixter/styles.css` from the `__brixter` layout, not your root layout.
+Import `brixter/styles.css` from the `__brixter` layout, not your root layout. Keep the brik render contract in host-owned CSS.
 
 Upgrade to **0.0.5** or later if fonts or accent colors look wrong — earlier
 0.0.4 builds did not run Brixter CSS through Tailwind correctly.
@@ -152,8 +170,8 @@ Upgrade to **0.0.5** or later if fonts or accent colors look wrong — earlier
 
 The dashboard explorer is SvelteKit-first: it starts from the app's routes
 directory and shows route pages instead of arbitrary repository folders. In
-split layout the Vite plugin sets `routesRoot` to your `routes-site` tree so the
-CMS still edits the site's GitHub routes.
+split layout, configure `routesRoot` to your `routes-site` tree if you want the
+CMS to edit the site's GitHub routes.
 
 You can override discovery explicitly:
 
