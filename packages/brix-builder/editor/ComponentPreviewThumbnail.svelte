@@ -38,7 +38,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<base href="${escapeHtml(sourceDocument.baseURI)}">
 	</head>
-	<body>
+	<body class="brixter-preview-root">
 		<div id="component-preview-stage">
 			<div id="component-preview-root"></div>
 		</div>

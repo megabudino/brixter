@@ -1,10 +1,9 @@
-@import 'tailwindcss';
-
 @source "./src/lib/ui";
 @source "./src/lib/editor";
 @source "./src/lib/dashboard";
 @source "../@brixter/brix-builder/dist";
-@plugin "@tailwindcss/typography";
+@source "../brix-builder/editor";
+@source "../brix-builder/svelte";
 @variant dark (&:where(.dark, .dark *));
 
 @font-face {
@@ -37,7 +36,7 @@
 	--tw-ring-color: var(--color-accent-focus);
 }
 
-.brixter-root {
+:where(.brixter-root, .brixter-preview-root) {
 	--brixter-accent: #fde047;
 	--brixter-accent-hover: #fef08a;
 	--brixter-accent-focus: #facc15;
@@ -61,17 +60,22 @@
 	--color-gray-900: #1e1c18;
 	--color-gray-950: #12100d;
 
+}
+
+.brixter-root {
 	background-color: var(--color-gray-50);
 	color-scheme: light;
 }
 
-.brixter-root.dark {
+:where(.brixter-root, .brixter-preview-root).dark {
 	--brixter-accent: #fde047;
 	--brixter-accent-hover: #fef9c3;
 	--brixter-accent-focus: #facc15;
 	--brixter-accent-subtle: #422006;
 	--brixter-brutal-stroke: var(--color-gray-700);
+}
 
+.brixter-root.dark {
 	background-color: var(--color-gray-900);
 	color-scheme: dark;
 }

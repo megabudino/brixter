@@ -95,7 +95,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<base href="${escapeHtml(document.baseURI)}">
 	</head>
-	<body>
+	<body class="brixter-preview-root">
 		<div id="builder-preview-root"></div>
 	</body>
 </html>`);

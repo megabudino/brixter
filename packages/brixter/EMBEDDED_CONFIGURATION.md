@@ -75,7 +75,6 @@ Create `src/routes/__brixter/+layout@.svelte`:
 
 ```svelte
 <script lang="ts">
-	import 'brixter/styles.css';
 	import './layout.css';
 
 	let { children } = $props();
@@ -88,11 +87,13 @@ Create `src/routes/__brixter/layout.css`:
 
 ```css
 @import 'tailwindcss';
+@import 'brixter/styles.css';
 @import '../../lib/brixter/theme.css';
+@source '../../lib/brixter/brix';
 @plugin '@tailwindcss/typography';
 ```
 
-That layout keeps Brixter styles scoped to the CMS route tree instead of your whole app, while `src/routes/__brixter/layout.css` loads the host-owned brik render contract for the CMS and preview.
+That layout keeps Brixter styles scoped to the CMS route tree instead of your whole app, while `src/routes/__brixter/layout.css` becomes the single CMS Tailwind entry that compiles both package chrome and the host-owned brik render contract for the CMS and preview.
 
 ## 3. Isolate your site layout from the CMS
 

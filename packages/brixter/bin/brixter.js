@@ -528,7 +528,6 @@ function ensureRouteShims(context, routesRoot = 'src/routes') {
 
 function ensureBrixterLayout(context, routesRoot = 'src/routes') {
 	const layoutContents = `<script lang="ts">
-	import 'brixter/styles.css';
 	import './layout.css';
 
 	let { children } = $props();
@@ -565,7 +564,9 @@ function ensureBrixterLayoutCss(context, routesRoot = 'src/routes') {
 		context,
 		relativePath,
 		`@import 'tailwindcss';
+@import 'brixter/styles.css';
 @import '../../lib/brixter/theme.css';
+@source '../../lib/brixter/brix';
 @plugin '@tailwindcss/typography';
 `
 	);

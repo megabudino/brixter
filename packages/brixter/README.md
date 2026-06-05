@@ -17,7 +17,7 @@ npx brixter init
 
 The init command adds `brixter` to `package.json` and runs your package manager,
 creates the hidden `__brixter` route shims (including a scoped layout that
-imports `brixter/styles.css`), wires SvelteKit hooks, adds the Vite plugin,
+imports a single CMS `layout.css` entry), wires SvelteKit hooks, adds the Vite plugin,
 documents required environment variables in `.env.example`, creates `.env` when
 missing, and applies Better Auth plus brixter SQL migrations to `DATABASE_URL`.
 It does not copy dashboard implementation files into the app.
@@ -42,7 +42,8 @@ To build this layout manually, follow [Embedded configuration](./EMBEDDED_CONFIG
 on `__brixter/` only skips intermediate layouts (e.g. `(site)`), not the root.
 Keep the root layout pass-through (`{@render children()}` only). Put Tailwind,
 favicon, and site chrome in `(site)/+layout.svelte`. Brixter styles live in
-`__brixter/+layout@.svelte` (imports `brixter/styles.css`).
+`__brixter/layout.css`, which imports `brixter/styles.css` and the host-owned
+`src/lib/brixter/theme.css` in a single Tailwind pipeline.
 
 **Separate CMS routes (split)** — still **one SvelteKit app**, but two build
 variants selected by `BRIXTER_VARIANT`:
@@ -112,8 +113,8 @@ src/routes/
     +layout.svelte            # navbar, footer, marketing shell
     +page.svelte
   __brixter/
-    +layout@.svelte           # imports brixter/styles.css + ./layout.css
-    layout.css                # imports ../../lib/brixter/theme.css
+    +layout@.svelte           # imports only ./layout.css
+    layout.css                # imports brixter/styles.css + ../../lib/brixter/theme.css
     [...path]/+page.svelte
 ```
 
@@ -132,7 +133,7 @@ src/lib/brixter/
 src/routes-cms/               # BRIXTER_VARIANT=cms
   __brixter/
     +layout@.svelte
-    layout.css                # imports ../../lib/brixter/theme.css
+    layout.css                # imports brixter/styles.css + ../../lib/brixter/theme.css
     [...path]/
 src/hooks.site.ts             # site client hooks (empty)
 src/hooks.cms.ts              # cms client hooks (empty)
@@ -158,10 +159,10 @@ Your host app needs:
 - `@tailwindcss/vite` in `vite.config` (before `sveltekit()`)
 - a host-owned `src/lib/brixter/theme.css` that defines the brik render contract
 - `@import 'tailwindcss'` plus `@import '../lib/brixter/theme.css'` in your site stylesheet
-- `__brixter/+layout@.svelte` importing both `brixter/styles.css` and `./layout.css`
-- `__brixter/layout.css` importing `../../lib/brixter/theme.css`
+- `__brixter/+layout@.svelte` importing only `./layout.css`
+- `__brixter/layout.css` importing `brixter/styles.css`, `../../lib/brixter/theme.css`, and `@source` for your host brik components
 
-Import `brixter/styles.css` from the `__brixter` layout, not your root layout. Keep the brik render contract in host-owned CSS.
+Import `brixter/styles.css` inside the CMS `layout.css`, not from your root or CMS Svelte layout. Keep the brik render contract in host-owned CSS.
 
 Upgrade to **0.0.5** or later if fonts or accent colors look wrong — earlier
 0.0.4 builds did not run Brixter CSS through Tailwind correctly.

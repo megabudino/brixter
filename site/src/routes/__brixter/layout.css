@@ -1,3 +1,5 @@
 @import 'tailwindcss';
+@import 'brixter/styles.css';
 @import '../../lib/brixter/theme.css';
+@source '../../lib/brixter/brix';
 @plugin '@tailwindcss/typography';

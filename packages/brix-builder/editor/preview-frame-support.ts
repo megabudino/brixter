@@ -58,6 +58,7 @@ export function syncPreviewTheme(frameDocument: Document): () => void {
 
 	const applyTheme = () => {
 		const isDark = systemTheme.matches;
+		frameDocument.body.classList.add('brixter-preview-root');
 		frameDocument.documentElement.classList.toggle('dark', isDark);
 		frameDocument.body.classList.toggle('dark', isDark);
 		frameDocument.documentElement.style.colorScheme = isDark ? 'dark' : 'light';

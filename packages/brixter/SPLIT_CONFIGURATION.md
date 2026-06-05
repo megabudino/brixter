@@ -117,7 +117,6 @@ Create `src/routes-cms/__brixter/+layout@.svelte`:
 
 ```svelte
 <script lang="ts">
-	import 'brixter/styles.css';
 	import './layout.css';
 
 	let { children } = $props();
@@ -130,7 +129,9 @@ Create `src/routes-cms/__brixter/layout.css`:
 
 ```css
 @import 'tailwindcss';
+@import 'brixter/styles.css';
 @import '../../lib/brixter/theme.css';
+@source '../../lib/brixter/brix';
 @plugin '@tailwindcss/typography';
 ```
 
