@@ -19,14 +19,14 @@
     "publish:brixter": "npm run build:brix-builder && npm run build:brixter && npm publish --workspace=brixter",
     "publish:packages": "npm run publish:brix-builder && npm run publish:brixter",
     "sync:brix-builder-version": "node ./sync-brix-builder-version.mjs",
-    "release:brix-builder:patch": "npm version patch --workspace=@brixter/brix-builder --no-git-tag-version && npm run sync:brix-builder-version",
-    "release:brix-builder:minor": "npm version minor --workspace=@brixter/brix-builder --no-git-tag-version && npm run sync:brix-builder-version",
-    "release:brix-builder:major": "npm version major --workspace=@brixter/brix-builder --no-git-tag-version && npm run sync:brix-builder-version",
-    "release:brixter:patch": "npm version patch --workspace=brixter --no-git-tag-version",
-    "release:brixter:minor": "npm version minor --workspace=brixter --no-git-tag-version",
-    "release:brixter:major": "npm version major --workspace=brixter --no-git-tag-version",
-    "release:all:patch": "npm run release:brix-builder:patch && npm run release:brixter:patch",
-    "release:all:minor": "npm run release:brix-builder:minor && npm run release:brixter:minor",
-    "release:all:major": "npm run release:brix-builder:major && npm run release:brixter:major"
+    "release:brix-builder:patch": "node ./release.mjs brix-builder patch",
+    "release:brix-builder:minor": "node ./release.mjs brix-builder minor",
+    "release:brix-builder:major": "node ./release.mjs brix-builder major",
+    "release:brixter:patch": "node ./release.mjs brixter patch",
+    "release:brixter:minor": "node ./release.mjs brixter minor",
+    "release:brixter:major": "node ./release.mjs brixter major",
+    "release:all:patch": "node ./release.mjs all patch",
+    "release:all:minor": "node ./release.mjs all minor",
+    "release:all:major": "node ./release.mjs all major"
   }
 }
