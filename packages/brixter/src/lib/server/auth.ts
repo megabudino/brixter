@@ -1,4 +1,6 @@
+import { getRequestEvent } from '$app/server';
 import { betterAuth } from 'better-auth';
+import { sveltekitCookies } from 'better-auth/svelte-kit';
 import type { Auth } from 'better-auth/types';
 import { getCoreConfig } from './config.ts';
 import { getDb } from './db.ts';
@@ -23,7 +25,7 @@ function build(): Auth {
 				}
 			}
 		},
-		plugins: []
+		plugins: [sveltekitCookies(getRequestEvent)]
 	}) as unknown as Auth;
 }
 

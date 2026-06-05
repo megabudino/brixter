@@ -2,9 +2,12 @@
 	import { enhance } from '$app/forms';
 	import { Button, Input, Spinner } from 'brixter/ui';
 
-	let { form }: { form: any } = $props();
+	let { form, notice = '' }: { form: any; notice?: string } = $props();
 
 	let submitting = $state(false);
+	let submitError = $state('');
+
+	const displayError = $derived(form?.message ?? submitError ?? notice);
 </script>
 
 <div class="flex min-h-screen items-center justify-center">
@@ -19,9 +22,27 @@
 			action="?/login"
 			use:enhance={() => {
 				submitting = true;
-				return async ({ update }) => {
-					await update();
-					submitting = false;
+				submitError = '';
+				return async ({ result, update }) => {
+					try {
+						if (result.type === 'redirect') {
+							await update();
+							return;
+						}
+						await update();
+						if (result.type === 'error') {
+							submitError =
+								result.error?.message?.trim() ||
+								'Sign in failed unexpectedly. Please try again.';
+						}
+					} catch (error) {
+						submitError =
+							error instanceof Error && error.message.trim()
+								? error.message
+								: 'Sign in failed unexpectedly. Please try again.';
+					} finally {
+						submitting = false;
+					}
 				};
 			}}
 			class="space-y-6"
@@ -30,11 +51,11 @@
 				<Input label="Email" type="email" name="email" required value={form?.email ?? ''} />
 				<Input label="Password" type="password" name="password" required />
 
-				{#if form?.message}
-					<p class="text-error text-sm">{form.message}</p>
+				{#if displayError}
+					<p class="text-error text-sm" role="alert" aria-live="polite">{displayError}</p>
 				{/if}
 
-				<Button class="w-full" disabled={submitting}>
+				<Button type="submit" class="w-full" disabled={submitting}>
 					{#if submitting}
 						<span class="flex items-center justify-center gap-2"><Spinner /> Signing in...</span>
 					{:else}

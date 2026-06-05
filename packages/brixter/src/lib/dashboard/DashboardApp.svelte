@@ -51,7 +51,7 @@
 
 {#snippet renderPage()}
 	{#if data.page === 'login'}
-		<LoginPage {form} />
+		<LoginPage {form} notice={pageData.notice ?? ''} />
 	{:else if data.page === 'setup'}
 		<SetupPage {form} />
 	{:else if data.page === 'config-error'}

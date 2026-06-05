@@ -1,4 +1,6 @@
 import { error, fail, redirect, type Actions, type RequestEvent } from '@sveltejs/kit';
+import { APIError } from '@better-auth/core/error';
+import { parseSetCookieHeader, toCookieOptions } from 'better-auth/cookies';
 import { getAuth } from '../server/auth.ts';
 import { getConfig, getCoreConfigIssues } from '../server/config.ts';
 import { isSetupComplete } from '../server/setup.ts';
@@ -57,6 +59,96 @@ function decodePathPart(value: string | undefined): string {
 	return decodeURIComponent(value ?? '');
 }
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+	INVALID_EMAIL_OR_PASSWORD: 'Incorrect email or password.',
+	EMAIL_NOT_VERIFIED:
+		'Your email is not verified yet. Check your inbox for a verification link, or ask an admin for help.',
+	FAILED_TO_CREATE_SESSION: 'We could not start a session. Please try again.',
+	EMAIL_PASSWORD_DISABLED: 'Email sign-in is not enabled on this server.',
+	INVALID_ORIGIN:
+		'This sign-in request was blocked because the site origin does not match server configuration. Set ORIGIN to the exact URL in your browser (scheme, host, and port).',
+	INVALID_EMAIL: 'Enter a valid email address.'
+};
+
+function formatAuthErrorMessage(error: APIError, fallback: string): string {
+	const code =
+		typeof error.body === 'object' && error.body !== null && 'code' in error.body
+			? String(error.body.code)
+			: '';
+	if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code];
+
+	const bodyMessage =
+		typeof error.body === 'object' && error.body !== null && 'message' in error.body
+			? String(error.body.message)
+			: '';
+	if (bodyMessage.trim()) return bodyMessage.trim();
+
+	const message = error.message?.trim();
+	if (message) return message;
+
+	return fallback;
+}
+
+function getActionErrorMessage(
+	error: unknown,
+	fallback: string
+): { message: string; status: number } {
+	if (error instanceof APIError) {
+		return {
+			message: formatAuthErrorMessage(error, fallback),
+			status: error.statusCode ?? 400
+		};
+	}
+
+	const status =
+		typeof error === 'object' &&
+		error !== null &&
+		'statusCode' in error &&
+		typeof error.statusCode === 'number'
+			? error.statusCode
+			: typeof error === 'object' &&
+				  error !== null &&
+				  'status' in error &&
+				  typeof error.status === 'number'
+				? error.status
+				: 400;
+
+	const candidates = [
+		error instanceof Error ? error.message : null,
+		typeof error === 'object' &&
+		error !== null &&
+		'body' in error &&
+		typeof error.body === 'object' &&
+		error.body !== null &&
+		'message' in error.body &&
+		typeof error.body.message === 'string'
+			? error.body.message
+			: null,
+		typeof error === 'object' &&
+		error !== null &&
+		'cause' in error &&
+		typeof error.cause === 'object' &&
+		error.cause !== null &&
+		'message' in error.cause &&
+		typeof error.cause.message === 'string'
+			? error.cause.message
+			: null
+	].filter((value): value is string => Boolean(value?.trim()));
+
+	const rawMessage = candidates[0]?.trim();
+	if (!rawMessage) return { message: fallback, status };
+
+	if (
+		/invalid email or password|invalid.*credential|incorrect.*password|email not found|user not found/i.test(
+			rawMessage
+		)
+	) {
+		return { message: 'Incorrect email or password.', status: 401 };
+	}
+
+	return { message: rawMessage, status };
+}
+
 function dashboardPath(pathname: string): string {
 	if (pathname === '/admin') return '';
 	if (pathname.startsWith('/admin/')) return pathname.slice('/admin/'.length);
@@ -107,10 +199,18 @@ function matchPage(pathname: string): PageMatch {
 	throw error(404, 'Not found');
 }
 
-async function loadLogin({ locals }: RequestEvent) {
+async function loadLogin({ locals, url }: RequestEvent) {
 	if (!isSetupComplete()) throw redirect(302, '/admin/setup');
 	if (locals.user) throw redirect(302, '/admin/routes');
-	return {};
+
+	const reason = url.searchParams.get('reason');
+	const notices: Record<string, string> = {
+		required: 'Sign in to continue.',
+		session:
+			'Your session could not be verified. Please sign in again. If this keeps happening, check that ORIGIN matches the URL in your browser.'
+	};
+
+	return { notice: reason ? (notices[reason] ?? undefined) : undefined };
 }
 
 async function loadAccounts({ locals }: RequestEvent) {
@@ -597,7 +697,9 @@ export async function loadDashboard(event: RequestEvent) {
 
 	const isPublic = match.page === 'login' || match.page === 'setup';
 
-	if (!isPublic && !event.locals.user) throw redirect(302, '/admin/login');
+	if (!isPublic && !event.locals.user) {
+		throw redirect(302, '/admin/login?reason=required');
+	}
 
 	let pageData: Record<string, unknown>;
 	switch (match.page) {
@@ -628,45 +730,26 @@ export async function loadDashboard(event: RequestEvent) {
 	};
 }
 
-function getSetCookieHeaders(headers: Headers): string[] {
-	const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
-	const values = getSetCookie?.call(headers);
-	if (values?.length) return values;
-
-	const header = headers.get('set-cookie');
-	if (!header) return [];
-	return header.split(/,(?=\s*[^;,=\s]+=)/).map((value) => value.trim());
-}
-
 function applySetCookieHeaders(headers: Headers, cookies: RequestEvent['cookies']) {
-	const setCookieHeaders = getSetCookieHeaders(headers);
-	for (const header of setCookieHeaders) {
-		const [pair, ...attributes] = header.split(';').map((part) => part.trim());
-		const separator = pair.indexOf('=');
-		if (separator === -1) continue;
+	const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+	const setCookieValues = getSetCookie?.call(headers);
+	const setCookieHeader = setCookieValues?.length
+		? setCookieValues.join(', ')
+		: headers.get('set-cookie');
+	if (!setCookieHeader) return;
 
-		const name = pair.slice(0, separator);
-		const value = pair.slice(separator + 1);
-		const options: Parameters<typeof cookies.set>[2] = {
-			path: '/',
-			encode: (cookieValue) => cookieValue
-		};
-
-		for (const attribute of attributes) {
-			const [rawKey, rawValue] = attribute.split('=');
-			const key = rawKey.toLowerCase();
-			if (key === 'httponly') options.httpOnly = true;
-			if (key === 'secure') options.secure = true;
-			if (key === 'path' && rawValue) options.path = rawValue;
-			if (key === 'max-age' && rawValue) options.maxAge = Number(rawValue);
-			if (key === 'domain' && rawValue) options.domain = rawValue;
-			if (key === 'expires' && rawValue) options.expires = new Date(rawValue);
-			if (key === 'samesite' && rawValue) {
-				options.sameSite = rawValue.toLowerCase() as 'strict' | 'lax' | 'none';
+	const parsed = parseSetCookieHeader(setCookieHeader);
+	for (const [name, attributes] of parsed) {
+		try {
+			cookies.set(name, attributes.value, {
+				...toCookieOptions(attributes),
+				path: attributes.path || '/'
+			});
+		} catch (err) {
+			if (process.env.NODE_ENV !== 'production') {
+				console.error('brixter failed to set auth cookie', name, err);
 			}
 		}
-
-		cookies.set(name, value, options);
 	}
 }
 
@@ -683,12 +766,22 @@ async function loginAction({ request, cookies }: RequestEvent) {
 			headers: request.headers,
 			returnHeaders: true
 		});
-		applySetCookieHeaders(result.headers, cookies);
+		if (result.headers) applySetCookieHeaders(result.headers, cookies);
+
+		const session = await getAuth().api.getSession({ headers: request.headers });
+		if (!session?.user) {
+			return fail(500, {
+				message:
+					'Sign-in succeeded but your session was not saved. Confirm ORIGIN in your environment matches the URL in your browser (including http/https and port), and that cookies are not blocked.',
+				email
+			});
+		}
 	} catch (err) {
 		if (process.env.NODE_ENV !== 'production') {
 			console.error('brixter login failed', err);
 		}
-		return fail(400, { message: 'Invalid email or password.', email });
+		const { message, status } = getActionErrorMessage(err, 'Sign in failed. Please try again.');
+		return fail(status, { message, email });
 	}
 
 	throw redirect(302, '/admin/routes');
@@ -717,10 +810,10 @@ async function setupAction({ request, cookies }: RequestEvent) {
 			headers: request.headers,
 			returnHeaders: true
 		});
-		applySetCookieHeaders(result.headers, cookies);
-	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Account creation failed.';
-		return fail(400, { message, name, email });
+		if (result.headers) applySetCookieHeaders(result.headers, cookies);
+	} catch (err) {
+		const { message, status } = getActionErrorMessage(err, 'Account creation failed.');
+		return fail(status, { message, name, email });
 	}
 
 	throw redirect(302, '/admin/routes');
