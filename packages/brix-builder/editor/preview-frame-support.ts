@@ -75,7 +75,7 @@ export function syncPreviewTheme(frameDocument: Document): () => void {
 
 function clearManagedHeadAssets(frameDocument: Document): void {
 	for (const node of Array.from(
-		frameDocument.head.querySelectorAll('[data-builder-preview-head-asset="true"]')
+		frameDocument.head.querySelectorAll('[data-brixter-preview-head-asset="true"]')
 	)) {
 		node.remove();
 	}

@@ -11,14 +11,14 @@ describe('createBrikSchemaFromMarkup', () => {
 
 			<section>
 				<h2
-					data-builder-field="headline"
-					data-builder-kind="richtext-inline"
-					data-builder-default="Titolo"
+					data-brixter-field="headline"
+					data-brixter-kind="richtext-inline"
+					data-brixter-default="Titolo"
 				>
 					{@html headline}
 				</h2>
-				<div data-builder-collection-item="articles">
-					<h3 data-builder-field="articles[].title" data-builder-default="Nuovo articolo">
+				<div data-brixter-collection-item="articles">
+					<h3 data-brixter-field="articles[].title" data-brixter-default="Nuovo articolo">
 						{article.title}
 					</h3>
 				</div>
@@ -71,13 +71,13 @@ describe('createBrixDefinitions', () => {
 				'../lib/brixter/brix/Cta.svelte': `
 					<div>
 						<h2
-							data-builder-field="headline"
-							data-builder-kind="richtext-inline"
-							data-builder-default="Titolo"
+							data-brixter-field="headline"
+							data-brixter-kind="richtext-inline"
+							data-brixter-default="Titolo"
 						>
 							{@html headline}
 						</h2>
-						<a data-builder-field="cta.label" data-builder-default="Parliamone">
+						<a data-brixter-field="cta.label" data-brixter-default="Parliamone">
 							{cta.label}
 						</a>
 					</div>
@@ -112,14 +112,14 @@ describe('createBrixDefinitions', () => {
 		expect(definitions[0]?.previewBindings).toEqual([
 			{
 				type: 'richtext',
-				selector: '[data-builder-field="headline"]',
+				selector: '[data-brixter-field="headline"]',
 				path: 'headline',
 				label: undefined,
 				richTextMode: 'inline'
 			},
 			{
 				type: 'text',
-				selector: '[data-builder-field="cta.label"]',
+				selector: '[data-brixter-field="cta.label"]',
 				path: 'cta.label',
 				label: undefined
 			}

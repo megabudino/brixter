@@ -1,0 +1,23 @@
+<script module lang="ts">
+	export const brikDescription = 'Short bridge statement between problem and offer.';
+</script>
+
+<section class="bg-gray-50 px-6 py-16 dark:bg-gray-900">
+	<div class="mx-auto max-w-2xl border-y border-gray-300 py-12 text-center dark:border-gray-700">
+		<h2
+			class="font-display text-heading text-3xl md:text-4xl"
+			data-brixter-field="statement"
+			data-brixter-kind="richtext-inline"
+		>
+			A short bridge statement between problem and offer.
+		</h2>
+
+		<p
+			class="text-secondary mx-auto mt-5 max-w-xl text-base leading-7"
+			data-brixter-field="note"
+			data-brixter-kind="richtext-inline"
+		>
+			A supporting note that follows the statement.
+		</p>
+	</div>
+</section>

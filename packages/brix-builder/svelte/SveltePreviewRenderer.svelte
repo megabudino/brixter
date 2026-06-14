@@ -118,18 +118,18 @@
 			return;
 		}
 
-		const container = event.currentTarget || (isElement(event.target) ? event.target.closest('[data-builder-preview-block]') : null);
+		const container = event.currentTarget || (isElement(event.target) ? event.target.closest('[data-brixter-preview-block]') : null);
 		if (!isHTMLElement(container)) {
 			return;
 		}
 
 		// 1. Try DOM target matching first (100% accurate, no coordinate issues)
 		if (isElement(event.target)) {
-			const itemElement = event.target.closest('[data-builder-collection-item]');
+			const itemElement = event.target.closest('[data-brixter-collection-item]');
 			if (itemElement) {
-				const collectionPath = itemElement.getAttribute('data-builder-collection-item');
+				const collectionPath = itemElement.getAttribute('data-brixter-collection-item');
 				if (collectionPath) {
-					const items = Array.from(container.querySelectorAll(`[data-builder-collection-item="${collectionPath}"]`));
+					const items = Array.from(container.querySelectorAll(`[data-brixter-collection-item="${collectionPath}"]`));
 					const index = items.indexOf(itemElement);
 					if (index !== -1) {
 						hoveredCollectionItem = getCollectionItemKey(blockId, collectionPath, index);
@@ -196,7 +196,7 @@
 </script>
 
 <div onclick={(event) => {
-	if (!(event.target as Element).closest('[data-builder-preview-block]')) {
+	if (!(event.target as Element).closest('[data-brixter-preview-block]')) {
 		onDeselectBlock();
 	}
 }}>
@@ -211,7 +211,7 @@
 			{@const hasPreviewBindings = definition.previewBindings.length > 0}
 			{#if hasPreviewBindings}
 				<div
-					data-builder-preview-block={block.id}
+					data-brixter-preview-block={block.id}
 					use:previewContainer={{
 						block,
 						definition,
@@ -243,7 +243,7 @@
 							onToggle={() => onOpenInserterModal(block.id, 'before')}
 						/>
 					{/if}
-					<div data-builder-preview-content>
+					<div data-brixter-preview-content>
 						<BlockComponent {...renderProps} />
 					</div>
 					{#if activeBlockId === block.id && !previewMode}
@@ -339,7 +339,7 @@
 				</div>
 			{:else}
 				<div
-					data-builder-preview-block={block.id}
+					data-brixter-preview-block={block.id}
 					use:previewContainer={{
 						block,
 						definition,
@@ -376,7 +376,7 @@
 							onToggle={() => onOpenInserterModal(block.id, 'before')}
 						/>
 					{/if}
-					<div data-builder-preview-content>
+					<div data-brixter-preview-content>
 						<BlockComponent {...renderProps} />
 					</div>
 					{#if activeBlockId === block.id && !previewMode}

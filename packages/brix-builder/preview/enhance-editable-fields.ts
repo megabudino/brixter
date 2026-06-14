@@ -39,9 +39,9 @@ interface MountedField {
 }
 
 function clearPreviewFieldChrome(element: HTMLElement): void {
-	element.removeAttribute('data-builder-placeholder');
-	element.removeAttribute('data-builder-placeholder-active');
-	element.removeAttribute('data-builder-icon-empty');
+	element.removeAttribute('data-brixter-placeholder');
+	element.removeAttribute('data-brixter-placeholder-active');
+	element.removeAttribute('data-brixter-icon-empty');
 	if (element.dataset.builderPreviewMinWidth === 'true') {
 		element.style.removeProperty('min-width');
 		delete element.dataset.builderPreviewMinWidth;
@@ -114,14 +114,14 @@ export function attachPreviewEditableFields(
 	}
 
 	function refreshNow(): void {
-		node.toggleAttribute('data-builder-editing', currentParams.active);
+		node.toggleAttribute('data-brixter-editing', currentParams.active);
 
 		if (!currentParams.active) {
 			teardownAll();
 		}
 
 		const blockRoot = getBlockRoot(node);
-		const fields = Array.from(node.querySelectorAll<HTMLElement>('[data-builder-field]'));
+		const fields = Array.from(node.querySelectorAll<HTMLElement>('[data-brixter-field]'));
 		const liveFields = new Set(fields);
 		const focusPath = currentParams.focusPath ?? null;
 
@@ -144,7 +144,7 @@ export function attachPreviewEditableFields(
 		}
 
 		for (const element of fields) {
-			const rawPath = element.getAttribute('data-builder-field');
+			const rawPath = element.getAttribute('data-brixter-field');
 			if (!rawPath) {
 				continue;
 			}
@@ -171,7 +171,7 @@ export function attachPreviewEditableFields(
 			let defaultString = resolveDefaultText(defaultValue);
 
 			if (!defaultString) {
-				defaultString = element.getAttribute('data-builder-default') || 
+				defaultString = element.getAttribute('data-brixter-default') || 
 				                (fieldDef ? getFallbackText(rawPath.split('.').at(-1) || '') : '');
 			}
 
@@ -180,9 +180,9 @@ export function attachPreviewEditableFields(
 				plainDefaultString = '';
 			}
 			if (plainDefaultString) {
-				element.setAttribute('data-builder-placeholder', plainDefaultString);
+				element.setAttribute('data-brixter-placeholder', plainDefaultString);
 			} else {
-				element.removeAttribute('data-builder-placeholder');
+				element.removeAttribute('data-brixter-placeholder');
 			}
 
 			const rawValue = getValueAtPath(currentParams.previewProps, path);
@@ -191,19 +191,19 @@ export function attachPreviewEditableFields(
 				path === focusPath || element.dataset.builderFieldEnhanced === 'true';
 
 			if (isEditing) {
-				element.removeAttribute('data-builder-placeholder-active');
+				element.removeAttribute('data-brixter-placeholder-active');
 			} else {
-				element.toggleAttribute('data-builder-placeholder-active', isEmpty);
+				element.toggleAttribute('data-brixter-placeholder-active', isEmpty);
 			}
 
 			if (resolveFieldKind(element) === 'icon' && isEmpty) {
-				element.setAttribute('data-builder-icon-empty', 'true');
+				element.setAttribute('data-brixter-icon-empty', 'true');
 				const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle" style="width: 100%; height: 100%; opacity: 0.4; stroke-dasharray: 4 4;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`;
 				if (element.innerHTML.trim() !== placeholderSvg) {
 					element.innerHTML = placeholderSvg;
 				}
 			} else if (resolveFieldKind(element) === 'icon') {
-				element.removeAttribute('data-builder-icon-empty');
+				element.removeAttribute('data-brixter-icon-empty');
 			}
 
 			if (
@@ -213,7 +213,7 @@ export function attachPreviewEditableFields(
 			) {
 				syncInteractiveHostMinWidth(
 					element,
-					plainDefaultString || element.getAttribute('data-builder-placeholder') || ''
+					plainDefaultString || element.getAttribute('data-brixter-placeholder') || ''
 				);
 			} else if (element.dataset.builderPreviewMinWidth === 'true') {
 				element.style.removeProperty('min-width');
@@ -257,7 +257,7 @@ export function attachPreviewEditableFields(
 	}
 
 	function resolveFieldPath(element: HTMLElement, blockRoot: HTMLElement): string | null {
-		const rawPath = element.getAttribute('data-builder-field');
+		const rawPath = element.getAttribute('data-brixter-field');
 		if (!rawPath) {
 			return null;
 		}
@@ -371,7 +371,7 @@ export function attachPreviewEditableFields(
 
 		return Boolean(
 			element.closest(
-				'.builder-preview-field-editor, .ProseMirror, .builder-preview-text-editor, [data-builder-field-enhanced="pending"]'
+				'.builder-preview-field-editor, .ProseMirror, .builder-preview-text-editor, [data-brixter-field-enhanced="pending"]'
 			)
 		);
 	}
@@ -390,11 +390,11 @@ export function attachPreviewEditableFields(
 		const useHostInlineTextEditor = kind === 'text' && isInteractiveFieldHost(element);
 		const multiline = kind === 'text' && !useHostInlineTextEditor && inferMultiline(element);
 
-		element.removeAttribute('data-builder-placeholder-active');
+		element.removeAttribute('data-brixter-placeholder-active');
 		element.dataset.builderFieldEnhanced = 'true';
 		element.style.cursor = (kind === 'image' || kind === 'icon') ? 'pointer' : 'text';
 
-		const placeholder = element.getAttribute('data-builder-placeholder') || '';
+		const placeholder = element.getAttribute('data-brixter-placeholder') || '';
 		const hostWidth = element.offsetWidth;
 		const placeholderWidth = measurePlaceholderWidth(element, placeholder);
 
@@ -515,7 +515,7 @@ export function attachPreviewEditableFields(
 							element.ownerDocument
 						);
 						if (plain.trim()) {
-							element.removeAttribute('data-builder-placeholder-active');
+							element.removeAttribute('data-brixter-placeholder-active');
 						}
 						currentParams.onUpdateText(path, plain);
 					},
@@ -537,7 +537,7 @@ export function attachPreviewEditableFields(
 					initialClickCoords: shouldFocus ? clickCoords : null,
 					onChange: (nextValue: string) => {
 						if (nextValue.trim()) {
-							element.removeAttribute('data-builder-placeholder-active');
+							element.removeAttribute('data-brixter-placeholder-active');
 						}
 						currentParams.onUpdateText(path, nextValue);
 					},
@@ -702,7 +702,7 @@ export function attachPreviewEditableFields(
 		if (state.instance) {
 			if (state.kind !== 'image' && state.kind !== 'icon' && state.kind !== 'pending') {
 				const value = getValueAtPath(currentParams.previewProps, state.path);
-				const defaultValue = element.getAttribute('data-builder-placeholder') || '';
+				const defaultValue = element.getAttribute('data-brixter-placeholder') || '';
 				restoreElementContent(state.element, value, state.kind, defaultValue);
 			}
 		}
@@ -754,17 +754,17 @@ export function attachPreviewEditableFields(
 		destroy() {
 			mutationObserver.disconnect();
 			teardownAll();
-			node.removeAttribute('data-builder-editing');
+			node.removeAttribute('data-brixter-editing');
 		}
 	};
 }
 
 function getBlockRoot(node: HTMLElement): HTMLElement {
-	return (node.closest('[data-builder-preview-block]') as HTMLElement | null) ?? node;
+	return (node.closest('[data-brixter-preview-block]') as HTMLElement | null) ?? node;
 }
 
 function resolveFieldKind(element: HTMLElement): FieldKind {
-	const builderKind = element.getAttribute('data-builder-kind');
+	const builderKind = element.getAttribute('data-brixter-kind');
 
 	if (builderKind === 'icon') {
 		return 'icon';
@@ -786,7 +786,7 @@ function coerceRichTextValue(value: unknown, element: HTMLElement): BuilderRichT
 		return value;
 	}
 
-	const builderKind = element.getAttribute('data-builder-kind');
+	const builderKind = element.getAttribute('data-brixter-kind');
 	const mode = builderKind === 'richtext-block' ? 'block' : 'inline';
 	return createRichTextValue(mode, asPlainText(value));
 }
@@ -973,8 +973,8 @@ function resolveFieldEditorColor(element: HTMLElement, color: string): string {
 		return color;
 	}
 
-	const hadPlaceholder = element.hasAttribute('data-builder-placeholder-active');
-	element.removeAttribute('data-builder-placeholder-active');
+	const hadPlaceholder = element.hasAttribute('data-brixter-placeholder-active');
+	element.removeAttribute('data-brixter-placeholder-active');
 
 	let resolved = element.ownerDocument.defaultView?.getComputedStyle(element).color ?? color;
 
@@ -986,7 +986,7 @@ function resolveFieldEditorColor(element: HTMLElement, color: string): string {
 	}
 
 	if (hadPlaceholder) {
-		element.setAttribute('data-builder-placeholder-active', '');
+		element.setAttribute('data-brixter-placeholder-active', '');
 	}
 
 	return isPlaceholderTone(resolved) ? color : resolved;

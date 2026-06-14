@@ -36,6 +36,10 @@
 			"types": "./dist/index.d.ts",
 			"svelte": "./dist/index.js",
 			"default": "./dist/index.js"
+		},
+		"./preprocess": {
+			"types": "./dist/svelte/preprocess.d.ts",
+			"default": "./dist/svelte/preprocess.js"
 		}
 	},
 	"peerDependencies": {
@@ -51,6 +55,7 @@
 	"dependencies": {
 		"@tiptap/core": "^3.22.4",
 		"@tiptap/starter-kit": "^3.22.4",
+		"magic-string": "^0.30.0",
 		"yaml": "^1.10.3"
 	}
 }

@@ -21,7 +21,7 @@
 
 	let hasIcon = $derived(
 		element &&
-		!element.hasAttribute('data-builder-icon-empty') &&
+		!element.hasAttribute('data-brixter-icon-empty') &&
 		element.innerHTML.trim() !== ''
 	);
 

@@ -1,10 +1,10 @@
 import type { BuilderField, BuilderFieldKind, BuilderFields } from '../core.js';
 
-const BUILDER_FIELD_ATTRIBUTE = 'data-builder-field';
-const BUILDER_KIND_ATTRIBUTE = 'data-builder-kind';
-const BUILDER_DEFAULT_ATTRIBUTE = 'data-builder-default';
-const BUILDER_LABEL_ATTRIBUTE = 'data-builder-label';
-const BUILDER_PREVIEW_LABEL_ATTRIBUTE = 'data-builder-preview-label';
+const BUILDER_FIELD_ATTRIBUTE = 'data-brixter-field';
+const BUILDER_KIND_ATTRIBUTE = 'data-brixter-kind';
+const BUILDER_DEFAULT_ATTRIBUTE = 'data-brixter-default';
+const BUILDER_LABEL_ATTRIBUTE = 'data-brixter-label';
+const BUILDER_PREVIEW_LABEL_ATTRIBUTE = 'data-brixter-preview-label';
 
 interface PathSegment {
 	name: string;

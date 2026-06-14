@@ -419,7 +419,7 @@
 
 		if (resolvedBinding.binding.type === 'image' || resolvedBinding.binding.type === 'icon') {
 			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
-			const rawPath = matchedElement.getAttribute('data-builder-field');
+			const rawPath = matchedElement.getAttribute('data-brixter-field');
 			const path =
 				rawPath != null
 					? (materializeFieldPath(rawPath, container, matchedElement) ?? resolvedBinding.path)
@@ -435,7 +435,7 @@
 
 		if (resolvedBinding.binding.type === 'richtext' || resolvedBinding.binding.type === 'text') {
 			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
-			const rawPath = matchedElement.getAttribute('data-builder-field');
+			const rawPath = matchedElement.getAttribute('data-brixter-field');
 			const path =
 				rawPath != null
 					? (materializeFieldPath(rawPath, container, matchedElement) ?? resolvedBinding.path)

@@ -38,12 +38,22 @@
 	let { data, form }: { data: any; form: any } = $props();
 
 	const brixDefinitions = createBrixDefinitions(
-		import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
-		import.meta.glob('$lib/brixter/brix/*.svelte', {
-			query: '?raw',
-			import: 'default',
-			eager: true
-		}) as Record<string, string>
+		{
+			...import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
+			...import.meta.glob('$lib/brixter/brix/*.brix.svelte', { eager: true })
+		},
+		{
+			...import.meta.glob('$lib/brixter/brix/*.svelte', {
+				query: '?raw',
+				import: 'default',
+				eager: true
+			}),
+			...import.meta.glob('$lib/brixter/brix/*.brix.svelte', {
+				query: '?raw',
+				import: 'default',
+				eager: true
+			})
+		} as Record<string, string>
 	);
 
 	let merging = $state(false);
