@@ -216,8 +216,8 @@ body {
 	background-clip: padding-box;
 }
 
-[data-builder-field-enhanced='pending'],
-[data-builder-field-enhanced='true'],
+[data-brixter-field-enhanced='pending'],
+[data-brixter-field-enhanced='true'],
 .builder-preview-field-editor,
 .builder-richtext-inline-editor,
 .builder-preview-text-editor {
@@ -252,7 +252,7 @@ body {
 	white-space: nowrap;
 }
 
-[data-builder-field-enhanced='true']:is(a, button, [role='button'], [role='link'])
+[data-brixter-field-enhanced='true']:is(a, button, [role='button'], [role='link'])
 	.builder-preview-text-editor--inline.is-editor-empty::before {
 	white-space: nowrap;
 }
@@ -269,7 +269,7 @@ body {
 	text-align: inherit;
 }
 
-[data-builder-field-enhanced='true']:is(a, button, [role='button'], [role='link']) {
+[data-brixter-field-enhanced='true']:is(a, button, [role='button'], [role='link']) {
 	display: inline-flex !important;
 	align-items: center;
 	justify-content: center;
@@ -302,39 +302,39 @@ body {
 	white-space: inherit;
 }
 
-[data-builder-field]:empty::before,
-[data-builder-field] > p:only-child:empty::before,
-[data-builder-field] > p:only-child:has(> br:only-child)::before {
-	content: attr(data-builder-placeholder);
+[data-brixter-field]:empty::before,
+[data-brixter-field] > p:only-child:empty::before,
+[data-brixter-field] > p:only-child:has(> br:only-child)::before {
+	content: attr(data-brixter-placeholder);
 	color: #9ca3af;
 	opacity: 1;
 	pointer-events: none;
 }
 
-[data-builder-field]:is(a, button, [role='button'], [role='link']):empty::before {
+[data-brixter-field]:is(a, button, [role='button'], [role='link']):empty::before {
 	display: inline;
 }
 
-[data-builder-field] > p:only-child:has(> br:only-child) > br {
+[data-brixter-field] > p:only-child:has(> br:only-child) > br {
 	display: none;
 }
 
-img[data-builder-field][data-builder-placeholder-active] {
+img[data-brixter-field][data-brixter-placeholder-active] {
 	background-color: #f4f4f5;
 	object-fit: cover;
 }
 
-body.dark img[data-builder-field][data-builder-placeholder-active] {
+body.dark img[data-brixter-field][data-brixter-placeholder-active] {
 	background-color: #27272a;
 }
 
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
+[data-brixter-placeholder-active]:not(img):not([data-brixter-field-enhanced='true']):not(
 	:is(a, button, [role='button'], [role='link'])
 ) {
 	opacity: 0.6;
 }
 
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):is(
+[data-brixter-placeholder-active]:not(img):not([data-brixter-field-enhanced='true']):is(
 	a,
 	button,
 	[role='button'],
@@ -344,25 +344,25 @@ body.dark img[data-builder-field][data-builder-placeholder-active] {
 	color: #9ca3af !important;
 }
 
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
+[data-brixter-placeholder-active]:not(img):not([data-brixter-field-enhanced='true']):not(
 	:is(a, button, [role='button'], [role='link'])
 ),
-[data-builder-placeholder-active]:not(img):not([data-builder-field-enhanced='true']):not(
+[data-brixter-placeholder-active]:not(img):not([data-brixter-field-enhanced='true']):not(
 	:is(a, button, [role='button'], [role='link'])
 ) *:not(.builder-preview-field-editor):not(.builder-preview-text-editor):not(.ProseMirror):not(.builder-richtext-inline-editor):not(.builder-richtext-mount) {
 	color: #9ca3af !important;
 }
 
-[data-builder-field-enhanced='true'] .builder-preview-text-editor,
-[data-builder-field-enhanced='true'] .ProseMirror,
-[data-builder-field-enhanced='true'] .builder-richtext-inline-editor,
-[data-builder-field-enhanced='true'] .builder-richtext-inline-editor p {
+[data-brixter-field-enhanced='true'] .builder-preview-text-editor,
+[data-brixter-field-enhanced='true'] .ProseMirror,
+[data-brixter-field-enhanced='true'] .builder-richtext-inline-editor,
+[data-brixter-field-enhanced='true'] .builder-richtext-inline-editor p {
 	color: var(--builder-preview-field-text-color, currentColor) !important;
 	-webkit-text-fill-color: var(--builder-preview-field-text-color, currentColor);
 	caret-color: var(--builder-preview-field-text-color, currentColor);
 }
 
-body[data-builder-preview-page-overflow='true']::before {
+body[data-brixter-preview-page-overflow='true']::before {
 	position: fixed;
 	top: 12px;
 	right: 12px;
@@ -376,12 +376,12 @@ body[data-builder-preview-page-overflow='true']::before {
 	pointer-events: none;
 }
 
-[data-builder-preview-overflow-item='true'] {
+[data-brixter-preview-overflow-item='true'] {
 	outline: 2px solid #f59e0b !important;
 	outline-offset: -2px;
 }
 
-body[data-builder-preview-canvas] [data-builder-preview-content] :is(
+body[data-brixter-preview-canvas] [data-brixter-preview-content] :is(
 	a,
 	button,
 	input[type='submit'],
@@ -396,7 +396,7 @@ body[data-builder-preview-canvas] [data-builder-preview-content] :is(
 	[role='button'],
 	[role='link']
 ),
-body[data-builder-preview-canvas] [data-builder-preview-content] :is(
+body[data-brixter-preview-canvas] [data-brixter-preview-content] :is(
 	a,
 	button,
 	input[type='submit'],
@@ -414,16 +414,16 @@ body[data-builder-preview-canvas] [data-builder-preview-content] :is(
 	pointer-events: none !important;
 }
 
-body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='pending'],
-body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-preview-field-editor,
-body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-preview-text-editor,
-body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .ProseMirror,
-body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-richtext-inline-editor,
-body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-field-enhanced='true'] .builder-richtext-mount {
+body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='pending'],
+body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-preview-field-editor,
+body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-preview-text-editor,
+body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .ProseMirror,
+body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-richtext-inline-editor,
+body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-richtext-mount {
 	pointer-events: auto !important;
 }
 
-[data-builder-field][data-builder-kind='icon']:empty::before {
+[data-brixter-field][data-brixter-kind='icon']:empty::before {
 	content: '+';
 	font-family: inherit;
 	font-weight: bold;
@@ -437,14 +437,14 @@ body[data-builder-preview-canvas] [data-builder-preview-content] [data-builder-f
 	opacity: 0.6;
 }
 
-body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']:hover,
-body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon'][data-builder-field-enhanced='true'] {
+body[data-brixter-preview-canvas] [data-brixter-field][data-brixter-kind='icon']:hover,
+body[data-brixter-preview-canvas] [data-brixter-field][data-brixter-kind='icon'][data-brixter-field-enhanced='true'] {
 	outline: 2px dashed #fde047 !important;
 	outline-offset: 2px;
 	border-radius: 4px;
 }
-.dark body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']:hover,
-.dark body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon'][data-builder-field-enhanced='true'] {
+.dark body[data-brixter-preview-canvas] [data-brixter-field][data-brixter-kind='icon']:hover,
+.dark body[data-brixter-preview-canvas] [data-brixter-field][data-brixter-kind='icon'][data-brixter-field-enhanced='true'] {
 	outline-color: #facc15 !important;
 }
 `;
@@ -493,12 +493,12 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 			const viewportWidth = frameDocument.documentElement.clientWidth;
 			const offenders = findPreviewOverflowElements(frameDocument, viewportWidth);
 			frameDocument.body.toggleAttribute(
-				'data-builder-preview-page-overflow',
+				'data-brixter-preview-page-overflow',
 				offenders.length > 0
 			);
 
 			for (const offender of offenders.slice(0, 20)) {
-				offender.setAttribute('data-builder-preview-overflow-item', 'true');
+				offender.setAttribute('data-brixter-preview-overflow-item', 'true');
 			}
 		}
 
@@ -527,15 +527,15 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 			mutationObserver.disconnect();
 			resizeObserver.disconnect();
 			clearOverflowMarkers(frameDocument);
-			frameDocument.body.removeAttribute('data-builder-preview-page-overflow');
+			frameDocument.body.removeAttribute('data-brixter-preview-page-overflow');
 		};
 	}
 
 	function isOverflowDiagnosticMutation(record: MutationRecord): boolean {
 		return (
 			record.type === 'attributes' &&
-			(record.attributeName === 'data-builder-preview-overflow-item' ||
-				record.attributeName === 'data-builder-preview-page-overflow')
+			(record.attributeName === 'data-brixter-preview-overflow-item' ||
+				record.attributeName === 'data-brixter-preview-page-overflow')
 		);
 	}
 
@@ -545,7 +545,7 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 	): HTMLElement[] {
 		const offenders = new Set<HTMLElement>();
 		const contentRoots = Array.from(
-			frameDocument.querySelectorAll<HTMLElement>('[data-builder-preview-content]')
+			frameDocument.querySelectorAll<HTMLElement>('[data-brixter-preview-content]')
 		);
 
 		for (const contentRoot of contentRoots) {
@@ -570,9 +570,9 @@ body[data-builder-preview-canvas] [data-builder-field][data-builder-kind='icon']
 
 	function clearOverflowMarkers(frameDocument: Document): void {
 		for (const element of Array.from(
-			frameDocument.querySelectorAll('[data-builder-preview-overflow-item]')
+			frameDocument.querySelectorAll('[data-brixter-preview-overflow-item]')
 		)) {
-			element.removeAttribute('data-builder-preview-overflow-item');
+			element.removeAttribute('data-brixter-preview-overflow-item');
 		}
 	}
 

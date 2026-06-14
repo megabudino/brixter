@@ -5,6 +5,7 @@
  * hidden catch-all route. The plugin only carries Vite-level integration
  * details that cannot live in SvelteKit route modules.
  */
+import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { loadEnv, type Plugin } from 'vite';
@@ -163,7 +164,7 @@ interface BrixDocument {
 	[key: string]: unknown;
 }
 
-function compileBrixYaml(source: string, options: BrixterPluginOptions): string {
+function compileBrixYaml(source: string, options: BrixterPluginOptions, brixFsDir?: string): string {
 	const parsed = parseYaml(source) as BrixDocument | null;
 	const document = parsed && typeof parsed === 'object' ? parsed : {};
 	const components = Array.isArray(document.components) ? document.components : [];
@@ -194,7 +195,8 @@ function compileBrixYaml(source: string, options: BrixterPluginOptions): string 
 		if (!importName) {
 			importName = `Brix${usedComponents.size}`;
 			usedComponents.set(componentName, importName);
-			imports.push(`import ${importName} from '${brixDir}/${componentName}.svelte';`);
+			const ext = pickExtension(brixFsDir, brixDir, componentName);
+			imports.push(`import ${importName} from '${brixDir}/${componentName}${ext}';`);
 		}
 
 		const propsName = `component${index}Props`;
@@ -263,6 +265,7 @@ function setBuildEnv(build: BuildRepoInfo): void {
 
 export function brixter(options: BrixterPluginOptions = {}): Plugin {
 	const adminPath = options.adminPath ?? '/admin';
+	let brixFsDir: string | undefined;
 	if (adminPath !== '/admin') {
 		console.warn(
 			`brixter: adminPath="${adminPath}" is not officially supported in v0.1; ` +
@@ -275,6 +278,17 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 		enforce: 'pre',
 		config(userConfig, env) {
 			const root = path.resolve(userConfig.root ?? process.cwd());
+
+			// Resolve the brix directory to a filesystem path so we can check
+			// whether .brix.svelte variants exist alongside .svelte files.
+			const brixDir = options.brixDir ?? '$lib/brixter/brix';
+			if (brixDir.startsWith('$lib/')) {
+				const libPath = path.join(root, 'src', 'lib', brixDir.slice('$lib/'.length));
+				brixFsDir = existsSync(libPath) ? libPath : undefined;
+			} else {
+				brixFsDir = path.resolve(root, brixDir);
+			}
+
 			const buildRepo = readBuildRepoInfo(root);
 			const appRoot = normalizeRepoPath(options.appRoot) ?? buildRepo.appRoot ?? '';
 			const routesRoot =
@@ -310,9 +324,16 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 		transform(code, id) {
 			if (!isBrixYaml(id)) return null;
 			return {
-				code: compileBrixYaml(code, options),
+				code: compileBrixYaml(code, options, brixFsDir),
 				map: { mappings: '' }
 			};
 		}
 	};
 }
+
+function pickExtension(brixFsDir: string | undefined, _brixDir: string, componentName: string): string {
+	if (!brixFsDir) return '.svelte';
+	const candidate = path.join(brixFsDir, `${componentName}.brix.svelte`);
+	return existsSync(candidate) ? '.brix.svelte' : '.svelte';
+}
+

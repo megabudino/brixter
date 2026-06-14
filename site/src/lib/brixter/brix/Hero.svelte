@@ -41,7 +41,7 @@
 		{#if eyebrow}
 			<p
 				class="text-muted mb-6 text-[11px] font-semibold tracking-wide uppercase"
-				data-builder-field="eyebrow"
+				data-brixter-field="eyebrow"
 			>
 				{eyebrow}
 			</p>
@@ -49,8 +49,8 @@
 
 		<h1
 			class="font-display text-heading text-5xl tracking-tight md:text-6xl"
-			data-builder-field="headline"
-			data-builder-kind="richtext-inline"
+			data-brixter-field="headline"
+			data-brixter-kind="richtext-inline"
 		>
 			{@html headline ?? ''}
 		</h1>
@@ -58,8 +58,8 @@
 		{#if subtitle}
 			<p
 				class="text-secondary mx-auto mt-6 max-w-xl text-lg leading-8"
-				data-builder-field="subtitle"
-				data-builder-kind="richtext-inline"
+				data-brixter-field="subtitle"
+				data-brixter-kind="richtext-inline"
 			>
 				{@html subtitle}
 			</p>
@@ -67,14 +67,14 @@
 
 		{#if cta}
 			<div class="mt-10">
-				<a href={cta.href} class="btn-site-primary" data-builder-field="cta.label">
+				<a href={cta.href} class="btn-site-primary" data-brixter-field="cta.label">
 					{cta.label}
 				</a>
 				{#if cta.note}
 					<p
 						class="text-muted mt-4 text-sm"
-						data-builder-field="cta.note"
-						data-builder-kind="richtext-inline"
+						data-brixter-field="cta.note"
+						data-brixter-kind="richtext-inline"
 					>
 						{@html cta.note}
 					</p>
@@ -89,7 +89,7 @@
 				src={screenshot}
 				alt="Product screenshot"
 				class="w-full shadow-2xl ring-1 ring-gray-900/10 dark:ring-white/10"
-				data-builder-field="screenshot"
+				data-brixter-field="screenshot"
 			/>
 		</div>
 	{/if}

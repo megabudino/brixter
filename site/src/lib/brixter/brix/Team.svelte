@@ -43,7 +43,7 @@
 				{#if eyebrow}
 					<p
 						class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
-						data-builder-field="eyebrow"
+						data-brixter-field="eyebrow"
 					>
 						{eyebrow}
 					</p>
@@ -51,8 +51,8 @@
 
 				<h2
 					class="font-display text-heading text-3xl md:text-4xl"
-					data-builder-field="headline"
-					data-builder-kind="richtext-inline"
+					data-brixter-field="headline"
+					data-brixter-kind="richtext-inline"
 				>
 					{@html headline ?? ''}
 				</h2>
@@ -61,8 +61,8 @@
 			{#if description}
 				<p
 					class="text-secondary text-base leading-7"
-					data-builder-field="description"
-					data-builder-kind="richtext-inline"
+					data-brixter-field="description"
+					data-brixter-kind="richtext-inline"
 				>
 					{@html description}
 				</p>
@@ -73,18 +73,18 @@
 			{#each members as member}
 				<article
 					class="border border-gray-300 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800"
-					data-builder-collection-item="members"
+					data-brixter-collection-item="members"
 				>
-					<h3 class="text-heading text-lg font-semibold" data-builder-field="members[].name">
+					<h3 class="text-heading text-lg font-semibold" data-brixter-field="members[].name">
 						{member.name}
 					</h3>
-					<p class="text-muted mt-1 text-sm" data-builder-field="members[].role">
+					<p class="text-muted mt-1 text-sm" data-brixter-field="members[].role">
 						{member.role}
 					</p>
 					<p
 						class="text-secondary mt-4 text-sm leading-6"
-						data-builder-field="members[].bio"
-						data-builder-kind="richtext-inline"
+						data-brixter-field="members[].bio"
+						data-brixter-kind="richtext-inline"
 					>
 						{@html member.bio ?? ''}
 					</p>

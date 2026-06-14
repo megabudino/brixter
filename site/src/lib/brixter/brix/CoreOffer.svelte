@@ -59,7 +59,7 @@
 			{#if eyebrow}
 				<p
 					class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
-					data-builder-field="eyebrow"
+					data-brixter-field="eyebrow"
 				>
 					{eyebrow}
 				</p>
@@ -67,8 +67,8 @@
 
 			<h2
 				class="font-display text-heading text-3xl md:text-4xl"
-				data-builder-field="headline"
-				data-builder-kind="richtext-inline"
+				data-brixter-field="headline"
+				data-brixter-kind="richtext-inline"
 			>
 				{@html headline ?? ''}
 			</h2>
@@ -76,15 +76,15 @@
 			{#if description}
 				<p
 					class="text-secondary mt-5 text-base leading-7"
-					data-builder-field="description"
-					data-builder-kind="richtext-inline"
+					data-brixter-field="description"
+					data-brixter-kind="richtext-inline"
 				>
 					{@html description}
 				</p>
 			{/if}
 
 			{#if cta}
-				<a href={cta.href} class="btn-site-primary mt-8" data-builder-field="cta.label">
+				<a href={cta.href} class="btn-site-primary mt-8" data-brixter-field="cta.label">
 					{cta.label}
 				</a>
 			{/if}
@@ -94,24 +94,24 @@
 			{#each features as feature}
 				<div
 					class="border-b border-gray-300 p-6 last:border-b-0 dark:border-gray-700"
-					data-builder-collection-item="features"
+					data-brixter-collection-item="features"
 				>
 					<div class="flex items-start gap-3">
 						<span
 							class="mt-1 h-5 w-5 shrink-0 text-yellow-500 dark:text-yellow-400"
-							data-builder-field="features[].icon"
-							data-builder-kind="icon"
+							data-brixter-field="features[].icon"
+							data-brixter-kind="icon"
 						>
 							{@html feature.icon ?? ''}
 						</span>
 						<div>
-							<h3 class="text-heading text-lg font-semibold" data-builder-field="features[].title">
+							<h3 class="text-heading text-lg font-semibold" data-brixter-field="features[].title">
 								{feature.title}
 							</h3>
 							<p
 								class="text-secondary mt-2 text-sm leading-6"
-								data-builder-field="features[].text"
-								data-builder-kind="richtext-inline"
+								data-brixter-field="features[].text"
+								data-brixter-kind="richtext-inline"
 							>
 								{@html feature.text ?? ''}
 							</p>

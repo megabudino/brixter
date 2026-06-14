@@ -43,26 +43,26 @@ describe('builder selector inference', () => {
 		expect(bindings).toEqual([
 			{
 				type: 'richtext',
-				selector: '[data-builder-field="headline"]',
+				selector: '[data-brixter-field="headline"]',
 				path: 'headline',
 				label: undefined,
 				richTextMode: 'inline'
 			},
 			{
 				type: 'text',
-				selector: '[data-builder-field="cta.label"]',
+				selector: '[data-brixter-field="cta.label"]',
 				path: 'cta.label',
 				label: undefined
 			},
 			{
 				type: 'text',
-				selector: '[data-builder-field="articles[].title"]',
+				selector: '[data-brixter-field="articles[].title"]',
 				path: 'articles[].title',
 				label: undefined
 			},
 			{
 				type: 'image',
-				selector: '[data-builder-field="articles[].cover"]',
+				selector: '[data-brixter-field="articles[].cover"]',
 				path: 'articles[].cover',
 				label: 'Sostituisci copertina'
 			}
@@ -102,7 +102,7 @@ describe('builder selector inference', () => {
 				},
 				summaryField: 'alt',
 				imageField: 'src',
-				previewSelector: '[data-builder-collection-item="logos"]'
+				previewSelector: '[data-brixter-collection-item="logos"]'
 			}
 		]);
 	});

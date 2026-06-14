@@ -33,12 +33,12 @@ export function isEditorInteractionTarget(element: Element): boolean {
 
 export function isFieldActivationTarget(element: Element): boolean {
 	return Boolean(
-		element.closest('[data-builder-field-enhanced="pending"], [data-builder-field-enhanced="true"]')
+		element.closest('[data-brixter-field-enhanced="pending"], [data-brixter-field-enhanced="true"]')
 	);
 }
 
 export function isPreviewContentInteractiveTarget(element: Element): boolean {
-	if (!element.closest('[data-builder-preview-content]')) {
+	if (!element.closest('[data-brixter-preview-content]')) {
 		return false;
 	}
 
@@ -68,7 +68,7 @@ export function neutralizeInteractiveElement(element: HTMLElement): void {
 
 export function syncNeutralizedInteractiveElements(root: ParentNode): void {
 	for (const element of root.querySelectorAll<HTMLElement>(INTERACTIVE_SELECTOR)) {
-		if (!element.closest('[data-builder-preview-content]')) {
+		if (!element.closest('[data-brixter-preview-content]')) {
 			continue;
 		}
 

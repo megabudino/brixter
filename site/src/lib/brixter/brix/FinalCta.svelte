@@ -34,8 +34,8 @@
 	>
 		<h2
 			class="font-display text-heading mx-auto max-w-2xl text-3xl md:text-4xl"
-			data-builder-field="headline"
-			data-builder-kind="richtext-inline"
+			data-brixter-field="headline"
+			data-brixter-kind="richtext-inline"
 		>
 			{@html headline ?? ''}
 		</h2>
@@ -43,8 +43,8 @@
 		{#if subtitle}
 			<p
 				class="text-secondary mx-auto mt-5 max-w-xl text-base leading-7"
-				data-builder-field="subtitle"
-				data-builder-kind="richtext-inline"
+				data-brixter-field="subtitle"
+				data-brixter-kind="richtext-inline"
 			>
 				{@html subtitle}
 			</p>
@@ -52,14 +52,14 @@
 
 		{#if cta}
 			<div class="mt-8">
-				<a href={cta.href} class="btn-site-primary" data-builder-field="cta.label">
+				<a href={cta.href} class="btn-site-primary" data-brixter-field="cta.label">
 					{cta.label}
 				</a>
 				{#if cta.note}
 					<p
 						class="text-muted mt-4 text-sm"
-						data-builder-field="cta.note"
-						data-builder-kind="richtext-inline"
+						data-brixter-field="cta.note"
+						data-brixter-kind="richtext-inline"
 					>
 						{@html cta.note}
 					</p>

@@ -6,10 +6,11 @@
     },
     "packages/brix-builder": {
       "name": "@brixter/brix-builder",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "dependencies": {
         "@tiptap/core": "^3.22.4",
         "@tiptap/starter-kit": "^3.22.4",
+        "magic-string": "^0.30.0",
         "yaml": "^1.10.3",
       },
       "peerDependencies": {
@@ -18,12 +19,12 @@
     },
     "packages/brixter": {
       "name": "brixter",
-      "version": "0.0.20",
+      "version": "0.0.30",
       "bin": {
         "brixter": "./bin/brixter.js",
       },
       "dependencies": {
-        "@brixter/brix-builder": "^0.0.5",
+        "@brixter/brix-builder": "^0.0.6",
         "@octokit/auth-app": "^8.2.0",
         "@octokit/core": "^7.0.6",
         "@tailwindcss/typography": "^0.5.19",

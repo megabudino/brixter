@@ -74,15 +74,15 @@
 						class="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold tracking-wide text-orange-800 uppercase dark:bg-orange-950/40 dark:text-orange-300"
 					>
 						<span>🍊</span>
-						<span data-builder-field="eyebrow" data-builder-default="Premium Citrus Harvest">{eyebrow}</span>
+						<span data-brixter-field="eyebrow" data-brixter-default="Premium Citrus Harvest">{eyebrow}</span>
 					</span>
 				{/if}
 
 				<h1
 					class="font-display text-heading mt-6 text-4xl tracking-tight leading-tight md:text-5xl lg:text-6xl"
-					data-builder-field="headline"
-					data-builder-kind="richtext-inline"
-					data-builder-default="Sun-Kissed Premium Mandarins Delivered Fresh"
+					data-brixter-field="headline"
+					data-brixter-kind="richtext-inline"
+					data-brixter-default="Sun-Kissed Premium Mandarins Delivered Fresh"
 				>
 					{@html headline ?? ''}
 				</h1>
@@ -90,9 +90,9 @@
 				{#if subtitle}
 					<p
 						class="text-secondary mt-6 text-base leading-relaxed md:text-lg"
-						data-builder-field="subtitle"
-						data-builder-kind="richtext-inline"
-						data-builder-default="Hand-picked at peak ripeness from sun-drenched Sicilian groves and shipped directly to your door in 48 hours. Experience the real, vibrant taste of natural citrus."
+						data-brixter-field="subtitle"
+						data-brixter-kind="richtext-inline"
+						data-brixter-default="Hand-picked at peak ripeness from sun-drenched Sicilian groves and shipped directly to your door in 48 hours. Experience the real, vibrant taste of natural citrus."
 					>
 						{@html subtitle}
 					</p>
@@ -104,7 +104,7 @@
 						{#each benefits as benefit}
 							<div
 								class="flex items-center gap-2"
-								data-builder-collection-item="benefits"
+								data-brixter-collection-item="benefits"
 							>
 								<svg
 									class="h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400"
@@ -120,8 +120,8 @@
 								</svg>
 								<span
 									class="text-secondary text-sm font-medium"
-									data-builder-field="benefits[].text"
-									data-builder-default="100% Organic & Pesticide-Free"
+									data-brixter-field="benefits[].text"
+									data-brixter-default="100% Organic & Pesticide-Free"
 								>
 									{benefit.text}
 								</span>
@@ -136,17 +136,17 @@
 						<a
 							href={cta.href}
 							class="inline-block rounded-xl bg-orange-600 px-6 py-3.5 text-center font-sans text-base font-bold text-white shadow-lg shadow-orange-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-orange-500 hover:shadow-orange-500/30 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:focus:ring-orange-400 dark:focus:ring-offset-gray-950"
-							data-builder-field="cta.label"
-							data-builder-default="Order a Fresh Box Today"
+							data-brixter-field="cta.label"
+							data-brixter-default="Order a Fresh Box Today"
 						>
 							{cta.label}
 						</a>
 						{#if cta.note}
 							<p
 								class="text-muted mt-4 text-xs tracking-wide"
-								data-builder-field="cta.note"
-								data-builder-kind="richtext-inline"
-								data-builder-default="100% money-back freshness guarantee"
+								data-brixter-field="cta.note"
+								data-brixter-kind="richtext-inline"
+								data-brixter-default="100% money-back freshness guarantee"
 							>
 								{@html cta.note}
 							</p>
@@ -165,8 +165,8 @@
 							src={image}
 							alt="Fresh mandarins in a rustic basket"
 							class="aspect-square w-full rounded-2xl object-cover"
-							data-builder-field="image"
-							data-builder-default="/fresh-mandarins.png"
+							data-brixter-field="image"
+							data-brixter-default="/fresh-mandarins.png"
 						/>
 					</div>
 				</div>

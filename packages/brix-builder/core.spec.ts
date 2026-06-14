@@ -42,10 +42,10 @@ const pageBriks = createBrixDefinitions(
 	{
 		'../lib/brixter/brix/Hero.svelte': `
 			<section>
-				<h1 data-builder-field="headline" data-builder-default="Titolo">
+				<h1 data-brixter-field="headline" data-brixter-default="Titolo">
 					{headline}
 				</h1>
-				<a data-builder-field="cta.label" data-builder-default="Contattami">
+				<a data-brixter-field="cta.label" data-brixter-default="Contattami">
 					{cta.label}
 				</a>
 			</section>
@@ -123,13 +123,13 @@ describe('serializeToMdsvex', () => {
 		expect(definition.previewBindings).toEqual([
 			{
 				type: 'text',
-				selector: '[data-builder-field="headline"]',
+				selector: '[data-brixter-field="headline"]',
 				path: 'headline',
 				label: undefined
 			},
 			{
 				type: 'text',
-				selector: '[data-builder-field="cta.label"]',
+				selector: '[data-brixter-field="cta.label"]',
 				path: 'cta.label',
 				label: undefined
 			}
@@ -150,7 +150,7 @@ describe('serializeToMdsvex', () => {
 				},
 				summaryField: 'title',
 				imageField: 'src',
-				previewSelector: '[data-builder-collection-item="pieces"]'
+				previewSelector: '[data-brixter-collection-item="pieces"]'
 			}
 		]);
 	});

@@ -1056,14 +1056,14 @@ function inferFieldPreviewSelector(field: BuilderField, path: string): string | 
 		kind === 'richtext-inline' ||
 		kind === 'richtext-block'
 	) {
-		return `[data-builder-field="${path}"]`;
+		return `[data-brixter-field="${path}"]`;
 	}
 
 	return undefined;
 }
 
 function getCollectionPreviewSelector(path: string): string {
-	return `[data-builder-collection-item="${path}"]`;
+	return `[data-brixter-collection-item="${path}"]`;
 }
 
 function inferSummaryField(field: BuilderField | undefined): string | undefined {

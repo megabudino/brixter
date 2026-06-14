@@ -31,9 +31,9 @@ export function describeFieldElement(element: Element | null | undefined): Recor
 	const rect = element.getBoundingClientRect();
 	return {
 		tag: element.tagName.toLowerCase(),
-		field: element.getAttribute('data-builder-field'),
+		field: element.getAttribute('data-brixter-field'),
 		enhanced: element.dataset.builderFieldEnhanced ?? null,
-		placeholderActive: element.hasAttribute('data-builder-placeholder-active'),
+		placeholderActive: element.hasAttribute('data-brixter-placeholder-active'),
 		ghostLabel: element.dataset.builderPreviewGhostLabel ?? null,
 		text: element.textContent?.slice(0, 80) ?? '',
 		rect: {

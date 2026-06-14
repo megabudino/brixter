@@ -1,0 +1,267 @@
+import { parse } from 'svelte/compiler';
+import MagicString from 'magic-string';
+import { createBuilderFieldsFromMarkup } from './markup-schema.js';
+import type { BuilderFields } from '../core.js';
+
+export interface BrixterPreprocessorOptions {
+	disable?: boolean;
+}
+
+/**
+ * Svelte markup preprocessor for `.brix.svelte` files.
+ *
+ * Transforms plain annotated markup into a Svelte component with:
+ * - Auto-inferred `brixterSchema` export for builder discovery
+ * - Auto-injected `$props()` for top-level field roots
+ * - Svelte expression replacement in annotated elements
+ * - {#each} wrapping around collection item containers
+ */
+export function brixter(options: BrixterPreprocessorOptions = {}) {
+	return {
+		name: 'brixter',
+		markup({ content, filename }: { content: string; filename?: string }) {
+			if (options.disable) return;
+			if (!filename?.endsWith('.brix.svelte')) return;
+
+			const fields = createBuilderFieldsFromMarkup(content);
+			const propNames = Object.keys(fields);
+
+			if (propNames.length === 0) return;
+
+			const s = new MagicString(content);
+			const ast = parse(content, { filename, modern: true });
+
+			injectSchemaExport(s, ast, fields);
+			injectProps(s, ast, propNames);
+			transformAnnotatedElements(s, ast, fields);
+
+			return {
+				code: s.toString(),
+				map: s.generateMap({ source: filename, hires: true }).toString()
+			};
+		}
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Schema export injection
+// ---------------------------------------------------------------------------
+
+function injectSchemaExport(
+	s: MagicString,
+	ast: ReturnType<typeof parse>,
+	fields: Record<string, unknown>
+): void {
+	const src = `export const brixterSchema = ${JSON.stringify(fields)};`;
+
+	const moduleScript = ast.module as { content?: { start: number } } | undefined;
+	if (moduleScript?.content) {
+		s.appendLeft(moduleScript.content.start + 1, `${src}\n`);
+		return;
+	}
+
+	const instanceScript = ast.instance as { start?: number } | undefined;
+	if (instanceScript?.start !== undefined) {
+		s.appendLeft(
+			instanceScript.start,
+			`\n<script module>${src}</script>\n`
+		);
+		return;
+	}
+
+	s.prepend(`<script module>${src}</script>\n`);
+}
+
+// ---------------------------------------------------------------------------
+// Props injection
+// ---------------------------------------------------------------------------
+
+function injectProps(
+	s: MagicString,
+	ast: ReturnType<typeof parse>,
+	propNames: string[]
+): void {
+	const decl = `let { ${propNames.join(', ')} } = $props();`;
+
+	const instanceScript = ast.instance as { content?: { start: number } } | undefined;
+	if (instanceScript?.content) {
+		s.appendLeft(instanceScript.content.start + 1, `${decl}\n`);
+		return;
+	}
+
+	const moduleScript = ast.module as { end?: number } | undefined;
+	if (moduleScript?.end !== undefined) {
+		s.appendRight(moduleScript.end, `\n<script>${decl}</script>\n`);
+		return;
+	}
+
+	s.prepend(`<script>${decl}</script>\n`);
+}
+
+// ---------------------------------------------------------------------------
+// Attribute helpers
+// ---------------------------------------------------------------------------
+
+interface SvelteBlock {
+	type: string;
+	start: number;
+	end: number;
+	nodes?: SvelteBlock[];
+	fragment?: SvelteBlock;
+	children?: Array<{ type: string; start: number; end: number; data?: string }>;
+	attributes?: Array<{ name: string; value: unknown; start: number; end: number }>;
+	name?: string;
+	data?: string;
+	raw?: string;
+	expression?: { type: string; start: number; end: number };
+}
+
+function getAttrString(attr: { value: unknown } | undefined): string | undefined {
+	if (!attr) return undefined;
+	if (typeof attr.value === 'string') return attr.value;
+	if (Array.isArray(attr.value)) {
+		return (attr.value as Array<{ data?: string }>)
+			.map((v) => v.data ?? '')
+			.join('');
+	}
+	return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Collection item mapping from fields
+// ---------------------------------------------------------------------------
+
+function buildItemVars(fields: BuilderFields): Map<string, string> {
+	const map = new Map<string, string>();
+	for (const [name, field] of Object.entries(fields)) {
+		if (field.item?.fields) {
+			map.set(name, field.itemLabel ?? singularize(name));
+		}
+	}
+	return map;
+}
+
+// ---------------------------------------------------------------------------
+// Recursive AST walk
+// ---------------------------------------------------------------------------
+
+function walkNodes(nodes: SvelteBlock[] | undefined, fn: (node: SvelteBlock) => void): void {
+	if (!nodes) return;
+	for (const node of nodes) {
+		fn(node);
+		// Svelte 5: elements nest children in node.fragment.nodes
+		walkNodes(node.fragment?.nodes, fn);
+		// Fallback: also try direct .nodes
+		walkNodes(node.nodes, fn);
+		// Control flow blocks
+		const dynamic = node as { body?: unknown; else?: unknown; then?: unknown; catch?: unknown };
+		if (dynamic.body) walkNodes((dynamic.body as { nodes?: SvelteBlock[] })?.nodes, fn);
+		if (dynamic.else) walkNodes((dynamic.else as { nodes?: SvelteBlock[] })?.nodes, fn);
+		if (dynamic.then) walkNodes((dynamic.then as { nodes?: SvelteBlock[] })?.nodes, fn);
+		if (dynamic.catch) walkNodes((dynamic.catch as { nodes?: SvelteBlock[] })?.nodes, fn);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Element transformation
+// ---------------------------------------------------------------------------
+
+function transformAnnotatedElements(
+	s: MagicString,
+	ast: ReturnType<typeof parse>,
+	fields: BuilderFields
+): void {
+	const itemVars = buildItemVars(fields);
+
+	const fragment = ast.fragment as { nodes?: SvelteBlock[] } | undefined;
+	if (!fragment?.nodes) return;
+
+	walkNodes(fragment.nodes, (node) => {
+		if (node.type !== 'RegularElement') return;
+
+		const attrs = node.attributes ?? [];
+		const fieldAttr = attrs.find((a) => a.name === 'data-brixter-field');
+		const kindAttr = attrs.find((a) => a.name === 'data-brixter-kind');
+		const collectionAttr = attrs.find((a) => a.name === 'data-brixter-collection-item');
+
+		// --- Collection item container → {#each} wrapper ---
+		if (collectionAttr) {
+			const colName = getAttrString(collectionAttr);
+			if (colName && itemVars.has(colName)) {
+				const itemVar = itemVars.get(colName)!;
+				s.appendLeft(node.start, `{#each ${colName} as ${itemVar}}\n`);
+				s.appendRight(node.end, `\n{/each}`);
+			}
+			return;
+		}
+
+		// --- Field annotation → Svelte expression ---
+		if (fieldAttr) {
+			const rawPath = getAttrString(fieldAttr);
+			if (!rawPath) return;
+
+			const kind = getAttrString(kindAttr) ?? (node.name === 'img' ? 'image' : 'text');
+			const expr = resolvedExpr(rawPath, kind, itemVars);
+
+			// <img> special case: rewrite src + replace children
+			if (node.name === 'img' && kind === 'image') {
+				const srcAttr = attrs.find((a) => a.name === 'src');
+				if (srcAttr) {
+					s.overwrite(srcAttr.start, srcAttr.end, `src={${rawPath}}`);
+				} else {
+					s.appendLeft(node.start + node.name.length + 1, ` src={${rawPath}}`);
+				}
+				// Drop children (if any)
+				if (node.children?.length) {
+					s.overwrite(node.children[0].start, node.children[node.children.length - 1].end, '');
+				}
+				return;
+			}
+
+			// Replace element text content with expression
+			const children = node.fragment?.nodes;
+			if (children?.length) {
+				const first = children[0];
+				const last = children[children.length - 1];
+				s.overwrite(first.start, last.end, expr);
+			}
+		}
+	});
+}
+
+function resolvedExpr(
+	path: string,
+	kind: string,
+	itemVars: Map<string, string>
+): string {
+	const resolved = resolvePath(path, itemVars);
+
+	if (kind === 'richtext-inline' || kind === 'richtext-block' || kind === 'icon') {
+		return `{@html ${resolved} ?? ''}`;
+	}
+
+	return `{${resolved}}`;
+}
+
+function resolvePath(path: string, itemVars: Map<string, string>): string {
+	const idx = path.indexOf('[]');
+	if (idx === -1) return path;
+
+	const collectionName = path.slice(0, idx);
+	const rest = path.slice(idx + 2);
+	const itemVar = itemVars.get(collectionName);
+	if (!itemVar) return path.replace('[]', '[0]');
+
+	return itemVar + rest;
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+function singularize(word: string): string {
+	if (word.endsWith('ies')) return word.slice(0, -3) + 'y';
+	if (word.endsWith('ses')) return word.slice(0, -2);
+	if (word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1);
+	return word;
+}

@@ -24,7 +24,7 @@ function syncInertInteractiveElements(root: ParentNode): void {
 	syncNeutralizedInteractiveElements(root);
 
 	for (const element of root.querySelectorAll<HTMLElement>(INTERACTIVE_SELECTOR)) {
-		if (!element.closest('[data-builder-preview-content]')) {
+		if (!element.closest('[data-brixter-preview-content]')) {
 			continue;
 		}
 
@@ -69,7 +69,7 @@ function blockInteractiveKeydown(event: KeyboardEvent): void {
 }
 
 export function attachPreviewInteractionGuard(document: Document): () => void {
-	document.body.setAttribute('data-builder-preview-canvas', 'true');
+	document.body.setAttribute('data-brixter-preview-canvas', 'true');
 	syncInertInteractiveElements(document);
 
 	const observer = new MutationObserver((records) => {
@@ -91,7 +91,7 @@ export function attachPreviewInteractionGuard(document: Document): () => void {
 
 	observer.observe(document.body, {
 		attributes: true,
-		attributeFilter: ['href', 'role', 'type', 'for', 'data-builder-field-enhanced'],
+		attributeFilter: ['href', 'role', 'type', 'for', 'data-brixter-field-enhanced'],
 		childList: true,
 		subtree: true,
 	});
@@ -108,6 +108,6 @@ export function attachPreviewInteractionGuard(document: Document): () => void {
 			document.removeEventListener(type, blockInteractiveAction, true);
 		}
 		document.removeEventListener('keydown', blockInteractiveKeydown, true);
-		document.body.removeAttribute('data-builder-preview-canvas');
+		document.body.removeAttribute('data-brixter-preview-canvas');
 	};
 }

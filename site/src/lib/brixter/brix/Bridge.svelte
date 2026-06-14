@@ -15,8 +15,8 @@
 	<div class="mx-auto max-w-2xl border-y border-gray-300 py-12 text-center dark:border-gray-700">
 		<h2
 			class="font-display text-heading text-3xl md:text-4xl"
-			data-builder-field="statement"
-			data-builder-kind="richtext-inline"
+			data-brixter-field="statement"
+			data-brixter-kind="richtext-inline"
 		>
 			{@html statement ?? ''}
 		</h2>
@@ -24,8 +24,8 @@
 		{#if note}
 			<p
 				class="text-secondary mx-auto mt-5 max-w-xl text-base leading-7"
-				data-builder-field="note"
-				data-builder-kind="richtext-inline"
+				data-brixter-field="note"
+				data-brixter-kind="richtext-inline"
 			>
 				{@html note}
 			</p>

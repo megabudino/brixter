@@ -41,7 +41,7 @@
 			{#if eyebrow}
 				<p
 					class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
-					data-builder-field="eyebrow"
+					data-brixter-field="eyebrow"
 				>
 					{eyebrow}
 				</p>
@@ -49,8 +49,8 @@
 
 			<h2
 				class="font-display text-heading text-3xl md:text-4xl"
-				data-builder-field="headline"
-				data-builder-kind="richtext-inline"
+				data-brixter-field="headline"
+				data-brixter-kind="richtext-inline"
 			>
 				{@html headline ?? ''}
 			</h2>
@@ -60,23 +60,23 @@
 			{#each reviews as review}
 				<figure
 					class="border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
-					data-builder-collection-item="reviews"
+					data-brixter-collection-item="reviews"
 				>
 					<blockquote
 						class="text-secondary text-sm leading-6"
-						data-builder-field="reviews[].quote"
-						data-builder-kind="richtext-inline"
+						data-brixter-field="reviews[].quote"
+						data-brixter-kind="richtext-inline"
 					>
 						{@html review.quote ?? ''}
 					</blockquote>
 					<figcaption class="mt-6">
 						<p
 							class="text-heading text-sm font-semibold"
-							data-builder-field="reviews[].author"
+							data-brixter-field="reviews[].author"
 						>
 							{review.author}
 						</p>
-						<p class="text-muted mt-1 text-xs" data-builder-field="reviews[].role">
+						<p class="text-muted mt-1 text-xs" data-brixter-field="reviews[].role">
 							{review.role}
 						</p>
 					</figcaption>

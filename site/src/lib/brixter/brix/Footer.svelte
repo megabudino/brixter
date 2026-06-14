@@ -36,9 +36,9 @@
 <footer class="border-t border-gray-300 bg-white px-6 py-10 dark:border-gray-700 dark:bg-gray-900">
 	<div class="mx-auto flex max-w-5xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
 		<div>
-			<p class="text-heading font-display text-2xl" data-builder-field="brand">{brand}</p>
+			<p class="text-heading font-display text-2xl" data-brixter-field="brand">{brand}</p>
 			{#if claim}
-				<p class="text-muted mt-2 text-sm" data-builder-field="claim">{claim}</p>
+				<p class="text-muted mt-2 text-sm" data-brixter-field="claim">{claim}</p>
 			{/if}
 		</div>
 
@@ -48,8 +48,8 @@
 					<a
 						href={link.href}
 						class="text-secondary hover:text-heading transition-colors"
-						data-builder-collection-item="links"
-						data-builder-field="links[].label"
+						data-brixter-collection-item="links"
+						data-brixter-field="links[].label"
 					>
 						{link.label}
 					</a>

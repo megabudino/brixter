@@ -102,7 +102,7 @@ export function resolvePreviewBindingAtPoint<
 
 	const pointCandidates: Record<string, unknown>[] = [];
 
-	for (const field of container.querySelectorAll<HTMLElement>('[data-builder-field]')) {
+	for (const field of container.querySelectorAll<HTMLElement>('[data-brixter-field]')) {
 		if (!isInteractiveFieldHost(field)) {
 			continue;
 		}
@@ -276,12 +276,12 @@ export function materializeFieldPath(
 
 	const collectionName = match[1];
 	const rest = match[2] ?? '';
-	const collectionItem = element.closest(`[data-builder-collection-item="${collectionName}"]`);
+	const collectionItem = element.closest(`[data-brixter-collection-item="${collectionName}"]`);
 	if (!isElement(collectionItem) || !blockRoot.contains(collectionItem)) {
 		return null;
 	}
 
-	const selector = `[data-builder-collection-item="${collectionName}"]`;
+	const selector = `[data-brixter-collection-item="${collectionName}"]`;
 	const items = Array.from(blockRoot.querySelectorAll(selector));
 	const index = items.indexOf(collectionItem);
 	if (index === -1) {
