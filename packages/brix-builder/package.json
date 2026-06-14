@@ -1,6 +1,6 @@
 {
 	"name": "@brixter/brix-builder",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Visual page builder for Brixter (Svelte 5)",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
