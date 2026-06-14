@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.0.30",
+	"version": "0.1.0",
 	"description": "SvelteKit CMS with dashboard, visual builder, and .brix.yaml pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
