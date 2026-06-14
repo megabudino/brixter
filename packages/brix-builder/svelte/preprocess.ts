@@ -81,13 +81,39 @@ function injectProps(
 	ast: ReturnType<typeof parse>,
 	propNames: string[]
 ): void {
-	const decl = `let { ${propNames.join(', ')} } = $props();`;
+	const instanceScript = ast.instance as { content?: { start: number; end: number } } | undefined;
 
-	const instanceScript = ast.instance as { content?: { start: number } } | undefined;
 	if (instanceScript?.content) {
+		const contentSlice = s.original.slice(instanceScript.content.start, instanceScript.content.end);
+		const propsMatch = contentSlice.match(/(?:let|const)\s*\{\s*([^}]*)\s*\}\s*=\s*\$props\(\)/);
+
+		if (propsMatch) {
+			// Merge inferred names into the existing $props() destructuring
+			const existingNames = propsMatch[1]
+				.split(',')
+				.map((n) => n.trim())
+				.filter(Boolean);
+			const newNames = propNames.filter((n) => !existingNames.includes(n));
+			if (newNames.length === 0) return;
+
+			const allNames = [...existingNames, ...newNames];
+			const newDecl = `let { ${allNames.join(', ')} } = $props()`;
+
+			s.overwrite(
+				instanceScript.content.start + (propsMatch.index ?? 0),
+				instanceScript.content.start + (propsMatch.index ?? 0) + propsMatch[0].length,
+				newDecl
+			);
+			return;
+		}
+
+		// No existing $props() — append as before
+		const decl = `let { ${propNames.join(', ')} } = $props();`;
 		s.appendLeft(instanceScript.content.start + 1, `${decl}\n`);
 		return;
 	}
+
+	const decl = `let { ${propNames.join(', ')} } = $props();`;
 
 	const moduleScript = ast.module as { end?: number } | undefined;
 	if (moduleScript?.end !== undefined) {
@@ -192,38 +218,54 @@ function transformAnnotatedElements(
 				s.appendLeft(node.start, `{#each ${colName} as ${itemVar}}\n`);
 				s.appendRight(node.end, `\n{/each}`);
 			}
-			return;
 		}
 
 		// --- Field annotation → Svelte expression ---
 		if (fieldAttr) {
 			const rawPath = getAttrString(fieldAttr);
-			if (!rawPath) return;
+			if (rawPath) {
+				const kind = getAttrString(kindAttr) ?? (node.name === 'img' ? 'image' : 'text');
+				const expr = resolvedExpr(rawPath, kind, itemVars);
 
-			const kind = getAttrString(kindAttr) ?? (node.name === 'img' ? 'image' : 'text');
-			const expr = resolvedExpr(rawPath, kind, itemVars);
-
-			// <img> special case: rewrite src + replace children
-			if (node.name === 'img' && kind === 'image') {
-				const srcAttr = attrs.find((a) => a.name === 'src');
-				if (srcAttr) {
-					s.overwrite(srcAttr.start, srcAttr.end, `src={${rawPath}}`);
+				// <img> special case: rewrite src + replace children
+				if (node.name === 'img' && kind === 'image') {
+					const srcAttr = attrs.find((a) => a.name === 'src');
+					if (srcAttr) {
+						s.overwrite(srcAttr.start, srcAttr.end, `src={${rawPath}}`);
+					} else {
+						s.appendLeft(node.start + node.name.length + 1, ` src={${rawPath}}`);
+					}
+					// Drop children (if any)
+					if (node.children?.length) {
+						s.overwrite(node.children[0].start, node.children[node.children.length - 1].end, '');
+					}
 				} else {
-					s.appendLeft(node.start + node.name.length + 1, ` src={${rawPath}}`);
+					// Replace element text content with expression
+					const children = node.fragment?.nodes;
+					if (children?.length) {
+						const first = children[0];
+						const last = children[children.length - 1];
+						s.overwrite(first.start, last.end, expr);
+					}
 				}
-				// Drop children (if any)
-				if (node.children?.length) {
-					s.overwrite(node.children[0].start, node.children[node.children.length - 1].end, '');
-				}
-				return;
 			}
 
-			// Replace element text content with expression
-			const children = node.fragment?.nodes;
-			if (children?.length) {
-				const first = children[0];
-				const last = children[children.length - 1];
-				s.overwrite(first.start, last.end, expr);
+			// --- data-brixter-bind: explicit HTML attribute → field path wiring ---
+			const bindAttr = attrs.find((a) => a.name === 'data-brixter-bind');
+			if (bindAttr && node.name) {
+				const bindValue = getAttrString(bindAttr);
+				if (bindValue) {
+					const bindings = parseBindings(bindValue);
+					for (const [htmlAttr, fieldPath] of bindings) {
+						const resolvedPath = resolvePath(fieldPath, itemVars);
+						const existingHtmlAttr = attrs.find((a) => a.name === htmlAttr);
+						if (existingHtmlAttr) {
+							s.overwrite(existingHtmlAttr.start, existingHtmlAttr.end, `${htmlAttr}={${resolvedPath}}`);
+						} else {
+							s.appendLeft(node.start + node.name.length + 1, ` ${htmlAttr}={${resolvedPath}}`);
+						}
+					}
+				}
 			}
 		}
 	});
@@ -264,4 +306,28 @@ function singularize(word: string): string {
 	if (word.endsWith('ses')) return word.slice(0, -2);
 	if (word.endsWith('s') && !word.endsWith('ss')) return word.slice(0, -1);
 	return word;
+}
+
+// ---------------------------------------------------------------------------
+// data-brixter-bind parsing
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse `data-brixter-bind="href:cta.href; target:cta.target"` into
+ * `[['href', 'cta.href'], ['target', 'cta.target']]`.
+ */
+function parseBindings(value: string): Array<[string, string]> {
+	const bindings: Array<[string, string]> = [];
+	for (const part of value.split(';')) {
+		const trimmed = part.trim();
+		if (!trimmed) continue;
+		const colon = trimmed.indexOf(':');
+		if (colon === -1) continue;
+		const htmlAttr = trimmed.slice(0, colon).trim();
+		const fieldPath = trimmed.slice(colon + 1).trim();
+		if (htmlAttr && fieldPath) {
+			bindings.push([htmlAttr, fieldPath]);
+		}
+	}
+	return bindings;
 }

@@ -1,9 +1,6 @@
 title: Brixter CMS
 description: A visual CMS for SvelteKit, versioned in your repository.
 components:
-  - type: Test
-    props:
-      headline: test
   - type: Hero
     props:
       eyebrow: Brixter CMS
