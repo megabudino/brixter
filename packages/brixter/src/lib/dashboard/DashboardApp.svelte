@@ -20,6 +20,7 @@
 
 	let root = $state<HTMLElement | null>(null);
 
+	const isLocal = $derived(data.isLocal === true);
 	const currentPath = $derived($pageStore.url.pathname);
 	const currentPublicPath = $derived(currentPath as string);
 	const routesActive = $derived(
@@ -131,6 +132,13 @@
 				</div>
 			</aside>
 			<main class="min-w-0 flex-1">
+				{#if isLocal}
+					<div
+						class="flex items-center justify-center gap-2 bg-yellow-100 px-4 py-2 text-sm font-medium text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200"
+					>
+						Local mode - changes are written directly to the filesystem and are not published to GitHub.
+					</div>
+				{/if}
 				{@render renderPage()}
 			</main>
 		</div>
