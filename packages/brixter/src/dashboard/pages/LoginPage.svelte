@@ -13,8 +13,8 @@
 <div class="flex min-h-screen items-center justify-center">
 	<div class="w-full max-w-md space-y-8">
 		<div class="text-center">
-			<h1 class="text-heading font-display text-3xl font-bold tracking-tight">Sign in</h1>
-			<p class="text-secondary mt-2">Sign in to your brixter account.</p>
+			<h1 class="bx-text-heading bx-font-display text-3xl font-bold tracking-tight">Sign in</h1>
+			<p class="bx-text-secondary mt-2">Sign in to your brixter account.</p>
 		</div>
 
 		<form
@@ -52,7 +52,7 @@
 				<Input label="Password" type="password" name="password" required />
 
 				{#if displayError}
-					<p class="text-error text-sm" role="alert" aria-live="polite">{displayError}</p>
+					<p class="bx-text-error text-sm" role="alert" aria-live="polite">{displayError}</p>
 				{/if}
 
 				<Button type="submit" class="w-full" disabled={submitting}>

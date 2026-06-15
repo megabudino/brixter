@@ -75,37 +75,37 @@
 			<aside
 				class="sticky top-0 flex h-svh w-56 shrink-0 flex-col border-r border-gray-300 bg-white px-3 py-6 dark:border-gray-700 dark:bg-gray-800"
 			>
-				<p class="font-brand mb-6 px-3 text-4xl leading-none text-black dark:text-yellow-300">
+				<p class="bx-font-brand mb-6 px-3 text-4xl leading-none text-black dark:text-yellow-300">
 					Brixter
 				</p>
 				<nav class="space-y-1">
 					<a
 						href="/admin/routes"
 						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {routesActive
-							? 'text-heading font-medium'
-							: 'text-secondary hover:text-heading'}"
+							? 'bx-text-heading font-medium'
+							: 'bx-text-secondary hover:bx-text-heading'}"
 					>
 						<Compass size={16} /> Routes
 					</a>
 					<a
 						href="/admin/media"
 						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {mediaActive
-							? 'text-heading font-medium'
-							: 'text-secondary hover:text-heading'}"
+							? 'bx-text-heading font-medium'
+							: 'bx-text-secondary hover:bx-text-heading'}"
 					>
 						<ImageIcon size={16} /> Media
 					</a>
 					<a
 						href="/admin/accounts"
 						class="flex items-center gap-2 px-3 py-2 text-sm transition-colors {accountsActive
-							? 'text-heading font-medium'
-							: 'text-secondary hover:text-heading'}"
+							? 'bx-text-heading font-medium'
+							: 'bx-text-secondary hover:bx-text-heading'}"
 					>
 						<Users size={16} /> Accounts
 					</a>
 				</nav>
 				<div class="mt-auto px-3 pt-6">
-					<span class="text-muted mb-2 block px-1 text-xs font-medium">Theme</span>
+					<span class="bx-text-muted mb-2 block px-1 text-xs font-medium">Theme</span>
 					<div
 						class="flex items-center gap-0.5 rounded-full bg-gray-100 p-0.5 dark:bg-gray-900"
 						role="radiogroup"

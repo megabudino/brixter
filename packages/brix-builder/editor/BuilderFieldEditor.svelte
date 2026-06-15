@@ -100,7 +100,7 @@
 
 {#if fieldKind === 'object' && field.fields}
 	<div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
-		<p class="text-heading text-sm font-semibold">{label}</p>
+		<p class="bx-text-heading text-sm font-semibold">{label}</p>
 
 		{#each objectEntries as [nestedKey, nestedField] (nestedKey)}
 			<BuilderFieldEditor
@@ -118,7 +118,7 @@
 {:else if fieldKind === 'array' && field.item}
 	<div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
 		<div class="flex items-center justify-between gap-3">
-			<p class="text-heading text-sm font-semibold">{label}</p>
+			<p class="bx-text-heading text-sm font-semibold">{label}</p>
 			<button
 				type="button"
 				class="border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
@@ -128,13 +128,13 @@
 		</div>
 
 		{#if arrayItems.length === 0}
-			<p class="text-muted text-sm">No items configured.</p>
+			<p class="bx-text-muted text-sm">No items configured.</p>
 		{/if}
 
 		{#each arrayItems as item, index (`${path}-${index}`)}
 			<div class="space-y-3 border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
 				<div class="flex items-center justify-between gap-3">
-					<p class="text-heading text-sm font-medium">{getItemLabel(item, index)}</p>
+					<p class="bx-text-heading text-sm font-medium">{getItemLabel(item, index)}</p>
 					<div class="flex flex-wrap gap-2">
 						<button
 							type="button"
@@ -187,7 +187,7 @@
 	</div>
 {:else if fieldKind === 'richtext-inline' || fieldKind === 'richtext-block'}
 	<label class="block">
-		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
 		<RichTextEditor
 			value={richTextValue}
 			mode={fieldKind === 'richtext-inline' ? 'inline' : 'block'}
@@ -200,11 +200,11 @@
 			checked={booleanValue}
 			class="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
 			onchange={(event) => updateBoolean(event.currentTarget.checked)} />
-		<span class="text-sm font-medium text-label">{label}</span>
+		<span class="text-sm font-medium bx-text-label">{label}</span>
 	</label>
 {:else if fieldKind === 'number'}
 	<label class="block">
-		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
 		<input
 			type="number"
 			value={numberValue}
@@ -213,7 +213,7 @@
 	</label>
 {:else if fieldKind === 'image'}
 	<label class="block">
-		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
 		{#if stringValue}
 			<img
 				src={stringValue}
@@ -236,7 +236,7 @@
 	</label>
 {:else if fieldKind === 'icon'}
 	<label class="block">
-		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
 		<div class="flex flex-wrap gap-2">
 			<div class="min-w-0 flex-1 flex items-center justify-center h-[46px] border border-gray-300 bg-white px-4 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
 				{#if stringValue}
@@ -257,7 +257,7 @@
 	</label>
 {:else}
 	<label class="block">
-		<span class="mb-1 block text-sm font-medium text-label">{label}</span>
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
 		{#if multiline}
 			<textarea
 				value={stringValue}

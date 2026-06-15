@@ -23,14 +23,14 @@
 </script>
 
 <div class="mx-auto max-w-2xl px-6 py-16">
-	<h1 class="font-display mb-8 text-3xl text-gray-900 dark:text-gray-50">Accounts</h1>
+	<h1 class="bx-font-display mb-8 text-3xl text-gray-900 dark:text-gray-50">Accounts</h1>
 
 	<section class="mb-12">
 		<h2 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Team members</h2>
-		<p class="text-muted mb-4 text-sm">People who can sign in to this brixter instance.</p>
+		<p class="bx-text-muted mb-4 text-sm">People who can sign in to this brixter instance.</p>
 
 		{#if data.users.length === 0}
-			<p class="text-muted text-sm">No accounts yet.</p>
+			<p class="bx-text-muted text-sm">No accounts yet.</p>
 		{:else}
 			<ul class="divide-y divide-gray-200 rounded border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
 				{#each data.users as user (user.id)}
@@ -39,12 +39,12 @@
 							<p class="truncate font-medium text-gray-900 dark:text-gray-50">
 								{user.name}
 								{#if user.id === data.currentUserId}
-									<span class="text-muted font-normal">(you)</span>
+									<span class="bx-text-muted font-normal">(you)</span>
 								{/if}
 							</p>
-							<p class="text-muted truncate text-sm">{user.email}</p>
+							<p class="bx-text-muted truncate text-sm">{user.email}</p>
 						</div>
-						<p class="text-muted shrink-0 text-xs">{formatDate(user.createdAt)}</p>
+						<p class="bx-text-muted shrink-0 text-xs">{formatDate(user.createdAt)}</p>
 					</li>
 				{/each}
 			</ul>
@@ -53,7 +53,7 @@
 
 	<section>
 		<h2 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Invite account</h2>
-		<p class="text-muted mb-4 text-sm">
+		<p class="bx-text-muted mb-4 text-sm">
 			Create a new account and share the credentials with your teammate.
 		</p>
 
@@ -83,7 +83,7 @@
 				/>
 
 				{#if form?.message}
-					<p class="text-error text-sm">{form.message}</p>
+					<p class="bx-text-error text-sm">{form.message}</p>
 				{/if}
 
 				{#if form?.success}

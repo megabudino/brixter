@@ -23,7 +23,7 @@
 
 	function diffLineClass(line: string): string {
 		if (line.startsWith('+++') || line.startsWith('---')) {
-			return 'text-secondary';
+			return 'bx-text-secondary';
 		}
 		if (line.startsWith('@@')) {
 			return 'text-yellow-500 dark:text-yellow-400';
@@ -41,7 +41,7 @@
 <div class="mx-auto max-w-4xl px-6 py-16">
 	<a
 		href="/admin/routes"
-		class="text-secondary hover:text-heading inline-flex items-center gap-2 text-sm transition-colors"
+		class="bx-text-secondary hover:bx-text-heading inline-flex items-center gap-2 text-sm transition-colors"
 	>
 		<ArrowLeft size={16} />
 		Back to routes
@@ -49,13 +49,13 @@
 
 	<div class="mt-6 flex flex-wrap items-start justify-between gap-4">
 		<div>
-			<h1 class="font-display text-heading text-3xl">Review & Publish</h1>
-			<p class="text-secondary mt-2 text-sm">
+			<h1 class="bx-font-display bx-text-heading text-3xl">Review & Publish</h1>
+			<p class="bx-text-secondary mt-2 text-sm">
 				{data.aheadBy} unpublished commit{data.aheadBy === 1 ? '' : 's'} on
-				<code class="text-heading">{data.branch}</code>
-				ahead of <code class="text-heading">{data.defaultBranch}</code>
+				<code class="bx-text-heading">{data.branch}</code>
+				ahead of <code class="bx-text-heading">{data.defaultBranch}</code>
 			</p>
-			<p class="text-muted mt-1 text-sm">{data.repo.fullName}</p>
+			<p class="bx-text-muted mt-1 text-sm">{data.repo.fullName}</p>
 		</div>
 
 		<form
@@ -72,7 +72,7 @@
 			<button
 				type="submit"
 				disabled={publishing}
-				class="btn-brutal-flat inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+				class="bx-btn-brutal-flat inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{#if publishing}
 					<Spinner /> Publishing…
@@ -84,7 +84,7 @@
 	</div>
 
 	{#if form?.publishError}
-		<p class="text-error mt-4 text-sm">{form.publishError}</p>
+		<p class="bx-text-error mt-4 text-sm">{form.publishError}</p>
 	{/if}
 
 	<div class="mt-10 space-y-6">
@@ -94,12 +94,12 @@
 					class="flex flex-wrap items-center justify-between gap-3 border-b-2 border-gray-300 px-5 py-4 dark:border-gray-700"
 				>
 					<div class="flex min-w-0 items-center gap-3">
-						<FileDiff size={18} class="text-muted shrink-0" />
-						<span class="text-heading truncate font-mono text-sm">{file.filename}</span>
+						<FileDiff size={18} class="bx-text-muted shrink-0" />
+						<span class="bx-text-heading truncate font-mono text-sm">{file.filename}</span>
 					</div>
 					<div class="flex shrink-0 items-center gap-3 text-xs">
 						<span
-							class="text-muted border-2 border-gray-300 bg-gray-50 px-2 py-1 tracking-wide uppercase dark:border-gray-600 dark:bg-gray-900"
+							class="bx-text-muted border-2 border-gray-300 bg-gray-50 px-2 py-1 tracking-wide uppercase dark:border-gray-600 dark:bg-gray-900"
 						>
 							{statusLabel(file.status)}
 						</span>
@@ -117,11 +117,11 @@
 						<pre class="m-0 min-w-full w-max p-0 text-xs leading-5"><code>{#each file.patch.split('\n') as line}<div class="min-w-full w-max whitespace-pre px-4 {diffLineClass(line)}">{line || ' '}</div>{/each}</code></pre>
 					</div>
 				{:else}
-					<p class="text-muted px-5 py-4 text-sm">No diff available for this file.</p>
+					<p class="bx-text-muted px-5 py-4 text-sm">No diff available for this file.</p>
 				{/if}
 			</section>
 		{:else}
-			<p class="text-muted text-sm">No file changes to review.</p>
+			<p class="bx-text-muted text-sm">No file changes to review.</p>
 		{/each}
 	</div>
 </div>

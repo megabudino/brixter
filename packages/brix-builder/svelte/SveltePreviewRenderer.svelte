@@ -264,7 +264,7 @@
 									></div>
 									<button
 										type="button"
-										class="collection-add-button btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();
@@ -397,7 +397,7 @@
 									></div>
 									<button
 										type="button"
-										class="collection-add-button btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
 										aria-label={`Aggiungi ${overlay.label}`}
 										onclick={(event) => {
 											event.stopPropagation();

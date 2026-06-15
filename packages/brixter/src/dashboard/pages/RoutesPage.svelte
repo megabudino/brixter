@@ -346,8 +346,8 @@
 					<button
 						type="button"
 						class={pageFlowOpen
-							? 'btn-brutal-icon group relative inline-flex h-10 w-10 items-center justify-center'
-							: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
+							? 'bx-btn-brutal-icon group relative inline-flex h-10 w-10 items-center justify-center'
+							: 'group hover:bx-border-accent hover:bx-bg-accent-hover dark:hover:bx-border-accent dark:hover:bx-bg-accent-hover relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 						aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
 						aria-pressed={pageFlowOpen}
 						onclick={() => (pageFlowOpen = !pageFlowOpen)}
@@ -492,8 +492,8 @@
 					<button
 						type="button"
 						class={inspectorOpen
-							? 'btn-brutal-icon group relative inline-flex h-10 w-10 items-center justify-center'
-							: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
+							? 'bx-btn-brutal-icon group relative inline-flex h-10 w-10 items-center justify-center'
+							: 'group hover:bx-border-accent hover:bx-bg-accent-hover dark:hover:bx-border-accent dark:hover:bx-bg-accent-hover relative inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 						aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
 						aria-pressed={inspectorOpen}
 						onclick={() => (inspectorOpen = !inspectorOpen)}
@@ -561,7 +561,7 @@
 					<button
 						type="submit"
 						disabled={saving || !brixDirty}
-						class="btn-brutal-flat inline-flex h-10 cursor-pointer items-center gap-2 px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+						class="bx-btn-brutal-flat inline-flex h-10 cursor-pointer items-center gap-2 px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if saving}
 						<Spinner /> {data.isLocal ? 'Saving…' : 'Committing…'}
@@ -605,10 +605,10 @@
 				/>
 			{:else}
 				<div class="mx-auto max-w-2xl px-6 py-16">
-					<h1 class="font-display mb-2 text-3xl text-gray-900 dark:text-gray-50">
+					<h1 class="bx-font-display mb-2 text-3xl text-gray-900 dark:text-gray-50">
 						No brix components found
 					</h1>
-					<p class="text-muted">
+					<p class="bx-text-muted">
 						Add Svelte components under <code>$lib/brixter/brix</code> to edit this brix page.
 					</p>
 				</div>
@@ -640,13 +640,13 @@
 	</div>
 {:else if isUnsupportedFile}
 	<div class="mx-auto max-w-2xl px-6 py-16">
-		<a href={backHref} class="text-secondary hover:text-heading text-sm transition-colors">
+		<a href={backHref} class="bx-text-secondary hover:bx-text-heading text-sm transition-colors">
 			← Back to routes
 		</a>
-		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
+		<h1 class="bx-font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">
 			{data.file.name}
 		</h1>
-		<p class="text-muted">
+		<p class="bx-text-muted">
 			This SvelteKit page is visible in the explorer, but only brix page files are editable right now.
 		</p>
 	</div>
@@ -661,7 +661,7 @@
 				</p>
 				<a
 					href="/admin/publish"
-					class="btn-brutal-flat inline-flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm font-medium"
+					class="bx-btn-brutal-flat inline-flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm font-medium"
 				>
 					Review & Publish
 				</a>
@@ -713,7 +713,7 @@
 					</form>
 				{/if}
 				{#if form?.mergeError}
-					<span class="text-error text-sm">{form.mergeError}</span>
+					<span class="bx-text-error text-sm">{form.mergeError}</span>
 				{/if}
 			</div>
 		</div>
@@ -722,16 +722,16 @@
 	<!-- File explorer -->
 	<div class="mx-auto max-w-2xl px-6 py-16">
 		{#if !isRoutesRoot}
-			<a href="/admin/routes" class="text-secondary hover:text-heading text-sm transition-colors">
+			<a href="/admin/routes" class="bx-text-secondary hover:bx-text-heading text-sm transition-colors">
 				← Back to routes
 			</a>
 		{/if}
 
-		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">Routes</h1>
-		<p class="text-secondary mb-8">{data.repo.fullName}</p>
+		<h1 class="bx-font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">Routes</h1>
+		<p class="bx-text-secondary mb-8">{data.repo.fullName}</p>
 
 		{#if breadcrumbs.length > 0}
-			<div class="text-muted mb-8 flex items-center gap-1 text-sm">
+			<div class="bx-text-muted mb-8 flex items-center gap-1 text-sm">
 				{#each breadcrumbs as crumb, i}
 					{#if i > 0}
 						<ChevronRight size={14} />
@@ -739,10 +739,10 @@
 					{#if i < breadcrumbs.length - 1}
 						<a
 							href={routesHref(crumb.path)}
-							class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
+							class="bx-text-secondary hover:bx-text-heading transition-colors">{crumb.label}</a
 						>
 					{:else}
-						<span class="text-heading">{crumb.label}</span>
+						<span class="bx-text-heading">{crumb.label}</span>
 					{/if}
 				{/each}
 			</div>
@@ -753,7 +753,7 @@
 				type="button"
 				onclick={startAddingPage}
 				disabled={addingPage || addingDirectory}
-				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+				class="bx-text-secondary hover:bx-text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<FilePlus size={16} />
 				New page
@@ -762,7 +762,7 @@
 				type="button"
 				onclick={startAddingDirectory}
 				disabled={addingDirectory || addingPage}
-				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+				class="bx-text-secondary hover:bx-text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<FolderPlus size={16} />
 				New directory
@@ -770,25 +770,25 @@
 		</div>
 
 		{#if addingDirectory && duplicateDirectory}
-			<p class="text-error mb-3 text-sm">A route named “{trimmedDirectoryName}” already exists.</p>
+			<p class="bx-text-error mb-3 text-sm">A route named “{trimmedDirectoryName}” already exists.</p>
 		{:else if form?.createDirectoryError}
-			<p class="text-error mb-3 text-sm">{form.createDirectoryError}</p>
+			<p class="bx-text-error mb-3 text-sm">{form.createDirectoryError}</p>
 		{:else if addingPage && duplicatePage}
-			<p class="text-error mb-3 text-sm">A route named “{trimmedPageName}” already exists.</p>
+			<p class="bx-text-error mb-3 text-sm">A route named “{trimmedPageName}” already exists.</p>
 		{:else if form?.createPageError}
-			<p class="text-error mb-3 text-sm">{form.createPageError}</p>
+			<p class="bx-text-error mb-3 text-sm">{form.createPageError}</p>
 		{:else if form?.deleteError}
-			<p class="text-error mb-3 text-sm">{form.deleteError}</p>
+			<p class="bx-text-error mb-3 text-sm">{form.deleteError}</p>
 		{:else if renameTarget && duplicateRename}
-			<p class="text-error mb-3 text-sm">A route named “{trimmedRenameName}” already exists.</p>
+			<p class="bx-text-error mb-3 text-sm">A route named “{trimmedRenameName}” already exists.</p>
 		{:else if form?.renameError}
-			<p class="text-error mb-3 text-sm">{form.renameError}</p>
+			<p class="bx-text-error mb-3 text-sm">{form.renameError}</p>
 		{/if}
 
 		{#if parentPath !== null}
 			<a
 				href={routesHref(parentPath)}
-				class="text-secondary hover:text-heading flex cursor-pointer items-center gap-3 border-2 border-b-0 border-gray-300 bg-white px-5 py-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+				class="bx-text-secondary hover:bx-text-heading flex cursor-pointer items-center gap-3 border-2 border-b-0 border-gray-300 bg-white px-5 py-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
 			>
 				..
 			</a>
@@ -820,9 +820,9 @@
 									}}
 								>
 									{#if entry.kind === 'route'}
-										<Folder size={18} class="text-muted shrink-0" />
+										<Folder size={18} class="bx-text-muted shrink-0" />
 									{:else}
-										<FileText size={18} class="text-muted shrink-0" />
+										<FileText size={18} class="bx-text-muted shrink-0" />
 									{/if}
 									<input type="hidden" name="routeDirPath" value={renameTarget.routeDirPath} />
 									<input
@@ -841,7 +841,7 @@
 										type="button"
 										onclick={cancelRename}
 										disabled={renaming}
-										class="text-secondary hover:text-heading shrink-0 cursor-pointer px-2 text-sm disabled:opacity-50"
+										class="bx-text-secondary hover:bx-text-heading shrink-0 cursor-pointer px-2 text-sm disabled:opacity-50"
 									>
 										Cancel
 									</button>
@@ -859,15 +859,15 @@
 											onclick={() => (lightbox = { name: entry.label, url: entry.downloadUrl })}
 											class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-5 py-4 text-left text-gray-900 dark:text-gray-100"
 										>
-											<Image size={18} class="text-muted" />
+											<Image size={18} class="bx-text-muted" />
 											{entry.label}
 										</button>
 									{:else if entry.disabled}
 										<div
-											class="text-muted flex min-w-0 flex-1 cursor-not-allowed items-center gap-3 px-5 py-4 opacity-70"
+											class="bx-text-muted flex min-w-0 flex-1 cursor-not-allowed items-center gap-3 px-5 py-4 opacity-70"
 											aria-disabled="true"
 										>
-											<FileText size={18} class="text-muted" />
+											<FileText size={18} class="bx-text-muted" />
 											<span class="min-w-0 flex-1">{entry.label}</span>
 										</div>
 									{:else}
@@ -876,9 +876,9 @@
 											class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 dark:text-gray-100"
 										>
 											{#if entry.kind === 'route'}
-												<Folder size={18} class="text-muted" />
+												<Folder size={18} class="bx-text-muted" />
 											{:else}
-												<FileText size={18} class="text-muted" />
+												<FileText size={18} class="bx-text-muted" />
 											{/if}
 											<span class="min-w-0 flex-1">{entry.label}</span>
 										</a>
@@ -891,7 +891,7 @@
 													e.stopPropagation();
 													toggleEntryMenu(entry.path);
 												}}
-												class="text-muted group-hover:text-heading inline-flex h-full cursor-pointer items-center justify-center px-2 py-4 transition-colors"
+												class="bx-text-muted group-hover:bx-text-heading inline-flex h-full cursor-pointer items-center justify-center px-2 py-4 transition-colors"
 												aria-label="Actions for {entry.label}"
 												aria-expanded={openMenuPath === entry.path}
 												aria-haspopup="menu"
@@ -908,7 +908,7 @@
 															type="button"
 															role="menuitem"
 															onclick={() => startRename(entry)}
-															class="text-secondary hover:text-heading flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
+															class="bx-text-secondary hover:bx-text-heading flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors"
 														>
 															<Pencil size={14} />
 															Rename
@@ -918,7 +918,7 @@
 														type="button"
 														role="menuitem"
 														onclick={() => beginDelete(entry)}
-														class="text-error flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+														class="bx-text-error flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
 													>
 														<Trash2 size={14} />
 														Delete
@@ -953,7 +953,7 @@
 									};
 								}}
 							>
-								<FileText size={18} class="text-muted shrink-0" />
+								<FileText size={18} class="bx-text-muted shrink-0" />
 								<input
 									use:focusOnMount
 									name="page_name"
@@ -970,7 +970,7 @@
 									}}
 									class="min-w-0 flex-1 bg-transparent text-gray-900 outline-none dark:text-gray-100"
 								/>
-								<span class="text-muted shrink-0">.brix.yaml</span>
+								<span class="bx-text-muted shrink-0">.brix.yaml</span>
 								{#if creatingPage}
 									<Spinner />
 								{/if}
@@ -999,7 +999,7 @@
 									};
 								}}
 							>
-								<Folder size={18} class="text-muted shrink-0" />
+								<Folder size={18} class="bx-text-muted shrink-0" />
 								<input
 									use:focusOnMount
 									name="directory_name"
@@ -1024,7 +1024,7 @@
 					{/if}
 				</ul>
 			{:else}
-				<p class="text-muted py-8 text-center text-sm">There's nothing here.</p>
+				<p class="bx-text-muted py-8 text-center text-sm">There's nothing here.</p>
 			{/if}
 		</div>
 	</div>
@@ -1071,10 +1071,10 @@
 			tabindex="-1"
 			onkeydown={handleDeleteKeydown}
 		>
-			<h2 id="delete-route-title" class="text-heading text-lg font-semibold">
+			<h2 id="delete-route-title" class="bx-text-heading text-lg font-semibold">
 				{target.kind === 'route' ? 'Delete directory' : 'Delete page'}
 			</h2>
-			<p class="text-secondary mt-2 text-sm">
+			<p class="bx-text-secondary mt-2 text-sm">
 				{#if target.kind === 'route'}
 					Delete “{target.label}” and everything inside it? This cannot be undone.
 				{:else}
@@ -1125,7 +1125,7 @@
 					type="button"
 					onclick={cancelDelete}
 					disabled={deleting}
-					class="text-secondary hover:text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+					class="bx-text-secondary hover:bx-text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
 				>
 					Cancel
 				</button>

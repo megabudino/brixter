@@ -211,9 +211,9 @@
 			class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-4 border-dashed border-[#FDE047] bg-[#FDE047]/10 backdrop-blur-sm dark:border-[#FACC15] dark:bg-[#FACC15]/10"
 		>
 			<div class="space-y-2 border border-gray-300 bg-white px-6 py-5 text-center shadow-lg dark:border-gray-700 dark:bg-gray-800">
-				<Upload class="text-heading mx-auto h-10 w-10" />
-				<p class="text-heading text-sm font-medium">Drop files here to upload</p>
-				<p class="text-muted text-sm">Files will be added to this folder</p>
+				<Upload class="bx-text-heading mx-auto h-10 w-10" />
+				<p class="bx-text-heading text-sm font-medium">Drop files here to upload</p>
+				<p class="bx-text-muted text-sm">Files will be added to this folder</p>
 			</div>
 		</div>
 	{/if}
@@ -222,16 +222,16 @@
 
 	<div class="mx-auto max-w-2xl px-6 py-16">
 		{#if !isMediaRoot}
-			<a href={mediaHref()} class="text-secondary hover:text-heading text-sm transition-colors">
+			<a href={mediaHref()} class="bx-text-secondary hover:bx-text-heading text-sm transition-colors">
 				← Back to media
 			</a>
 		{/if}
 
-		<h1 class="font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">Media</h1>
-		<p class="text-secondary mb-8">{data.repo.fullName}</p>
+		<h1 class="bx-font-display mt-4 mb-2 text-3xl text-gray-900 dark:text-gray-50">Media</h1>
+		<p class="bx-text-secondary mb-8">{data.repo.fullName}</p>
 
 		{#if breadcrumbs.length > 1}
-			<div class="text-muted mb-8 flex items-center gap-1 text-sm">
+			<div class="bx-text-muted mb-8 flex items-center gap-1 text-sm">
 				{#each breadcrumbs as crumb, i}
 					{#if i > 0}
 						<ChevronRight size={14} />
@@ -239,10 +239,10 @@
 					{#if i < breadcrumbs.length - 1}
 						<a
 							href={mediaHref(crumb.path)}
-							class="text-secondary hover:text-heading transition-colors">{crumb.label}</a
+							class="bx-text-secondary hover:bx-text-heading transition-colors">{crumb.label}</a
 						>
 					{:else}
-						<span class="text-heading">{crumb.label}</span>
+						<span class="bx-text-heading">{crumb.label}</span>
 					{/if}
 				{/each}
 			</div>
@@ -259,7 +259,7 @@
 							type: 'dir',
 							sha: null
 						})}
-					class="text-error hover:text-red-700 dark:hover:text-red-300 inline-flex cursor-pointer items-center gap-2 text-sm transition-colors"
+					class="bx-text-error hover:text-red-700 dark:hover:text-red-300 inline-flex cursor-pointer items-center gap-2 text-sm transition-colors"
 				>
 					<Trash2 size={16} />
 					Delete folder
@@ -269,7 +269,7 @@
 				type="button"
 				onclick={triggerFileInput}
 				disabled={uploadingFiles || creatingFolder}
-				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+				class="bx-text-secondary hover:bx-text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{#if uploadingFiles}
 					<Spinner />
@@ -283,7 +283,7 @@
 				type="button"
 				onclick={startAddingFolder}
 				disabled={uploadingFiles || creatingFolder || addingFolder}
-				class="text-secondary hover:text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+				class="bx-text-secondary hover:bx-text-heading inline-flex cursor-pointer items-center gap-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				<FolderPlus size={16} />
 				New folder
@@ -291,20 +291,20 @@
 		</div>
 
 		{#if data.loadError}
-			<p class="text-error mb-3 text-sm">{data.loadError}</p>
+			<p class="bx-text-error mb-3 text-sm">{data.loadError}</p>
 		{/if}
 		{#if form?.createDirectoryError}
-			<p class="text-error mb-3 text-sm">{form.createDirectoryError}</p>
+			<p class="bx-text-error mb-3 text-sm">{form.createDirectoryError}</p>
 		{/if}
 		{#if form?.deleteError}
-			<p class="text-error mb-3 text-sm">{form.deleteError}</p>
+			<p class="bx-text-error mb-3 text-sm">{form.deleteError}</p>
 		{/if}
 
 		{#if data.relativePath}
 			{@const parentLink = data.relativePath.split('/').slice(0, -1).join('/')}
 			<a
 				href={mediaHref(parentLink)}
-				class="text-secondary hover:text-heading flex cursor-pointer items-center gap-3 border border-b-0 border-gray-300 bg-white px-5 py-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+				class="bx-text-secondary hover:bx-text-heading flex cursor-pointer items-center gap-3 border border-b-0 border-gray-300 bg-white px-5 py-4 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
 			>
 				..
 			</a>
@@ -320,7 +320,7 @@
 									href={mediaHref(getRelativePath(entry.path, data.repo.mediaPath))}
 									class="flex cursor-pointer items-center gap-3 px-5 py-4 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
 								>
-									<Folder size={18} class="text-muted shrink-0" />
+									<Folder size={18} class="bx-text-muted shrink-0" />
 									<span class="min-w-0 flex-1">{entry.name}</span>
 								</a>
 							{:else}
@@ -338,7 +338,7 @@
 										/>
 									{:else}
 										{@const Icon = getFileIcon(entry.name)}
-										<Icon size={18} class="text-muted shrink-0" />
+										<Icon size={18} class="bx-text-muted shrink-0" />
 									{/if}
 									<span class="min-w-0 flex-1">{entry.name}</span>
 								</button>
@@ -359,7 +359,7 @@
 									};
 								}}
 							>
-								<Folder size={18} class="text-muted shrink-0" />
+								<Folder size={18} class="bx-text-muted shrink-0" />
 								<input
 									use:focusOnMount
 									name="directory_name"
@@ -384,7 +384,7 @@
 					{/if}
 				</ul>
 			{:else}
-				<p class="text-muted py-8 text-center text-sm">
+				<p class="bx-text-muted py-8 text-center text-sm">
 					There's nothing here. Drag files here or use Upload file.
 				</p>
 			{/if}
@@ -421,14 +421,14 @@
 				{:else}
 					{@const Icon = getFileIcon(selectedFile.name)}
 					<div class="space-y-3 text-center">
-						<Icon size={64} class="text-muted mx-auto" />
-						<p class="text-muted text-sm">Preview not available for this file type</p>
+						<Icon size={64} class="bx-text-muted mx-auto" />
+						<p class="bx-text-muted text-sm">Preview not available for this file type</p>
 					</div>
 				{/if}
 				<button
 					type="button"
 					onclick={() => (selectedFile = null)}
-					class="text-secondary hover:text-heading absolute top-3 right-3 cursor-pointer p-2 transition-colors"
+					class="bx-text-secondary hover:bx-text-heading absolute top-3 right-3 cursor-pointer p-2 transition-colors"
 					aria-label="Close"
 				>
 					<X size={20} />
@@ -438,28 +438,28 @@
 			<div class="flex w-full shrink-0 flex-col justify-between p-6 md:w-72">
 				<div class="space-y-5">
 					<div>
-						<h3 class="text-heading truncate text-lg font-semibold" title={selectedFile.name}>
+						<h3 class="bx-text-heading truncate text-lg font-semibold" title={selectedFile.name}>
 							{selectedFile.name}
 						</h3>
 						<span
-							class="text-muted mt-1 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-800"
+							class="bx-text-muted mt-1 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px] tracking-wide uppercase dark:bg-gray-800"
 						>
 							{selectedFile.name.split('.').pop()} file
 						</span>
 					</div>
 
 					<div>
-						<span class="text-muted mb-1 block text-xs">Path</span>
+						<span class="bx-text-muted mb-1 block text-xs">Path</span>
 						<div class="flex items-start gap-2">
 							<code
-								class="text-heading min-w-0 flex-1 break-all rounded bg-gray-100 px-2 py-1.5 font-mono text-xs dark:bg-gray-900"
+								class="bx-text-heading min-w-0 flex-1 break-all rounded bg-gray-100 px-2 py-1.5 font-mono text-xs dark:bg-gray-900"
 							>
 								/{relativePath}
 							</code>
 							<button
 								type="button"
 								onclick={() => copyToClipboard('/' + relativePath)}
-								class="text-secondary hover:text-heading shrink-0 cursor-pointer border border-gray-300 p-2 transition-colors dark:border-gray-600"
+								class="bx-text-secondary hover:bx-text-heading shrink-0 cursor-pointer border border-gray-300 p-2 transition-colors dark:border-gray-600"
 								title="Copy path"
 							>
 								{#if copied}
@@ -476,7 +476,7 @@
 					<button
 						type="button"
 						onclick={() => beginDelete(selectedFile)}
-						class="text-error hover:text-red-700 dark:hover:text-red-300 inline-flex w-full cursor-pointer items-center justify-center gap-2 text-sm transition-colors"
+						class="bx-text-error hover:text-red-700 dark:hover:text-red-300 inline-flex w-full cursor-pointer items-center justify-center gap-2 text-sm transition-colors"
 					>
 						<Trash2 size={16} />
 						{selectedFile.type === 'dir' ? 'Delete folder' : 'Delete file'}
@@ -504,10 +504,10 @@
 			tabindex="-1"
 			onkeydown={handleDeleteKeydown}
 		>
-			<h2 id="delete-media-title" class="text-heading text-lg font-semibold">
+			<h2 id="delete-media-title" class="bx-text-heading text-lg font-semibold">
 				{deleteTarget.type === 'dir' ? 'Delete folder' : 'Delete file'}
 			</h2>
-			<p class="text-secondary mt-2 text-sm">
+			<p class="bx-text-secondary mt-2 text-sm">
 				{#if deleteTarget.type === 'dir'}
 					Delete “{deleteTarget.name}” and everything inside it? This cannot be undone.
 				{:else}
@@ -562,7 +562,7 @@
 					type="button"
 					onclick={cancelDelete}
 					disabled={deleting}
-					class="text-secondary hover:text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
+					class="bx-text-secondary hover:bx-text-heading inline-flex flex-1 cursor-pointer items-center justify-center border border-gray-300 px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600"
 				>
 					Cancel
 				</button>

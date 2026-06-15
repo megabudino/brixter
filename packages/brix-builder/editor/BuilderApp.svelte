@@ -838,8 +838,8 @@
 				<button
 					type="button"
 					class={pageFlowOpen
-						? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
-						: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
+						? 'bx-btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
+						: 'group hover:bx-border-accent hover:bx-bg-accent-hover dark:hover:bx-border-accent dark:hover:bx-bg-accent-hover relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 					aria-label={pageFlowOpen ? 'Chiudi Page flow' : 'Apri Page flow'}
 					aria-pressed={pageFlowOpen}
 					onclick={togglePageFlow}
@@ -880,7 +880,7 @@
 				</button>
 				<button
 					type="button"
-					class="btn-brutal-icon flex h-9 w-9 items-center justify-center text-xl leading-none"
+					class="bx-btn-brutal-icon flex h-9 w-9 items-center justify-center text-xl leading-none"
 					onclick={() => definitions[0] && addBlock(definitions[0].type)}
 					aria-label="Aggiungi brik"
 				>
@@ -1050,7 +1050,7 @@
 
 				<button
 					type="button"
-					class="btn-brutal-flat cursor-pointer px-3 py-1.5 text-xs font-medium"
+					class="bx-btn-brutal-flat cursor-pointer px-3 py-1.5 text-xs font-medium"
 					onclick={copyMdsvex}
 				>
 					{controller?.copied ? 'Copiato' : 'Copia export'}
@@ -1058,8 +1058,8 @@
 				<button
 					type="button"
 					class={inspectorOpen
-						? 'btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
-						: 'group hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
+						? 'bx-btn-brutal-icon group relative flex h-9 w-9 items-center justify-center'
+						: 'group hover:bx-border-accent hover:bx-bg-accent-hover dark:hover:bx-border-accent dark:hover:bx-bg-accent-hover relative flex h-9 w-9 items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:text-gray-900'}
 					aria-label={inspectorOpen ? 'Chiudi Inspector' : 'Apri Inspector'}
 					aria-pressed={inspectorOpen}
 					onclick={toggleInspector}
@@ -1199,8 +1199,8 @@
 				class="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 p-5 dark:border-gray-700"
 			>
 				<div>
-					<h2 class="text-heading text-lg font-semibold">Add component</h2>
-					<p class="text-muted mt-1 text-sm">
+					<h2 class="bx-text-heading text-lg font-semibold">Add component</h2>
+					<p class="bx-text-muted mt-1 text-sm">
 						Choose the component to insert {inserterModal.placement === 'before'
 							? 'before'
 							: 'after'} this section.
@@ -1208,7 +1208,7 @@
 				</div>
 				<button
 					type="button"
-					class="hover:border-accent hover:bg-accent-hover dark:hover:border-accent dark:hover:bg-accent-hover flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:text-gray-900 dark:border-gray-700 dark:text-gray-200"
+					class="hover:bx-border-accent hover:bx-bg-accent-hover dark:hover:bx-border-accent dark:hover:bx-bg-accent-hover flex h-9 w-9 items-center justify-center border border-gray-300 text-xl leading-none text-gray-700 transition-colors hover:text-gray-900 dark:border-gray-700 dark:text-gray-200"
 					aria-label="Close"
 					onclick={closeInserterModal}
 				>
@@ -1226,8 +1226,8 @@
 						>
 							<ComponentPreviewThumbnail {definition} />
 							<div class="border-t border-gray-200 p-4 dark:border-gray-700">
-								<p class="text-heading text-sm font-semibold">{definition.type}</p>
-								<p class="text-muted mt-1 line-clamp-2 text-xs leading-5">
+								<p class="bx-text-heading text-sm font-semibold">{definition.type}</p>
+								<p class="bx-text-muted mt-1 line-clamp-2 text-xs leading-5">
 									{definition.description}
 								</p>
 							</div>
@@ -1256,10 +1256,10 @@
 		>
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<h2 class="font-display text-heading text-2xl">
+					<h2 class="bx-font-display bx-text-heading text-2xl">
 						Riordina {activeReorderContext.collection.label}
 					</h2>
-					<p class="text-muted mt-1 text-sm">
+					<p class="bx-text-muted mt-1 text-sm">
 						Trascina gli elementi in una lista lineare per aggiornare l'ordine della collection.
 					</p>
 				</div>
@@ -1290,16 +1290,16 @@
 					>
 						<div class="flex min-w-0 items-center gap-4">
 							<div
-								class="text-muted flex h-12 w-12 items-center justify-center border border-gray-300 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-gray-900"
+								class="bx-text-muted flex h-12 w-12 items-center justify-center border border-gray-300 bg-white text-xs font-semibold dark:border-gray-700 dark:bg-gray-900"
 							>
 								{itemIndex + 1}
 							</div>
 
 							<div class="min-w-0">
-								<p class="text-heading truncate text-sm font-medium">
+								<p class="bx-text-heading truncate text-sm font-medium">
 									{getCollectionItemSummary(item, activeReorderContext.collection, itemIndex)}
 								</p>
-								<p class="text-muted truncate text-xs">
+								<p class="bx-text-muted truncate text-xs">
 									{activeReorderContext.collection.path}[{itemIndex}]
 								</p>
 							</div>

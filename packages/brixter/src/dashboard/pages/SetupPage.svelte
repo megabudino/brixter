@@ -13,10 +13,10 @@ const displayError = $derived(form?.message ?? submitError);
 <div class="flex min-h-screen items-center justify-center">
 	<div class="w-full max-w-md space-y-8">
 		<div class="text-center">
-			<h1 class="text-heading font-display text-3xl font-bold tracking-tight">
+			<h1 class="bx-text-heading bx-font-display text-3xl font-bold tracking-tight">
 				Welcome to brixter
 			</h1>
-			<p class="text-secondary mt-2">Create your account to get started.</p>
+			<p class="bx-text-secondary mt-2">Create your account to get started.</p>
 		</div>
 
 		<form
@@ -62,7 +62,7 @@ const displayError = $derived(form?.message ?? submitError);
 				/>
 
 				{#if displayError}
-					<p class="text-error text-sm" role="alert" aria-live="polite">{displayError}</p>
+					<p class="bx-text-error text-sm" role="alert" aria-live="polite">{displayError}</p>
 				{/if}
 
 				<Button type="submit" class="w-full" disabled={submitting}>
