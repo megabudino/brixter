@@ -26,11 +26,11 @@ const config = {
 		alias: {
 			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
 			'@brixter/brix-builder/preprocess': '../packages/brix-builder/svelte/preprocess.ts',
-			'brixter/server': '../packages/brixter/src/lib/server/index.ts',
-			'brixter/editor': '../packages/brixter/src/lib/editor/index.ts',
-			'brixter/ui': '../packages/brixter/src/lib/ui/index.ts',
-			'brixter/sveltekit/server': '../packages/brixter/src/lib/sveltekit/server.ts',
-			'brixter/sveltekit/api': '../packages/brixter/src/lib/sveltekit/api.ts',
+			'brixter/server': '../packages/brixter/src/server/index.ts',
+			'brixter/editor': '../packages/brixter/src/editor/index.ts',
+			'brixter/ui': '../packages/brixter/src/ui/index.ts',
+			'brixter/sveltekit/server': '../packages/brixter/src/sveltekit/server.ts',
+			'brixter/sveltekit/api': '../packages/brixter/src/sveltekit/api.ts',
 			'brixter/styles.css': '../packages/brixter/styles.css'
 		}
 	}

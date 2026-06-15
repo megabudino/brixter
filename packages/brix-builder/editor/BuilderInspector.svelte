@@ -54,14 +54,14 @@
 		{#if activeBlock && activeDefinition}
 			<section class="p-4 dark:border-gray-700">
 				<div class="mb-4">
-					<p class="text-muted text-[11px] font-semibold tracking-wide uppercase">Brik</p>
-					<h3 class="text-heading mt-1 text-sm font-semibold">{activeDefinition.type}</h3>
-					<p class="text-muted mt-1 text-xs leading-5">{activeDefinition.description}</p>
+					<p class="bx-text-muted text-[11px] font-semibold tracking-wide uppercase">Brik</p>
+					<h3 class="bx-text-heading mt-1 text-sm font-semibold">{activeDefinition.type}</h3>
+					<p class="bx-text-muted mt-1 text-xs leading-5">{activeDefinition.description}</p>
 				</div>
 
 				{#if activeDefinition.mode === 'markdown'}
 					<label class="block">
-						<span class="text-label mb-1 block text-sm font-medium">Contenuto markdown</span>
+						<span class="bx-text-label mb-1 block text-sm font-medium">Contenuto markdown</span>
 						<textarea
 							value={typeof activeBlock.props.content === 'string' ? activeBlock.props.content : ''}
 							class="min-h-48 w-full border border-gray-300 bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
@@ -87,19 +87,19 @@
 						{/each}
 					</div>
 				{:else}
-					<p class="text-muted text-sm">Nothing to edit here!</p>
+					<p class="bx-text-muted text-sm">Nothing to edit here!</p>
 				{/if}
 
 				{#if propsError}
-					<p class="text-error mt-3 text-sm">{propsError}</p>
+					<p class="bx-text-error mt-3 text-sm">{propsError}</p>
 				{/if}
 			</section>
 		{:else}
 			<section class="p-4 dark:border-gray-700">
-				<h3 class="text-muted mb-4 text-[11px] font-semibold tracking-wide uppercase">Page</h3>
+				<h3 class="bx-text-muted mb-4 text-[11px] font-semibold tracking-wide uppercase">Page</h3>
 				<div class="space-y-4">
 					<label class="block">
-						<span class="text-label mb-1 block text-sm font-medium">Page Title</span>
+						<span class="bx-text-label mb-1 block text-sm font-medium">Page Title</span>
 						<input
 							value={title}
 							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
@@ -108,7 +108,7 @@
 						/>
 					</label>
 					<label class="block">
-						<span class="text-label mb-1 block text-sm font-medium">Description</span>
+						<span class="bx-text-label mb-1 block text-sm font-medium">Description</span>
 						<input
 							value={description}
 							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
