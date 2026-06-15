@@ -26,7 +26,6 @@ import {
 	getBranchStatus,
 	invalidateBranchRouteCache
 } from './repo-cache.ts';
-import { marked } from 'marked';
 import { Buffer } from 'node:buffer';
 
 type DashboardPage =
@@ -43,14 +42,6 @@ interface PageMatch {
 	branch?: string;
 	path?: string;
 }
-
-const editorRenderer = {
-	html({ text }: { text: string }) {
-		const trimmed = text.trim();
-		if (!trimmed) return text;
-		return `<div data-html-block>${trimmed}</div>`;
-	}
-};
 
 function draftBranch(): string {
 	return getContentStore().branch;
@@ -307,15 +298,11 @@ async function syncDraftWithDefaultBranch(defaultBranch: string): Promise<{
 }
 
 async function loadBranchFile(
-	branch: string,
-	filePath: string,
-	mediaPath: string
+	filePath: string
 ): Promise<Record<string, unknown>> {
 	const store = getContentStore();
 	const result = await store.readFile(filePath);
 
-	let htmlContent: string | undefined;
-	let frontmatter: string | undefined;
 	let brixYaml: string | undefined;
 
 	const raw = result.content;
@@ -323,23 +310,6 @@ async function loadBranchFile(
 
 	if (isBrixYamlFile(fileName)) {
 		brixYaml = raw;
-	}
-	if (fileName.endsWith('.md')) {
-		const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-
-		if (fmMatch) {
-			frontmatter = fmMatch[1];
-			htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
-		} else {
-			htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
-		}
-
-		const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
-		htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
-			const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
-			const proxyParams = new URLSearchParams({ branch, path: repoPath });
-			return `src="/admin/api/repo-image?${proxyParams}"`;
-		});
 	}
 
 	return {
@@ -349,8 +319,6 @@ async function loadBranchFile(
 			sha: result.sha,
 			downloadUrl: result.downloadUrl,
 			size: result.size,
-			htmlContent,
-			frontmatter,
 			brixYaml
 		}
 	};
@@ -405,7 +373,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 		let filePayload: Record<string, unknown>;
 		try {
-			filePayload = await loadBranchFile(branch, pageFile.filePath, mediaDir);
+			filePayload = await loadBranchFile(pageFile.filePath);
 		} catch (err: unknown) {
 			const e = err as {
 				status?: number;

@@ -23,15 +23,7 @@
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
 	import { BrixEditor, createBrixDefinitions, SHORTCUTS } from '@brixter/brix-builder';
-	import {
-		RichTextEditor,
-		Toolbar,
-		InlineToolbar,
-		FrontmatterEditor,
-		MediaPicker,
-		IconPicker
-	} from 'brixter/editor';
-	import TurndownService from 'turndown/lib/turndown.browser.es.js';
+	import { MediaPicker, IconPicker } from 'brixter/editor';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 
@@ -88,6 +80,20 @@
 	} | null>(null);
 	let renameName = $state('');
 	let renaming = $state(false);
+
+	let mediaPickerOpen = $state(false);
+	let builderImagePickCallback = $state<((url: string) => void) | null>(null);
+	let iconPickerOpen = $state(false);
+	let builderIconPickCallback = $state<((iconSvg: string) => void) | null>(null);
+	let toastMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
+	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	let initialBrixYaml = $state('');
+	let currentBrixYaml = $state('');
+	let brixYamlHydrated = $state(false);
+	let loadedFilePath = $state<string | null>(null);
+	const brixDirty = $derived(currentBrixYaml !== initialBrixYaml);
+	const isDirty = $derived(brixDirty);
 
 	const existingDirNames = $derived(
 		new Set<string>((data.childDirNames ?? []).map((name: string) => name.toLowerCase()))
@@ -216,20 +222,6 @@
 	function focusOnMount(node: HTMLInputElement) {
 		node.focus();
 	}
-	let editorRef: RichTextEditor | null = $state(null);
-	let frontmatterRef: FrontmatterEditor | null = $state(null);
-	let editorInstance: any = $state(null);
-	let mediaPickerOpen = $state(false);
-	let builderImagePickCallback = $state<((url: string) => void) | null>(null);
-	let iconPickerOpen = $state(false);
-	let builderIconPickCallback = $state<((iconSvg: string) => void) | null>(null);
-	let editorFocused = $state(false);
-	let htmlBlockFocused = $state(false);
-	let activeTab: 'body' | 'frontmatter' = $state('body');
-	let frontmatterValue = $state('');
-	const hasFrontmatter = $derived(data.file?.frontmatter !== undefined);
-	let toastMessage = $state<{ text: string; type: 'success' | 'error' } | null>(null);
-	let toastTimeout: ReturnType<typeof setTimeout> | undefined;
 
 	function showToast(text: string, type: 'success' | 'error' = 'success') {
 		clearTimeout(toastTimeout);
@@ -239,23 +231,10 @@
 		}, 3000);
 	}
 
-	let initialMarkdown = $state('');
-	let currentMarkdown = $state('');
-	let initialFm = $state('');
-	let initialBrixYaml = $state('');
-	let currentBrixYaml = $state('');
-	let brixYamlHydrated = $state(false);
-	let loadedFilePath = $state<string | null>(null);
-	const bodyDirty = $derived(initialMarkdown !== '' && currentMarkdown !== initialMarkdown);
-	const frontmatterDirty = $derived(frontmatterValue !== initialFm);
-	const brixDirty = $derived(currentBrixYaml !== initialBrixYaml);
-	const isDirty = $derived(bodyDirty || frontmatterDirty || brixDirty);
-
 	const base = '/admin/routes';
-	const isEditing = $derived(!!data.file?.htmlContent);
 	const isBrixEditing = $derived(data.file?.brixYaml !== undefined);
 	const backHref = $derived(data.parentPath ? routesHref(data.parentPath) : base);
-	const isUnsupportedFile = $derived(!!data.file && !isEditing && !isBrixEditing);
+	const isUnsupportedFile = $derived(!!data.file && !isBrixEditing);
 
 	const breadcrumbs = $derived(data.breadcrumbs ?? []);
 	const isRoutesRoot = $derived(!data.parentPath && breadcrumbs.length === 0);
@@ -266,15 +245,10 @@
 		if (filePath === loadedFilePath) return;
 
 		loadedFilePath = filePath;
-		const nextFrontmatter = file?.frontmatter ?? '';
-		frontmatterValue = nextFrontmatter;
-		initialFm = nextFrontmatter;
 		const nextBrixYaml = file?.brixYaml ?? '';
 		initialBrixYaml = nextBrixYaml;
 		currentBrixYaml = nextBrixYaml;
 		brixYamlHydrated = false;
-		initialMarkdown = '';
-		currentMarkdown = '';
 	});
 
 	const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp']);
@@ -297,70 +271,9 @@
 		return data.parentPath ?? null;
 	});
 
-	const turndown = new TurndownService({
-		headingStyle: 'atx',
-		hr: '---',
-		bulletListMarker: '-',
-		codeBlockStyle: 'fenced'
-	});
-
-	turndown.addRule('listItem', {
-		filter: 'li',
-		replacement: (content, node) => {
-			const parent = node.parentNode as HTMLElement;
-			const isOrdered = parent?.nodeName === 'OL';
-			const prefix = isOrdered
-				? `${Array.from(parent.children).indexOf(node as Element) + 1}. `
-				: '- ';
-			return prefix + content.trim() + '\n';
-		}
-	});
-
-	turndown.addRule('htmlBlock', {
-		filter: (node) => node.nodeName === 'DIV' && node.hasAttribute('data-html-block'),
-		replacement: (_content, node) => {
-			const html = (node as HTMLElement).getAttribute('data-content') ?? '';
-			return html ? `\n${html}\n` : '';
-		}
-	});
-
-	turndown.addRule('strikethrough', {
-		filter: ['del', 's'] as any,
-		replacement: (content) => `~~${content}~~`
-	});
-
 	const mediaPrefix = $derived(
 		data.repo.mediaPath ? data.repo.mediaPath.replace(/\/$/, '') + '/' : ''
 	);
-
-	turndown.addRule('repoImage', {
-		filter: (node) => {
-			if (node.nodeName !== 'IMG') return false;
-			const src = node.getAttribute('src') ?? '';
-			return (
-				src.startsWith('/admin/api/repo-image?') ||
-				/^https:\/\/raw\.githubusercontent\.com\//.test(src)
-			);
-		},
-		replacement: (_content, node) => {
-			const src = (node as HTMLElement).getAttribute('src') ?? '';
-			let repoPath: string;
-			if (src.startsWith('/admin/api/repo-image?')) {
-				const params = new URLSearchParams(src.split('?')[1]);
-				repoPath = params.get('path') ?? '';
-			} else {
-				const match = src.match(
-					/^https:\/\/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/(.+)$/
-				);
-				repoPath = match ? match[1].split('?')[0] : src;
-			}
-			if (mediaPrefix && repoPath.startsWith(mediaPrefix)) {
-				repoPath = repoPath.slice(mediaPrefix.length);
-			}
-			const alt = (node as HTMLElement).getAttribute('alt') ?? '';
-			return `![${alt}](/${repoPath})`;
-		}
-	});
 
 	function transformGithubUrlToRelative(src: string): string {
 		if (/^https:\/\/raw\.githubusercontent\.com\//.test(src)) {
@@ -372,12 +285,6 @@
 			return `/${repoPath}`;
 		}
 		return src;
-	}
-
-	function getMarkdown(): string {
-		if (!editorRef) return '';
-		const { html } = editorRef.getContent();
-		return turndown.turndown(html);
 	}
 
 	function handleBack() {
@@ -419,169 +326,7 @@
 	</div>
 {/if}
 
-{#if isEditing}
-	<!-- Full-screen markdown editor -->
-	<div class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900">
-		<!-- Editor header -->
-		<div
-			class="relative z-30 flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
-		>
-			<div class="flex items-center gap-3">
-				<button
-					type="button"
-					onclick={handleBack}
-					class="inline-flex h-10 w-10 cursor-pointer items-center justify-center border border-gray-300 bg-white text-gray-900 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-				>
-					<ArrowLeft size={20} />
-				</button>
-				<span class="text-sm font-medium text-gray-900 dark:text-gray-100">{data.file.name}</span>
-			</div>
-			{#if hasFrontmatter}
-				<div
-					class="absolute left-1/2 flex -translate-x-1/2 items-center rounded-full bg-gray-100 p-0.5 dark:bg-gray-800"
-				>
-					<button
-						type="button"
-						onclick={() => (activeTab = 'body')}
-						class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors {activeTab ===
-						'body'
-							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
-							: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
-					>
-						Body
-					</button>
-					<button
-						type="button"
-						onclick={() => (activeTab = 'frontmatter')}
-						class="cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors {activeTab ===
-						'frontmatter'
-							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100'
-							: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}"
-					>
-						Frontmatter
-					</button>
-				</div>
-			{/if}
-			<form
-				method="post"
-				action="?/save"
-				use:enhance={({ formData }) => {
-					formData.set('markdown', getMarkdown());
-					formData.set('frontmatter', frontmatterRef?.getValue() ?? frontmatterValue);
-					formData.set('sha', data.file.sha);
-					saving = true;
-					return async ({ result, update }) => {
-						saving = false;
-						if (result.type === 'success') {
-							initialMarkdown = currentMarkdown;
-							initialFm = frontmatterValue;
-							showToast('Saved successfully.');
-						} else if (result.type === 'failure') {
-							showToast((result.data as any)?.saveError ?? 'Save failed.', 'error');
-						}
-						await update({ reset: false });
-					};
-				}}
-			>
-				<button
-					type="submit"
-					disabled={saving || !isDirty}
-					class="btn-brutal-flat inline-flex cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					{#if saving}
-						<Spinner /> Committing…
-					{:else}
-						Commit
-					{/if}
-				</button>
-			</form>
-		</div>
-
-		<!-- Body tab -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="relative flex-1 overflow-y-auto"
-			class:hidden={activeTab !== 'body'}
-			onfocusin={(e) => {
-				editorFocused = true;
-				htmlBlockFocused = !!(e.target as HTMLElement).closest?.('.html-block');
-			}}
-			onfocusout={(e) => {
-				if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-					editorFocused = false;
-					htmlBlockFocused = false;
-				}
-			}}
-		>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="sticky top-0 z-20 flex justify-center border-b bg-white px-4 py-2 transition-all duration-200 dark:bg-gray-900 {editorFocused
-					? 'translate-y-0 border-gray-200 opacity-100 dark:border-gray-700'
-					: 'pointer-events-none -translate-y-1 border-transparent opacity-0'}"
-				onmousedown={(e) => e.preventDefault()}
-			>
-				<Toolbar
-					editor={editorInstance}
-					onpickImage={() => (mediaPickerOpen = true)}
-					{htmlBlockFocused}
-				/>
-			</div>
-			<div class="mx-auto max-w-3xl py-8">
-				<RichTextEditor
-					bind:this={editorRef}
-					initialContent={data.file.htmlContent}
-					placeholder="Start writing..."
-					onready={({ editor }) => {
-						editorInstance = editor;
-						initialMarkdown = currentMarkdown = getMarkdown();
-					}}
-					oncontentChange={() => {
-						currentMarkdown = getMarkdown();
-					}}
-					onselectionUpdate={({ editor }) => (editorInstance = editor)}
-				/>
-				<InlineToolbar editor={editorInstance} {editorFocused} />
-			</div>
-		</div>
-
-		<!-- Frontmatter tab -->
-		{#if hasFrontmatter}
-			<div class="flex-1 overflow-y-auto" class:hidden={activeTab !== 'frontmatter'}>
-				<FrontmatterEditor
-					bind:this={frontmatterRef}
-					value={frontmatterValue}
-					onchange={(v) => {
-						frontmatterValue = v;
-					}}
-					fullscreen
-				/>
-			</div>
-		{/if}
-
-		{#if toastMessage}
-			<div
-				class="fixed bottom-6 left-1/2 z-60 -translate-x-1/2"
-				transition:fly={{ y: 16, duration: 200 }}
-			>
-				<div
-					class="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg {toastMessage.type ===
-					'success'
-						? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-						: 'bg-red-600 text-white'}"
-				>
-					{toastMessage.text}
-					<button
-						type="button"
-						onclick={() => (toastMessage = null)}
-						class="ml-1 cursor-pointer opacity-60 transition-opacity hover:opacity-100"
-					>
-						<X size={14} />
-					</button>
-				</div>
-			</div>
-		{/if}
-	</div>
-{:else if isBrixEditing}
+{#if isBrixEditing}
 	<div class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900">
 		<div
 			class="relative z-30 flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
@@ -902,8 +647,7 @@
 			{data.file.name}
 		</h1>
 		<p class="text-muted">
-			This SvelteKit page is visible in the explorer, but only Markdown and brix page files are
-			editable right now.
+			This SvelteKit page is visible in the explorer, but only brix page files are editable right now.
 		</p>
 	</div>
 {:else}
@@ -1394,17 +1138,11 @@
 	open={mediaPickerOpen}
 	branch={data.branch}
 	mediaPath={data.repo.mediaPath}
-	onselect={({ imageUrl, fileName }) => {
+	onselect={({ imageUrl }) => {
 		if (builderImagePickCallback) {
 			builderImagePickCallback(imageUrl);
 			builderImagePickCallback = null;
 			mediaPickerOpen = false;
-		} else {
-			editorInstance
-				?.chain()
-				.focus()
-				.insertContent(`<img src="${imageUrl}" alt="${fileName}">`)
-				.run();
 		}
 	}}
 	onclose={() => {
