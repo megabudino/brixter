@@ -2,6 +2,8 @@
 
 SvelteKit CMS with a visual builder, `.brix.yaml` pages, and a dashboard for routes, media, and publishing.
 
+> **Adding Brixter to your project?** Follow the [configuration guide →](./packages/brixter/README.md)
+
 ## Packages
 
 | Package | Description |
