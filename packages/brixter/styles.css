@@ -1,6 +1,6 @@
-@source "./src/lib/ui";
-@source "./src/lib/editor";
-@source "./src/lib/dashboard";
+@source "./src/ui";
+@source "./src/editor";
+@source "./src/dashboard";
 @source "../@brixter/brix-builder/dist";
 @source "../brix-builder/editor";
 @source "../brix-builder/svelte";

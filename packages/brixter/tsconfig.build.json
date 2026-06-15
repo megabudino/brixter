@@ -3,7 +3,7 @@
 		"target": "ES2022",
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"rootDir": "./src/lib/vite",
+		"rootDir": "./src/vite",
 		"outDir": "./dist/vite",
 		"declaration": true,
 		"declarationMap": true,
@@ -17,5 +17,5 @@
 		"resolveJsonModule": true,
 		"skipLibCheck": true
 	},
-	"include": ["./src/lib/vite/**/*.ts"]
+	"include": ["./src/vite/**/*.ts"]
 }
