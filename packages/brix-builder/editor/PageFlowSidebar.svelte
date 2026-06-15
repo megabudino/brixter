@@ -98,7 +98,7 @@
 <aside class="flex h-full min-h-0 w-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" aria-label="Page flow" onclick={(event) => { if (!(event.target as Element).closest('[data-page-flow-block]')) onDeselectBlock(); }}>
 	<div class="min-h-0 flex-1 overflow-y-auto py-2">
 		{#if blocks.length === 0}
-			<p class="text-muted mx-3 border border-dashed border-gray-300 px-4 py-6 text-sm dark:border-gray-600">
+			<p class="bx-text-muted mx-3 border border-dashed border-gray-300 px-4 py-6 text-sm dark:border-gray-600">
 				No briks on the page.
 			</p>
 		{/if}
