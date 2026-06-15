@@ -248,7 +248,7 @@ function pageTypeLabel(page: PageFile): string {
 }
 
 function isEditablePage(page: PageFile): boolean {
-	return page.kind === 'brix' || page.kind === 'markdown';
+	return page.kind === 'brix';
 }
 
 function hasHiddenSegment(path: string, root: string): boolean {
