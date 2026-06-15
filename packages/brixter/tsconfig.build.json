@@ -5,6 +5,7 @@
 		"moduleResolution": "NodeNext",
 		"rootDir": "./src/vite",
 		"outDir": "./dist/vite",
+		"rewriteRelativeImportExtensions": true,
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
