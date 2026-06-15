@@ -16,15 +16,6 @@ export async function loginAction({ request, cookies }: RequestEvent) {
 			returnHeaders: true
 		});
 		if (result.headers) applySetCookieHeaders(result.headers, cookies);
-
-		const session = await getAuth().api.getSession({ headers: request.headers });
-		if (!session?.user) {
-			return fail(500, {
-				message:
-					'Sign-in succeeded but your session was not saved. Confirm ORIGIN in your environment matches the URL in your browser (including http/https and port), and that cookies are not blocked.',
-				email
-			});
-		}
 	} catch (err) {
 		if (process.env.NODE_ENV !== 'production') {
 			console.error('brixter login failed', err);
