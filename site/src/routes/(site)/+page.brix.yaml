@@ -4,7 +4,7 @@ components:
   - type: Hero
     props:
       eyebrow: Brixter CMS
-      headline: The CMS that does not take the site away from developers.
+      headline: The content is in your codebase.
       subtitle: Landing pages, content, and routes editable in preview. Code stays in
         the repo. Marketing stops waiting.
       cta:

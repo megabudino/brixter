@@ -154,7 +154,6 @@
 	}
 
 	function getPreviewUrl(entry: any) {
-		if (!entry.downloadUrl) return '';
 		return `/admin/api/repo-image?branch=${data.branch}&path=${entry.path}`;
 	}
 

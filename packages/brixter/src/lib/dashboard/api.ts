@@ -1,36 +1,10 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { getOctokit, getRepo } from '../server/github.ts';
-import { getRepoConfig } from '../server/repo-config.ts';
+import { getContentStore, isLocalMode, type ContentEntry } from '../server/content-store.ts';
 import { getConfig } from '../server/config.ts';
 import { isWithinRepoRoot, normalizeRepoPath } from '../server/sveltekit-routes.ts';
+import { Buffer } from 'node:buffer';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
-
-export async function resolveLocalPath(repoRelativePath: string): Promise<string> {
-	const fs = await import('node:fs/promises');
-	const pathLib = await import('node:path');
-	
-	let root = process.cwd();
-	while (true) {
-		const gitPath = pathLib.join(root, '.git');
-		const hasGit = await fs.access(gitPath).then(() => true).catch(() => false);
-		if (hasGit) {
-			return pathLib.resolve(root, repoRelativePath);
-		}
-		const parent = pathLib.dirname(root);
-		if (parent === root) {
-			break;
-		}
-		root = parent;
-	}
-	
-	let resolved = pathLib.resolve(process.cwd(), repoRelativePath);
-	const cwdNormalized = process.cwd().replace(/\\/g, '/');
-	if (cwdNormalized.endsWith('/site') && repoRelativePath.startsWith('site/')) {
-		resolved = pathLib.resolve(pathLib.dirname(process.cwd()), repoRelativePath);
-	}
-	return resolved;
-}
 
 function apiPath(pathname: string): string {
 	const marker = '/admin/api/';
@@ -44,10 +18,12 @@ async function mediaPicker(event: RequestEvent) {
 	const { locals, url, request } = event;
 	if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
 
+	const store = getContentStore();
+	const branch = store.branch;
+
 	if (request.method === 'POST') {
 		try {
 			const formData = await request.formData();
-			const branch = formData.get('branch')?.toString();
 			const path = normalizeRepoPath(formData.get('path')?.toString() ?? '');
 			const action = formData.get('action')?.toString();
 
@@ -58,9 +34,6 @@ async function mediaPicker(event: RequestEvent) {
 			const { mediaDir } = getConfig();
 			const mediaRoot = normalizeRepoPath(mediaDir);
 
-			const octokit = getOctokit();
-			const repo = getRepo();
-
 			if (action === 'create-dir') {
 				const name = formData.get('name')?.toString().trim();
 				if (!name) return json({ error: 'Directory name is required' }, { status: 400 });
@@ -68,32 +41,12 @@ async function mediaPicker(event: RequestEvent) {
 					return json({ error: 'Invalid directory name' }, { status: 400 });
 				}
 
-				const targetPath = normalizeRepoPath(path ? `${path}/${name}/.gitkeep` : `${name}/.gitkeep`);
+				const targetPath = normalizeRepoPath(path ? `${path}/${name}` : `${name}`);
 				if (mediaRoot && !isWithinRepoRoot(targetPath, mediaRoot)) {
 					return json({ error: 'Access denied' }, { status: 403 });
 				}
 
-				await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-					owner: repo.owner,
-					repo: repo.name,
-					path: targetPath,
-					message: `Create directory ${name}`,
-					content: Buffer.from('').toString('base64'),
-					branch
-				});
-
-				if (process.env.NODE_ENV !== 'production') {
-					try {
-						const fs = await import('node:fs/promises');
-						const pathLib = await import('node:path');
-						const localPath = await resolveLocalPath(targetPath);
-						await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
-						await fs.writeFile(localPath, '');
-					} catch (fsErr) {
-						console.error('Failed to create local directory:', fsErr);
-					}
-				}
-
+				await store.createDirectory(targetPath);
 				return json({ success: true });
 			} else if (action === 'upload') {
 				const file = formData.get('file');
@@ -108,34 +61,12 @@ async function mediaPicker(event: RequestEvent) {
 				}
 
 				const arrayBuffer = await (file as any).arrayBuffer();
-				const base64Content = Buffer.from(arrayBuffer).toString('base64');
-
-				await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-					owner: repo.owner,
-					repo: repo.name,
-					path: targetPath,
-					message: `Upload ${fileName}`,
-					content: base64Content,
-					branch
-				});
-
-				if (process.env.NODE_ENV !== 'production') {
-					try {
-						const fs = await import('node:fs/promises');
-						const pathLib = await import('node:path');
-						const localPath = await resolveLocalPath(targetPath);
-						await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
-						await fs.writeFile(localPath, Buffer.from(arrayBuffer));
-					} catch (fsErr) {
-						console.error('Failed to write uploaded file locally:', fsErr);
-					}
-				}
+				await store.writeFile(targetPath, Buffer.from(arrayBuffer));
 
 				return json({ success: true });
 			} else if (action === 'delete') {
 				const itemPath = normalizeRepoPath(formData.get('itemPath')?.toString() ?? '');
 				const isDir = formData.get('isDir')?.toString() === 'true';
-				const sha = formData.get('sha')?.toString();
 
 				if (!itemPath) {
 					return json({ error: 'Item path is required' }, { status: 400 });
@@ -144,47 +75,7 @@ async function mediaPicker(event: RequestEvent) {
 					return json({ error: 'Access denied' }, { status: 403 });
 				}
 
-				const pathToDelete = isDir ? normalizeRepoPath(`${itemPath}/.gitkeep`) : itemPath;
-				let fileSha = sha;
-				if (!fileSha) {
-					try {
-						const { data: fileData } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-							owner: repo.owner,
-							repo: repo.name,
-							path: pathToDelete,
-							ref: branch
-						});
-						if (!Array.isArray(fileData)) {
-							fileSha = fileData.sha;
-						}
-					} catch (err) {
-						// Ignore and attempt delete anyway if we might be in some other state,
-						// but typically we need it.
-					}
-				}
-
-				if (fileSha) {
-					await octokit.request('DELETE /repos/{owner}/{repo}/contents/{path}', {
-						owner: repo.owner,
-						repo: repo.name,
-						path: pathToDelete,
-						message: `Delete ${pathToDelete.split('/').pop()}`,
-						sha: fileSha,
-						branch
-					});
-				} else if (!isDir) {
-					return json({ error: 'Failed to retrieve file SHA' }, { status: 400 });
-				}
-
-				if (process.env.NODE_ENV !== 'production') {
-					try {
-						const fs = await import('node:fs/promises');
-						const localPath = await resolveLocalPath(itemPath);
-						await fs.rm(localPath, { recursive: true, force: true });
-					} catch (fsErr) {
-						console.error('Failed to delete local file/directory:', fsErr);
-					}
-				}
+				await store.deleteFile(itemPath);
 
 				return json({ success: true });
 			} else {
@@ -199,39 +90,22 @@ async function mediaPicker(event: RequestEvent) {
 		}
 	}
 
-	const branch = url.searchParams.get('branch');
-	const all = url.searchParams.get('all') === 'true';
+	// GET: list directory
 	const { mediaDir } = getConfig();
 	const mediaRoot = normalizeRepoPath(mediaDir);
-	const path = normalizeRepoPath(url.searchParams.get('path') ?? mediaRoot);
+	const queryPath = normalizeRepoPath(url.searchParams.get('path') ?? mediaRoot);
+	const all = url.searchParams.get('all') === 'true';
 	if (!branch) return json({ error: 'Missing required parameters' }, { status: 400 });
 
-	if (mediaRoot && !isWithinRepoRoot(path, mediaRoot)) {
+	if (mediaRoot && !isWithinRepoRoot(queryPath, mediaRoot)) {
 		return json({ error: 'Access denied' }, { status: 403 });
 	}
 
-	const octokit = getOctokit();
-	const repo = getRepo();
-
 	try {
-		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path,
-			ref: branch
-		});
+		const entries = await store.listDirectory(queryPath);
 
-		if (!Array.isArray(data)) return json({ error: 'Path is not a directory' }, { status: 400 });
-
-		const entries = data
-			.map((item) => ({
-				name: item.name,
-				path: item.path,
-				type: item.type as 'file' | 'dir',
-				downloadUrl: item.download_url as string | null,
-				sha: item.sha
-			}))
-			.filter((item) => {
+		const filtered = entries
+			.filter((item: ContentEntry) => {
 				if (item.name === '.gitkeep') return false;
 				if (item.type === 'dir') {
 					return !mediaRoot || isWithinRepoRoot(item.path, mediaRoot);
@@ -243,12 +117,12 @@ async function mediaPicker(event: RequestEvent) {
 				}
 				return !mediaRoot || isWithinRepoRoot(item.path, mediaRoot);
 			})
-			.sort((a, b) => {
-				if (a.type === b.type) return a.name.localeCompare(b.name);
+			.sort((a: ContentEntry, b: ContentEntry) => {
+				if (a.type === b.type) return (a.name ?? '').localeCompare(b.name ?? '');
 				return a.type === 'dir' ? -1 : 1;
 			});
 
-		return json({ path, entries });
+		return json({ path: queryPath, entries: filtered });
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return json(
@@ -265,34 +139,34 @@ async function repoImage({ locals, url }: RequestEvent) {
 	const path = url.searchParams.get('path');
 	if (!branch || !path) return new Response('Missing parameters', { status: 400 });
 
-	if (process.env.NODE_ENV !== 'production') {
+	// In local mode, serve directly from the filesystem
+	if (isLocalMode()) {
+		const store = getContentStore();
 		try {
-			const fs = await import('node:fs/promises');
-			const localFilePath = await resolveLocalPath(path);
-			const exists = await fs.access(localFilePath).then(() => true).catch(() => false);
-			if (exists) {
-				const content = await fs.readFile(localFilePath);
-				const contentType = path.endsWith('.svg')
-					? 'image/svg+xml'
-					: path.endsWith('.webp')
-						? 'image/webp'
-						: path.endsWith('.png')
-							? 'image/png'
-							: path.endsWith('.gif')
-								? 'image/gif'
-								: 'image/jpeg';
-				return new Response(content, {
-					headers: {
-						'Content-Type': contentType,
-						'Cache-Control': 'private, max-age=3600'
-					}
-				});
-			}
-		} catch (err) {
-			console.error('Failed to read local file for repoImage:', err);
+			const buffer = await store.readBuffer(path);
+			const contentType = path.endsWith('.svg')
+				? 'image/svg+xml'
+				: path.endsWith('.webp')
+					? 'image/webp'
+					: path.endsWith('.png')
+						? 'image/png'
+						: path.endsWith('.gif')
+							? 'image/gif'
+							: 'image/jpeg';
+
+			return new Response(new Uint8Array(buffer), {
+				headers: {
+					'Content-Type': contentType,
+					'Cache-Control': 'private, max-age=3600'
+				}
+			});
+		} catch {
+			return new Response('Image not found', { status: 404 });
 		}
 	}
 
+	// GitHub mode
+	const { getOctokit, getRepo } = await import('../server/github.ts');
 	const octokit = getOctokit();
 	const repo = getRepo();
 
@@ -343,43 +217,29 @@ async function iconPicker(event: RequestEvent) {
 	const relativePath = url.searchParams.get('path') ?? '';
 	const targetPath = relativePath ? `${iconsBase}/${relativePath}` : iconsBase;
 
-	if (process.env.NODE_ENV !== 'production') {
+	// In local mode, read direct from filesystem
+	if (isLocalMode()) {
+		const store = getContentStore();
 		try {
-			const fs = await import('node:fs/promises');
-			const localDir = await resolveLocalPath(targetPath);
+			const entries = await store.listDirectory(targetPath);
+			const filtered = entries
+				.filter((item: ContentEntry) => {
+					if (item.type === 'dir') return true;
+					return item.name.toLowerCase().endsWith('.svg');
+				})
+				.sort((a: ContentEntry, b: ContentEntry) => {
+					if (a.type === b.type) return (a.name ?? '').localeCompare(b.name ?? '');
+					return a.type === 'dir' ? -1 : 1;
+				});
 
-			const exists = await fs.access(localDir).then(() => true).catch(() => false);
-			if (exists) {
-				const dirents = await fs.readdir(localDir, { withFileTypes: true });
-				const entries = dirents
-					.map((item) => {
-						const itemPath = relativePath ? `${relativePath}/${item.name}` : item.name;
-						const fullRepoPath = `${targetPath}/${item.name}`;
-						return {
-							name: item.name,
-							path: itemPath,
-							type: item.isDirectory() ? 'dir' : 'file',
-							downloadUrl: item.isDirectory()
-								? null
-								: `/admin/api/repo-image?branch=${branch}&path=${fullRepoPath}`
-						};
-					})
-					.filter((item) => {
-						if (item.type === 'dir') return true;
-						return item.name.toLowerCase().endsWith('.svg');
-					})
-					.sort((a, b) => {
-						if (a.type === b.type) return a.name.localeCompare(b.name);
-						return a.type === 'dir' ? -1 : 1;
-					});
-
-				return json({ path: targetPath, entries });
-			}
-		} catch (err) {
-			console.error('Failed to read local icons directory:', err);
+			return json({ path: targetPath, entries: filtered });
+		} catch {
+			return json({ path: targetPath, entries: [] });
 		}
 	}
 
+	// GitHub mode
+	const { getOctokit, getRepo } = await import('../server/github.ts');
 	const octokit = getOctokit();
 	const repo = getRepo();
 

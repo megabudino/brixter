@@ -5,7 +5,7 @@ import { getAuth } from '../server/auth.ts';
 import { getConfig, getCoreConfigIssues } from '../server/config.ts';
 import { isSetupComplete } from '../server/setup.ts';
 import { getDb } from '../server/db.ts';
-import { getOctokit, getRepo } from '../server/github.ts';
+import { getContentStore, isLocalMode } from '../server/content-store.ts';
 import {
 	childDirNames,
 	childPageNames,
@@ -27,7 +27,7 @@ import {
 	invalidateBranchRouteCache
 } from './repo-cache.ts';
 import { marked } from 'marked';
-import { resolveLocalPath } from './api.ts';
+import { Buffer } from 'node:buffer';
 
 type DashboardPage =
 	| 'login'
@@ -52,8 +52,23 @@ const editorRenderer = {
 	}
 };
 
-const DRAFT_BRANCH = 'brixter-draft';
+function draftBranch(): string {
+	return getContentStore().branch;
+}
+
 const LEGACY_DRAFT_BRANCHES = ['drafts'];
+
+function repoMeta() {
+	const config = getConfig().github;
+	return {
+		name: config.repoName,
+		fullName: `${config.repoOwner}/${config.repoName}`
+	};
+}
+
+function defaultBranchForConfig(): string {
+	return getConfig().github.defaultBranch;
+}
 
 function decodePathPart(value: string | undefined): string {
 	return decodeURIComponent(value ?? '');
@@ -159,19 +174,21 @@ function dashboardPath(pathname: string): string {
 
 function matchPage(pathname: string): PageMatch {
 	const path = dashboardPath(pathname).replace(/\/$/, '');
+	const branch = draftBranch();
+
 	if (!path) throw redirect(302, '/admin/routes');
 	if (path === 'login') return { page: 'login' };
 	if (path === 'setup') return { page: 'setup' };
 	if (path === 'config-error') return { page: 'config-error' };
 	if (path === 'settings') throw redirect(302, '/admin/routes');
 	if (path === 'accounts') return { page: 'accounts' };
-	if (path === 'publish') return { page: 'publish', branch: DRAFT_BRANCH };
+	if (path === 'publish') return { page: 'publish', branch };
 
 	const parts = path.split('/');
 	if (parts[0] === 'routes') {
 		return {
 			page: 'branch',
-			branch: DRAFT_BRANCH,
+			branch,
 			path: decodePathPart(parts.slice(1).join('/'))
 		};
 	}
@@ -179,14 +196,14 @@ function matchPage(pathname: string): PageMatch {
 	if (parts[0] === 'media') {
 		return {
 			page: 'media',
-			branch: DRAFT_BRANCH,
+			branch,
 			path: decodePathPart(parts.slice(1).join('/'))
 		};
 	}
 
 	if (parts[0] === 'b' && parts[1]) {
-		const branch = decodePathPart(parts[1]);
-		if (branch !== DRAFT_BRANCH && !LEGACY_DRAFT_BRANCHES.includes(branch)) {
+		const legacyBranch = decodePathPart(parts[1]);
+		if (legacyBranch !== branch && !LEGACY_DRAFT_BRANCHES.includes(legacyBranch)) {
 			throw redirect(302, '/admin/routes');
 		}
 		const routePath = parts
@@ -241,8 +258,6 @@ function parentPathForPage(path: string, routeTree: RouteNode): string | null {
 	const routeNode = findRouteNode(routeTree, routeDir);
 	if (!routeNode) return parentPathFor(path, routeTree);
 
-	// Leaf pages are displayed collapsed in the parent listing, so "back"
-	// should return to that mapped parent rather than opening the route dir.
 	if (routeNode.children.length === 0) return parentPathFor(routeDir, routeTree);
 	return routeDirUrlPath(routeTree.dirPath, routeDir);
 }
@@ -277,57 +292,9 @@ function routesHref(path = ''): string {
 	return `${base}/${path.split('/').map(encodeRouteSegment).join('/')}`;
 }
 
-function isGithubNotFound(err: unknown): boolean {
-	const e = err as { status?: number; response?: { status?: number } };
-	return (e.status ?? e.response?.status) === 404;
-}
-
-async function getBranchRefSha(branch: string): Promise<string | null> {
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	try {
-		const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: `heads/${branch}`
-		});
-		return ref.object.sha;
-	} catch (err: unknown) {
-		if (isGithubNotFound(err)) return null;
-		throw err;
-	}
-}
-
 async function ensureDraftBranch(): Promise<void> {
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	if (repo.defaultBranch === DRAFT_BRANCH) return;
-
-	if (await getBranchRefSha(DRAFT_BRANCH)) return;
-
-	let sourceSha: string | null = null;
-	for (const legacyBranch of LEGACY_DRAFT_BRANCHES) {
-		sourceSha = await getBranchRefSha(legacyBranch);
-		if (sourceSha) break;
-	}
-	sourceSha ??= await getBranchRefSha(repo.defaultBranch);
-	if (!sourceSha) throw error(500, 'Failed to resolve draft branch source.');
-
-	try {
-		await octokit.request('POST /repos/{owner}/{repo}/git/refs', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: `refs/heads/${DRAFT_BRANCH}`,
-			sha: sourceSha
-		});
-		invalidateBranchRouteCache(DRAFT_BRANCH);
-	} catch (err: unknown) {
-		const e = err as { status?: number; response?: { status?: number } };
-		const status = e.status ?? e.response?.status;
-		if (status !== 422) throw err;
-	}
+	const store = getContentStore();
+	await store.ensureDraftBranch();
 }
 
 async function syncDraftWithDefaultBranch(defaultBranch: string): Promise<{
@@ -335,30 +302,8 @@ async function syncDraftWithDefaultBranch(defaultBranch: string): Promise<{
 	aheadBy: number;
 	syncError?: string;
 }> {
-	if (defaultBranch === DRAFT_BRANCH) return { behindBy: 0, aheadBy: 0 };
-
-	const status = await getBranchStatus(DRAFT_BRANCH, defaultBranch);
-	if (status.behindBy === 0) return status;
-
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	try {
-		await octokit.request('POST /repos/{owner}/{repo}/merges', {
-			owner: repo.owner,
-			repo: repo.name,
-			base: DRAFT_BRANCH,
-			head: defaultBranch
-		});
-		invalidateBranchRouteCache(DRAFT_BRANCH);
-		const updated = await getBranchStatus(DRAFT_BRANCH, defaultBranch);
-		return { behindBy: updated.behindBy, aheadBy: updated.aheadBy };
-	} catch (err: unknown) {
-		const message =
-			(err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-			'Failed to update draft from main.';
-		return { behindBy: status.behindBy, aheadBy: status.aheadBy, syncError: message };
-	}
+	const store = getContentStore();
+	return store.syncWithDefault();
 }
 
 async function loadBranchFile(
@@ -366,61 +311,44 @@ async function loadBranchFile(
 	filePath: string,
 	mediaPath: string
 ): Promise<Record<string, unknown>> {
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-		owner: repo.owner,
-		repo: repo.name,
-		path: filePath,
-		ref: branch
-	});
-
-	const file = data as {
-		name: string;
-		path: string;
-		sha: string;
-		download_url: string;
-		size: number;
-		content?: string;
-		encoding?: string;
-	};
+	const store = getContentStore();
+	const result = await store.readFile(filePath);
 
 	let htmlContent: string | undefined;
 	let frontmatter: string | undefined;
 	let brixYaml: string | undefined;
 
-	if (file.content && file.encoding === 'base64') {
-		const raw = Buffer.from(file.content, 'base64').toString('utf-8');
-		if (isBrixYamlFile(file.name)) {
-			brixYaml = raw;
-		}
-		if (file.name.endsWith('.md')) {
-			const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+	const raw = result.content;
+	const fileName = filePath.split('/').pop() ?? filePath;
 
-			if (fmMatch) {
-				frontmatter = fmMatch[1];
-				htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
-			} else {
-				htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
-			}
+	if (isBrixYamlFile(fileName)) {
+		brixYaml = raw;
+	}
+	if (fileName.endsWith('.md')) {
+		const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
 
-			const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
-			htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
-				const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
-				const proxyParams = new URLSearchParams({ branch, path: repoPath });
-				return `src="/admin/api/repo-image?${proxyParams}"`;
-			});
+		if (fmMatch) {
+			frontmatter = fmMatch[1];
+			htmlContent = await marked.use({ renderer: editorRenderer }).parse(fmMatch[2]);
+		} else {
+			htmlContent = await marked.use({ renderer: editorRenderer }).parse(raw);
 		}
+
+		const mediaPrefix = (mediaPath ?? '').replace(/\/$/, '');
+		htmlContent = htmlContent.replace(/src="\/([^"]+)"/g, (_match, imgPath) => {
+			const repoPath = mediaPrefix ? `${mediaPrefix}/${imgPath}` : imgPath;
+			const proxyParams = new URLSearchParams({ branch, path: repoPath });
+			return `src="/admin/api/repo-image?${proxyParams}"`;
+		});
 	}
 
 	return {
 		file: {
-			name: file.name,
-			path: file.path,
-			sha: file.sha,
-			downloadUrl: file.download_url,
-			size: file.size,
+			name: fileName,
+			path: filePath,
+			sha: result.sha,
+			downloadUrl: result.downloadUrl,
+			size: result.size,
 			htmlContent,
 			frontmatter,
 			brixYaml
@@ -430,12 +358,12 @@ async function loadBranchFile(
 
 async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (match.branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
+	if (match.branch !== draftBranch()) throw redirect(302, '/admin/routes');
 
 	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
 	const routesRoot = normalizeRepoPath(getConfig().routesRoot);
-	const repo = getRepo();
-	const defaultBranch = repo.defaultBranch;
+	const defaultBranch = defaultBranchForConfig();
+	const branch = match.branch!;
 	await ensureDraftBranch();
 
 	let routeTree: RouteNode;
@@ -447,7 +375,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		behindBy = sync.behindBy;
 		aheadBy = sync.aheadBy;
 		syncError = sync.syncError;
-		({ routeTree } = await getBranchRouteSnapshot(match.branch, routesRoot));
+		({ routeTree } = await getBranchRouteSnapshot(branch, routesRoot));
 	} catch (err: unknown) {
 		const e = err as {
 			status?: number;
@@ -467,7 +395,8 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 	if (!isWithinRepoRoot(currentRouteDir, routesRoot)) throw error(403, 'Access denied');
 
-	const repoMeta = { name: repo.name, fullName: repo.fullName, mediaPath: mediaDir, routesRoot };
+	const rm = repoMeta();
+	const repoMetaObj = { name: rm.name, fullName: rm.fullName, mediaPath: mediaDir, routesRoot };
 
 	if (routeRequest.kind === 'page') {
 		const currentNode = findRouteNode(routeTree, currentRouteDir);
@@ -476,7 +405,7 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 		let filePayload: Record<string, unknown>;
 		try {
-			filePayload = await loadBranchFile(match.branch, pageFile.filePath, mediaDir);
+			filePayload = await loadBranchFile(branch, pageFile.filePath, mediaDir);
 		} catch (err: unknown) {
 			const e = err as {
 				status?: number;
@@ -491,8 +420,8 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 
 		const file = filePayload.file as { path: string };
 		return {
-			repo: repoMeta,
-			branch: match.branch,
+			repo: repoMetaObj,
+			branch,
 			defaultBranch,
 			filePath: pageFile.filePath,
 			explorerRoot: routesRoot,
@@ -504,7 +433,8 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 			childPageNames: [],
 			behindBy,
 			aheadBy,
-			syncError
+			syncError,
+			isLocal: isLocalMode()
 		};
 	}
 
@@ -512,8 +442,8 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 	if (!currentNode) throw error(404, 'Not found');
 
 	return {
-		repo: repoMeta,
-		branch: match.branch,
+		repo: repoMetaObj,
+		branch,
 		defaultBranch,
 		filePath: currentRouteDir,
 		explorerRoot: routesRoot,
@@ -524,23 +454,40 @@ async function loadBranch({ locals }: RequestEvent, match: PageMatch) {
 		childPageNames: childPageNames(routeTree, currentRouteDir),
 		behindBy,
 		aheadBy,
-		syncError
+		syncError,
+		isLocal: isLocalMode()
 	};
 }
 
 async function loadPublish({ locals }: RequestEvent, match: PageMatch) {
 	if (!locals.user) throw redirect(302, '/admin/login');
-	if (match.branch !== DRAFT_BRANCH) throw redirect(302, '/admin/routes');
+	if (match.branch !== draftBranch()) throw redirect(302, '/admin/routes');
 
-	const repo = getRepo();
-	const defaultBranch = repo.defaultBranch;
-	const branch = DRAFT_BRANCH;
+	const defaultBranch = defaultBranchForConfig();
+	const branch = draftBranch();
 	await ensureDraftBranch();
 
 	const { aheadBy, behindBy } = await getBranchStatus(branch, defaultBranch);
 	if (aheadBy === 0) throw redirect(302, '/admin/routes');
 
+	// In local mode, we show an empty comparison
+	if (isLocalMode()) {
+		return {
+			repo: { name: repoMeta().name, fullName: repoMeta().fullName },
+			branch,
+			defaultBranch,
+			aheadBy,
+			behindBy,
+			totalCommits: 0,
+			files: []
+		};
+	}
+
+	// GitHub mode: fetch comparison
+	const { getOctokit, getRepo } = await import('../server/github.ts');
 	const octokit = getOctokit();
+	const repo = getRepo();
+
 	let comparison: {
 		total_commits: number;
 		files?: Array<{
@@ -594,38 +541,25 @@ async function loadMedia({ locals }: RequestEvent, match: PageMatch) {
 	if (!locals.user) throw redirect(302, '/admin/login');
 
 	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
-	const repo = getRepo();
-	const defaultBranch = repo.defaultBranch;
+	const defaultBranch = defaultBranchForConfig();
 	await ensureDraftBranch();
 
-	const branch = DRAFT_BRANCH;
+	const branch = draftBranch();
 	const currentPath = normalizeRepoPath(match.path ? `${mediaDir}/${match.path}` : mediaDir);
 
 	if (mediaDir && !isWithinRepoRoot(currentPath, mediaDir)) {
 		throw error(403, 'Access denied');
 	}
 
-	const octokit = getOctokit();
+	const store = getContentStore();
 	let entries: any[] = [];
 	let loadError = '';
 
 	try {
-		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: currentPath,
-			ref: branch
-		});
+		const dirEntries = await store.listDirectory(currentPath);
 
-		if (Array.isArray(data)) {
-			entries = data
-				.map((item) => ({
-					name: item.name,
-					path: item.path,
-					type: item.type as 'file' | 'dir',
-					downloadUrl: item.download_url as string | null,
-					sha: item.sha
-				}))
+		if (dirEntries.length > 0) {
+			entries = dirEntries
 				.filter((item) => {
 					if (item.name === '.gitkeep') return false;
 					if (item.type === 'dir') {
@@ -637,6 +571,48 @@ async function loadMedia({ locals }: RequestEvent, match: PageMatch) {
 					if (a.type === b.type) return a.name.localeCompare(b.name);
 					return a.type === 'dir' ? -1 : 1;
 				});
+		} else if (!isLocalMode()) {
+			// Fallback to GitHub API in non-local mode if listDirectory is empty
+			// (this happens for brand-new branches)
+			const { getOctokit, getRepo } = await import('../server/github.ts');
+			const octokit = getOctokit();
+			const repo = getRepo();
+
+			try {
+				const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+					owner: repo.owner,
+					repo: repo.name,
+					path: currentPath,
+					ref: branch
+				});
+
+				if (Array.isArray(data)) {
+					entries = data
+						.map((item) => ({
+							name: item.name,
+							path: item.path,
+							type: item.type as 'file' | 'dir',
+							downloadUrl: item.download_url as string | null,
+							sha: item.sha
+						}))
+						.filter((item) => {
+							if (item.name === '.gitkeep') return false;
+							if (item.type === 'dir') {
+								return !mediaDir || isWithinRepoRoot(item.path, mediaDir);
+							}
+							return !mediaDir || isWithinRepoRoot(item.path, mediaDir);
+						})
+						.sort((a, b) => {
+							if (a.type === b.type) return a.name.localeCompare(b.name);
+							return a.type === 'dir' ? -1 : 1;
+						});
+				}
+			} catch (err: any) {
+				const e = err as { response?: { status?: number; data?: { message?: string } } };
+				if (e.response?.status !== 404) {
+					loadError = e.response?.data?.message ?? 'Failed to load media files.';
+				}
+			}
 		}
 	} catch (err: any) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
@@ -657,8 +633,9 @@ async function loadMedia({ locals }: RequestEvent, match: PageMatch) {
 		})
 	];
 
+	const rm = repoMeta();
 	return {
-		repo: { name: repo.name, fullName: repo.fullName, mediaPath: mediaDir },
+		repo: { name: rm.name, fullName: rm.fullName, mediaPath: mediaDir },
 		branch,
 		defaultBranch,
 		currentPath,
@@ -726,6 +703,7 @@ export async function loadDashboard(event: RequestEvent) {
 	return {
 		page: match.page,
 		showNav: Boolean(event.locals.user) && match.page !== 'login' && match.page !== 'setup',
+		isLocal: isLocalMode(),
 		pageData
 	};
 }
@@ -852,16 +830,9 @@ async function mergeAction({ locals, url }: RequestEvent) {
 	const match = matchPage(url.pathname);
 	if (match.page !== 'branch' || !match.branch) return fail(404, { mergeError: 'Not found.' });
 
-	const octokit = getOctokit();
-	const repo = getRepo();
-
+	const store = getContentStore();
 	try {
-		await octokit.request('POST /repos/{owner}/{repo}/merges', {
-			owner: repo.owner,
-			repo: repo.name,
-			base: match.branch,
-			head: repo.defaultBranch
-		});
+		await store.mergeDefaultIntoDraft();
 		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
@@ -903,36 +874,26 @@ async function saveAction({ request, locals, url }: RequestEvent) {
 		return fail(404, { saveError: 'Not found.' });
 	}
 
-	if (routeRequest.kind !== 'page' || !sha) {
-		return fail(400, { saveError: 'Missing file path or sha.' });
+	if (routeRequest.kind !== 'page') {
+		return fail(400, { saveError: 'Missing file path.' });
 	}
 	if (!isWithinRepoRoot(routeRequest.dirPath, routesRoot)) {
 		return fail(403, { saveError: 'Access denied.' });
 	}
 
-	let filePath: string;
 	const pageFile = findRouteNode(routeTree, routeRequest.dirPath)?.page;
 	if (!pageFile) return fail(404, { saveError: 'Not found.' });
-	filePath = pageFile.filePath;
+	const filePath = pageFile.filePath;
 
 	const fileContent = isBrixYamlFile(filePath)
 		? brixYaml
 		: frontmatterYaml.trim()
 			? `---\n${frontmatterYaml.trim()}\n---\n${markdown}`
 			: markdown;
-	const octokit = getOctokit();
-	const repo = getRepo();
 
+	const store = getContentStore();
 	try {
-		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: filePath,
-			message: `Update ${filePath}`,
-			content: Buffer.from(fileContent).toString('base64'),
-			sha,
-			branch: match.branch
-		});
+		await store.writeFile(filePath, fileContent, sha || undefined);
 		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
@@ -986,49 +947,76 @@ async function createDirectoryAction({ request, locals, url }: RequestEvent) {
 		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
 	}
 
-	const octokit = getOctokit();
-	const repo = getRepo();
-	let directoryAlreadyExists = false;
-
-	try {
-		const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: directoryPath,
-			ref: match.branch
-		});
-
-		if (Array.isArray(data)) {
-			directoryAlreadyExists = true;
-		} else {
-			return fail(409, {
-				createDirectoryError: `A file named "${name}" already exists.`,
-				directoryName: name
-			});
+	// Check if directory or file already exists
+	const store = getContentStore();
+	if (store.isLocal) {
+		const existing = await store.listDirectory(directoryPath);
+		const routeNode = findRouteNode(routeTree, directoryPath);
+		if (existing.length > 0 || routeNode) {
+			throw redirect(303, routesHref(routeDirUrlPath(routesRoot, directoryPath)));
 		}
-	} catch (err: unknown) {
-		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		if (e.response?.status !== 404) {
+	} else {
+		// GitHub mode: check via API
+		const { getOctokit, getRepo } = await import('../server/github.ts');
+		const octokit = getOctokit();
+		const repo = getRepo();
+
+		let directoryAlreadyExists = false;
+
+		try {
+			const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+				owner: repo.owner,
+				repo: repo.name,
+				path: directoryPath,
+				ref: match.branch
+			});
+
+			if (Array.isArray(data)) {
+				directoryAlreadyExists = true;
+			} else {
+				return fail(409, {
+					createDirectoryError: `A file named "${name}" already exists.`,
+					directoryName: name
+				});
+			}
+		} catch (err: unknown) {
+			const e = err as { response?: { status?: number; data?: { message?: string } } };
+			if (e.response?.status !== 404) {
+				return fail(e.response?.status ?? 500, {
+					createDirectoryError: e.response?.data?.message ?? 'Failed to check directory.',
+					directoryName: name
+				});
+			}
+		}
+
+		if (directoryAlreadyExists) {
+			throw redirect(303, routesHref(routeDirUrlPath(routesRoot, directoryPath)));
+		}
+
+		try {
+			await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
+				owner: repo.owner,
+				repo: repo.name,
+				path: `${directoryPath}/.gitkeep`,
+				message: `Create ${directoryPath}`,
+				content: Buffer.from('').toString('base64'),
+				branch: match.branch
+			});
+			invalidateBranchRouteCache(match.branch);
+		} catch (err: unknown) {
+			const e = err as { response?: { status?: number; data?: { message?: string } } };
 			return fail(e.response?.status ?? 500, {
-				createDirectoryError: e.response?.data?.message ?? 'Failed to check directory.',
+				createDirectoryError: e.response?.data?.message ?? 'Failed to create directory.',
 				directoryName: name
 			});
 		}
-	}
 
-	if (directoryAlreadyExists) {
 		throw redirect(303, routesHref(routeDirUrlPath(routesRoot, directoryPath)));
 	}
 
+	// Local mode: create directory directly
 	try {
-		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: `${directoryPath}/.gitkeep`,
-			message: `Create ${directoryPath}`,
-			content: Buffer.from('').toString('base64'),
-			branch: match.branch
-		});
+		await store.createDirectory(directoryPath);
 		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
@@ -1082,9 +1070,6 @@ async function createPageAction({ request, locals, url }: RequestEvent) {
 		return fail(403, { createPageError: 'Access denied.', pageName: name });
 	}
 
-	const octokit = getOctokit();
-	const repo = getRepo();
-
 	const existingRoute = childRoute(routeTree, currentPath, name);
 	const existingBlob = tree.find((entry) => entry.type === 'blob' && entry.path === directoryPath);
 
@@ -1109,15 +1094,9 @@ description: ''
 components: []
 `;
 
+	const store = getContentStore();
 	try {
-		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: `${directoryPath}/+page.brix.yaml`,
-			message: `Create ${directoryPath}/+page.brix.yaml`,
-			content: Buffer.from(fileContent).toString('base64'),
-			branch: match.branch
-		});
+		await store.writeFile(`${directoryPath}/+page.brix.yaml`, fileContent);
 		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
@@ -1150,35 +1129,13 @@ async function createMediaDirectoryAction({ request, locals, url }: RequestEvent
 	}
 
 	const targetDir = `${currentPath}/${name}`;
-	const targetPath = normalizeRepoPath(`${targetDir}/.gitkeep`);
-	if (mediaDir && !isWithinRepoRoot(targetPath, mediaDir)) {
+	if (mediaDir && !isWithinRepoRoot(targetDir, mediaDir)) {
 		return fail(403, { createDirectoryError: 'Access denied.', directoryName: name });
 	}
 
-	const octokit = getOctokit();
-	const repo = getRepo();
-
+	const store = getContentStore();
 	try {
-		await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-			owner: repo.owner,
-			repo: repo.name,
-			path: targetPath,
-			message: `Create directory ${name}`,
-			content: Buffer.from('').toString('base64'),
-			branch: match.branch
-		});
-
-		if (process.env.NODE_ENV !== 'production') {
-			try {
-				const fs = await import('node:fs/promises');
-				const pathLib = await import('node:path');
-				const localPath = await resolveLocalPath(targetPath);
-				await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
-				await fs.writeFile(localPath, '');
-			} catch (fsErr) {
-				console.error('Failed to create local directory:', fsErr);
-			}
-		}
+		await store.createDirectory(targetDir);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {
@@ -1209,8 +1166,7 @@ async function uploadMediaAction({ request, locals, url }: RequestEvent) {
 		return fail(403, { uploadError: 'Access denied.' });
 	}
 
-	const octokit = getOctokit();
-	const repo = getRepo();
+	const store = getContentStore();
 
 	for (const file of files) {
 		if (!file || typeof (file as any).arrayBuffer !== 'function') {
@@ -1227,28 +1183,7 @@ async function uploadMediaAction({ request, locals, url }: RequestEvent) {
 
 		try {
 			const arrayBuffer = await (file as any).arrayBuffer();
-			const base64Content = Buffer.from(arrayBuffer).toString('base64');
-
-			await octokit.request('PUT /repos/{owner}/{repo}/contents/{path}', {
-				owner: repo.owner,
-				repo: repo.name,
-				path: targetPath,
-				message: `Upload ${fileName}`,
-				content: base64Content,
-				branch: match.branch
-			});
-
-			if (process.env.NODE_ENV !== 'production') {
-				try {
-					const fs = await import('node:fs/promises');
-					const pathLib = await import('node:path');
-					const localPath = await resolveLocalPath(targetPath);
-					await fs.mkdir(pathLib.dirname(localPath), { recursive: true });
-					await fs.writeFile(localPath, Buffer.from(arrayBuffer));
-				} catch (fsErr) {
-					console.error('Failed to write uploaded file locally:', fsErr);
-				}
-			}
+			await store.writeFile(targetPath, Buffer.from(arrayBuffer));
 		} catch (err: any) {
 			const e = err as { response?: { status?: number; data?: { message?: string } } };
 			return fail(e.response?.status ?? 500, {
@@ -1279,165 +1214,6 @@ function collectRouteDeletePaths(
 	return tree
 		.filter((entry) => entry.type === 'blob' && entry.path.startsWith(prefix))
 		.map((entry) => entry.path);
-}
-
-interface GitBlobEntry {
-	path: string;
-	sha: string;
-}
-
-async function fetchBranchGitBlobs(branch: string): Promise<GitBlobEntry[]> {
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	let treeItems: Array<{ path?: string; type?: string; sha?: string }>;
-
-	try {
-		const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
-			owner: repo.owner,
-			repo: repo.name,
-			tree_sha: branch,
-			recursive: '1'
-		});
-		treeItems = tree.tree ?? [];
-	} catch (err: unknown) {
-		const e = err as { status?: number; response?: { status?: number } };
-		const status = e.status ?? e.response?.status;
-		if (status !== 404 && status !== 422) throw err;
-
-		const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: `heads/${branch}`
-		});
-		const { data: commit } = await octokit.request(
-			'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
-			{
-				owner: repo.owner,
-				repo: repo.name,
-				commit_sha: ref.object.sha
-			}
-		);
-		const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
-			owner: repo.owner,
-			repo: repo.name,
-			tree_sha: commit.tree.sha,
-			recursive: '1'
-		});
-		treeItems = tree.tree ?? [];
-	}
-
-	return treeItems
-		.filter((item) => item.type === 'blob' && item.path && item.sha)
-		.map((item) => ({ path: item.path as string, sha: item.sha as string }));
-}
-
-function collectBlobsUnderDir(routeDirPath: string, blobs: GitBlobEntry[]): GitBlobEntry[] {
-	const prefix = `${routeDirPath}/`;
-	return blobs.filter((blob) => blob.path.startsWith(prefix));
-}
-
-function remapRepoPath(path: string, fromDir: string, toDir: string): string {
-	const prefix = `${fromDir}/`;
-	if (!path.startsWith(prefix)) {
-		throw new Error(`Path ${path} is not under ${fromDir}`);
-	}
-	return `${toDir}${path.slice(fromDir.length)}`;
-}
-
-async function commitTreeChanges(
-	branch: string,
-	treeItems: Array<{
-		path: string;
-		mode: '100644';
-		type: 'blob';
-		sha: string | null;
-	}>,
-	message: string
-): Promise<void> {
-	if (treeItems.length === 0) return;
-
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-		owner: repo.owner,
-		repo: repo.name,
-		ref: `heads/${branch}`
-	});
-	const commitSha = ref.object.sha;
-
-	const { data: commit } = await octokit.request(
-		'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
-		{
-			owner: repo.owner,
-			repo: repo.name,
-			commit_sha: commitSha
-		}
-	);
-
-	const { data: newTree } = await octokit.request('POST /repos/{owner}/{repo}/git/trees', {
-		owner: repo.owner,
-		repo: repo.name,
-		base_tree: commit.tree.sha,
-		tree: treeItems
-	});
-
-	const { data: newCommit } = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
-		owner: repo.owner,
-		repo: repo.name,
-		message,
-		tree: newTree.sha,
-		parents: [commitSha]
-	});
-
-	await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/{ref}', {
-		owner: repo.owner,
-		repo: repo.name,
-		ref: `heads/${branch}`,
-		sha: newCommit.sha
-	});
-}
-
-async function deletePathsFromBranch(branch: string, pathsToDelete: string[]): Promise<void> {
-	const treeItems = pathsToDelete.map((path) => ({
-		path,
-		mode: '100644' as const,
-		type: 'blob' as const,
-		sha: null
-	}));
-
-	const messageLabel =
-		pathsToDelete.length === 1
-			? pathsToDelete[0].split('/').pop()
-			: `${pathsToDelete.length} route files`;
-
-	await commitTreeChanges(branch, treeItems, `Delete ${messageLabel}`);
-}
-
-async function moveRouteDirOnBranch(
-	branch: string,
-	routeDirPath: string,
-	newRouteDirPath: string,
-	blobs: GitBlobEntry[]
-): Promise<void> {
-	const treeItems = [
-		...blobs.map(({ path, sha }) => ({
-			path: remapRepoPath(path, routeDirPath, newRouteDirPath),
-			mode: '100644' as const,
-			type: 'blob' as const,
-			sha
-		})),
-		...blobs.map(({ path }) => ({
-			path,
-			mode: '100644' as const,
-			type: 'blob' as const,
-			sha: null
-		}))
-	];
-
-	const label = routeDirPath.split('/').pop() ?? routeDirPath;
-	await commitTreeChanges(branch, treeItems, `Rename ${label}`);
 }
 
 async function deleteRouteAction({ request, locals, url }: RequestEvent) {
@@ -1484,22 +1260,20 @@ async function deleteRouteAction({ request, locals, url }: RequestEvent) {
 		return fail(404, { deleteError: 'Nothing to delete.' });
 	}
 
+	const store = getContentStore();
 	try {
-		await deletePathsFromBranch(match.branch, pathsToDelete);
-		invalidateBranchRouteCache(match.branch);
-
-		if (process.env.NODE_ENV !== 'production') {
-			try {
-				const fs = await import('node:fs/promises');
-				if (kind === 'route') {
-					await fs.rm(await resolveLocalPath(routeDirPath), { recursive: true, force: true });
-				} else {
-					await fs.rm(await resolveLocalPath(filePath), { force: true });
-				}
-			} catch (fsErr) {
-				console.error('Failed to delete local route files:', fsErr);
+		if (kind === 'route' && store.isLocal) {
+			// In local mode, delete the entire directory
+			await store.deleteFile(routeDirPath);
+		} else if (kind === 'page' && store.isLocal) {
+			await store.deleteFile(filePath);
+		} else {
+			// GitHub mode: delete individual files via API
+			for (const path of pathsToDelete) {
+				await store.deleteFile(path);
 			}
 		}
+		invalidateBranchRouteCache(match.branch);
 	} catch (err: unknown) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {
@@ -1569,43 +1343,138 @@ async function renameRouteAction({ request, locals, url }: RequestEvent) {
 		});
 	}
 
-	let blobsToMove: GitBlobEntry[] = [];
-	try {
-		const allBlobs = await fetchBranchGitBlobs(match.branch);
-		blobsToMove = collectBlobsUnderDir(routeDirPath, allBlobs);
-	} catch (err: unknown) {
-		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, {
-			renameError: e.response?.data?.message ?? 'Failed to resolve route files.',
-			newName
-		});
-	}
+	const store = getContentStore();
 
-	if (blobsToMove.length === 0) {
-		return fail(404, { renameError: 'Nothing to rename.', newName });
-	}
+	if (store.isLocal) {
+		// Local mode: rename directory using fs
+		try {
+			const fs = await import('node:fs/promises');
+			const pathLib = await import('node:path');
 
-	try {
-		await moveRouteDirOnBranch(match.branch, routeDirPath, newRouteDirPath, blobsToMove);
-		invalidateBranchRouteCache(match.branch);
-
-		if (process.env.NODE_ENV !== 'production') {
-			try {
-				const fs = await import('node:fs/promises');
-				await fs.rename(
-					await resolveLocalPath(routeDirPath),
-					await resolveLocalPath(newRouteDirPath)
-				);
-			} catch (fsErr) {
-				console.error('Failed to rename local route directory:', fsErr);
+			// Resolve paths relative to repo root
+			let root = process.cwd();
+			while (true) {
+				const gitPath = pathLib.resolve(root, '.git');
+				const hasGit = await fs.access(gitPath).then(() => true).catch(() => false);
+				if (hasGit) break;
+				const parent = pathLib.dirname(root);
+				if (parent === root) break;
+				root = parent;
 			}
+
+			const oldPath = pathLib.resolve(root, routeDirPath);
+			const newPath = pathLib.resolve(root, newRouteDirPath);
+			await fs.rename(oldPath, newPath);
+			invalidateBranchRouteCache(match.branch);
+		} catch (err: unknown) {
+			const e = err as { response?: { status?: number; data?: { message?: string } } };
+			return fail(e.response?.status ?? 500, {
+				renameError: e.response?.data?.message ?? 'Rename failed.',
+				newName
+			});
 		}
-	} catch (err: unknown) {
-		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, {
-			renameError: e.response?.data?.message ?? 'Rename failed.',
-			newName
-		});
+	} else {
+		// GitHub mode: use API
+		const { getOctokit, getRepo } = await import('../server/github.ts');
+		const octokit = getOctokit();
+		const repo = getRepo();
+
+		let treeItems: Array<{ path?: string; type?: string; sha?: string }>;
+		try {
+			const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
+				owner: repo.owner,
+				repo: repo.name,
+				tree_sha: match.branch,
+				recursive: '1'
+			});
+			treeItems = tree.tree ?? [];
+		} catch (err: unknown) {
+			const e = err as { status?: number; response?: { status?: number } };
+			const status = e.status ?? e.response?.status;
+			if (status !== 404 && status !== 422) throw err;
+
+			const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+				owner: repo.owner,
+				repo: repo.name,
+				ref: `heads/${match.branch}`
+			});
+			const { data: commit } = await octokit.request(
+				'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
+				{ owner: repo.owner, repo: repo.name, commit_sha: ref.object.sha }
+			);
+			const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
+				owner: repo.owner,
+				repo: repo.name,
+				tree_sha: commit.tree.sha,
+				recursive: '1'
+			});
+			treeItems = tree.tree ?? [];
+		}
+
+		const blobs = treeItems
+			.filter((item) => item.type === 'blob' && item.path && item.sha)
+			.map((item) => ({ path: item.path as string, sha: item.sha as string }));
+
+		const prefix = `${routeDirPath}/`;
+		const blobsToMove = blobs.filter((blob) => blob.path.startsWith(prefix));
+
+		if (blobsToMove.length === 0) {
+			return fail(404, { renameError: 'Nothing to rename.', newName });
+		}
+
+		const treeItems2 = [
+			...blobsToMove.map(({ path, sha }) => ({
+				path: path.replace(prefix, `${newRouteDirPath}/`),
+				mode: '100644' as const,
+				type: 'blob' as const,
+				sha
+			})),
+			...blobsToMove.map(({ path }) => ({
+				path,
+				mode: '100644' as const,
+				type: 'blob' as const,
+				sha: null
+			}))
+		];
+
+		if (treeItems2.length > 0) {
+			const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
+				owner: repo.owner,
+				repo: repo.name,
+				ref: `heads/${match.branch}`
+			});
+			const commitSha = ref.object.sha;
+
+			const { data: commit } = await octokit.request(
+				'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
+				{ owner: repo.owner, repo: repo.name, commit_sha: commitSha }
+			);
+
+			const { data: newTree } = await octokit.request('POST /repos/{owner}/{repo}/git/trees', {
+				owner: repo.owner,
+				repo: repo.name,
+				base_tree: commit.tree.sha,
+				tree: treeItems2
+			});
+
+			const label = routeDirPath.split('/').pop() ?? routeDirPath;
+			const { data: newCommit } = await octokit.request('POST /repos/{owner}/{repo}/git/commits', {
+				owner: repo.owner,
+				repo: repo.name,
+				message: `Rename ${label}`,
+				tree: newTree.sha,
+				parents: [commitSha]
+			});
+
+			await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/{ref}', {
+				owner: repo.owner,
+				repo: repo.name,
+				ref: `heads/${match.branch}`,
+				sha: newCommit.sha
+			});
+		}
+
+		invalidateBranchRouteCache(match.branch);
 	}
 
 	throw redirect(303, routesHref(routeDirUrlPath(routesRoot, newRouteDirPath)));
@@ -1621,7 +1490,6 @@ async function deleteMediaAction({ request, locals, url }: RequestEvent) {
 	const formData = await request.formData();
 	const itemPath = normalizeRepoPath(formData.get('itemPath')?.toString() ?? '');
 	const isDir = formData.get('isDir')?.toString() === 'true';
-	const sha = formData.get('sha')?.toString();
 
 	const mediaDir = normalizeRepoPath(getConfig().mediaDir) ?? '';
 	if (!itemPath) {
@@ -1631,52 +1499,9 @@ async function deleteMediaAction({ request, locals, url }: RequestEvent) {
 		return fail(403, { deleteError: 'Access denied.' });
 	}
 
-	const pathToDelete = isDir ? normalizeRepoPath(`${itemPath}/.gitkeep`) : itemPath;
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	let fileSha = sha;
-	if (!fileSha) {
-		try {
-			const { data: fileData } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-				owner: repo.owner,
-				repo: repo.name,
-				path: pathToDelete,
-				ref: match.branch
-			});
-			if (!Array.isArray(fileData)) {
-				fileSha = fileData.sha;
-			}
-		} catch (err) {
-			// ignore
-		}
-	}
-
-	if (!fileSha && !isDir) {
-		return fail(400, { deleteError: 'Failed to retrieve file SHA.' });
-	}
-
+	const store = getContentStore();
 	try {
-		if (fileSha) {
-			await octokit.request('DELETE /repos/{owner}/{repo}/contents/{path}', {
-				owner: repo.owner,
-				repo: repo.name,
-				path: pathToDelete,
-				message: `Delete ${pathToDelete.split('/').pop()}`,
-				sha: fileSha,
-				branch: match.branch
-			});
-		}
-
-		if (process.env.NODE_ENV !== 'production') {
-			try {
-				const fs = await import('node:fs/promises');
-				const localPath = await resolveLocalPath(itemPath);
-				await fs.rm(localPath, { recursive: true, force: true });
-			} catch (fsErr) {
-				console.error('Failed to delete local file/directory:', fsErr);
-			}
-		}
+		await store.deleteFile(itemPath);
 	} catch (err: any) {
 		const e = err as { response?: { status?: number; data?: { message?: string } } };
 		return fail(e.response?.status ?? 500, {
@@ -1693,52 +1518,22 @@ async function publishAction({ locals, url }: RequestEvent) {
 	const match = matchPage(url.pathname);
 	if (match.page !== 'publish') return fail(404, { publishError: 'Not found.' });
 
-	const octokit = getOctokit();
-	const repo = getRepo();
-	const defaultBranch = repo.defaultBranch;
-	const branch = DRAFT_BRANCH;
+	const store = getContentStore();
 
-	const { aheadBy } = await getBranchStatus(branch, defaultBranch);
-	if (aheadBy === 0) throw redirect(302, '/admin/routes');
-
-	try {
-		const { data: pr } = await octokit.request('POST /repos/{owner}/{repo}/pulls', {
-			owner: repo.owner,
-			repo: repo.name,
-			title: 'Publish draft changes',
-			head: branch,
-			base: defaultBranch
-		});
-
-		const { data: mergeResult } = await octokit.request(
-			'PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge',
-			{
-				owner: repo.owner,
-				repo: repo.name,
-				pull_number: pr.number,
-				merge_method: 'squash'
-			}
-		);
-
-		const mergeSha = mergeResult.sha;
-		if (!mergeSha) return fail(500, { publishError: 'Merge did not return a commit SHA.' });
-
-		await octokit.request('PATCH /repos/{owner}/{repo}/git/refs/heads/{ref}', {
-			owner: repo.owner,
-			repo: repo.name,
-			ref: branch,
-			sha: mergeSha,
-			force: true
-		});
-
-		invalidateBranchRouteCache(branch);
-	} catch (err: unknown) {
-		const e = err as { response?: { status?: number; data?: { message?: string } } };
-		return fail(e.response?.status ?? 500, {
-			publishError: e.response?.data?.message ?? 'Publish failed.'
-		});
+	// In local mode, publish is a no-op
+	if (store.isLocal) {
+		return { publishSuccess: true };
 	}
 
+	const { aheadBy } = await getBranchStatus(store.branch, defaultBranchForConfig());
+	if (aheadBy === 0) throw redirect(302, '/admin/routes');
+
+	const result = await store.publish();
+	if (!result.success) {
+		return fail(500, { publishError: result.error ?? 'Publish failed.' });
+	}
+
+	invalidateBranchRouteCache(store.branch);
 	throw redirect(302, '/admin/routes');
 }
 

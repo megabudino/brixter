@@ -158,6 +158,11 @@ export function getAdminPath(): string {
 	return overrides.adminPath ?? present(envValue('BRIXTER_ADMIN_PATH')) ?? '/admin';
 }
 
+function isLocalMode(): boolean {
+	const mode = (process.env.BRIXTER_MODE ?? '').toLowerCase();
+	return mode === 'local' || (!mode && process.env.NODE_ENV !== 'production');
+}
+
 /** Missing values required before auth, setup, or the database can run. */
 export function getCoreConfigIssues(): CoreConfigIssue[] {
 	const issues: CoreConfigIssue[] = [];
@@ -183,6 +188,9 @@ export function getCoreConfigIssues(): CoreConfigIssue[] {
 			description: 'Replace the generated placeholder with a real secret.'
 		});
 	}
+
+	// In local mode, GitHub credentials are not required.
+	if (isLocalMode()) return issues;
 
 	addMissingIssue(
 		issues,
@@ -358,6 +366,21 @@ export function getConfig(): ResolvedBrixterConfig {
 	const core = getCoreConfig();
 	const gh = overrides.github ?? {};
 	const buildRepo = getBuildRepoInfo();
+
+	if (isLocalMode()) {
+		cached = {
+			...core,
+			github: {
+				appId: gh.appId ?? 'local',
+				privateKey: gh.privateKey ?? 'local',
+				installationId: gh.installationId ?? 'local',
+				repoOwner: gh.repoOwner ?? buildRepo.repoOwner ?? 'local',
+				repoName: gh.repoName ?? buildRepo.repoName ?? 'project',
+				defaultBranch: gh.defaultBranch ?? buildRepo.defaultBranch ?? 'main'
+			}
+		};
+		return cached;
+	}
 
 	cached = {
 		...core,

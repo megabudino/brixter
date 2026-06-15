@@ -1,4 +1,4 @@
-import { getOctokit, getRepo } from '../server/github.ts';
+import { getContentStore, type BranchStatus } from '../server/content-store.ts';
 import {
 	buildSvelteKitRouteTree,
 	type RouteNode,
@@ -19,76 +19,20 @@ interface RouteCacheEntry {
 	snapshot: BranchRouteSnapshot;
 }
 
+export type { BranchStatus };
+
 const routeCache = new Map<string, RouteCacheEntry>();
 const inflightRouteFetches = new Map<string, Promise<BranchRouteSnapshot>>();
-export interface BranchStatus {
-	behindBy: number;
-	aheadBy: number;
-}
 
 const branchStatusCache = new Map<string, { expiresAt: number; status: BranchStatus }>();
 const inflightBranchStatusFetches = new Map<string, Promise<BranchStatus>>();
 
-function normalizeTreeEntries(tree: Array<{ path?: string; type?: string }>): TreeEntry[] {
-	return tree
-		.filter((item) => item.type === 'tree' || item.type === 'blob')
-		.map((item) => ({
-			path: item.path as string,
-			type: item.type as 'tree' | 'blob'
-		}));
-}
-
 function cacheKey(branch: string, routesRoot: string): string {
-	const repo = getRepo();
-	return `${repo.fullName}:${branch}:${routesRoot}`;
+	return `${branch}:${routesRoot}`;
 }
 
 function branchStatusCacheKey(branch: string, defaultBranch: string): string {
-	const repo = getRepo();
-	return `${repo.fullName}:${branch}:${defaultBranch}`;
-}
-
-async function fetchRepoTree(branch: string): Promise<TreeEntry[]> {
-	const octokit = getOctokit();
-	const repo = getRepo();
-
-	try {
-		const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
-			owner: repo.owner,
-			repo: repo.name,
-			tree_sha: branch,
-			recursive: '1'
-		});
-		return normalizeTreeEntries(tree.tree);
-	} catch (err: unknown) {
-		const e = err as { status?: number; response?: { status?: number } };
-		const status = e.status ?? e.response?.status;
-		if (status !== 404 && status !== 422) throw err;
-	}
-
-	const { data: ref } = await octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
-		owner: repo.owner,
-		repo: repo.name,
-		ref: `heads/${branch}`
-	});
-
-	const { data: commit } = await octokit.request(
-		'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
-		{
-			owner: repo.owner,
-			repo: repo.name,
-			commit_sha: ref.object.sha
-		}
-	);
-
-	const { data: tree } = await octokit.request('GET /repos/{owner}/{repo}/git/trees/{tree_sha}', {
-		owner: repo.owner,
-		repo: repo.name,
-		tree_sha: commit.tree.sha,
-		recursive: '1'
-	});
-
-	return normalizeTreeEntries(tree.tree);
+	return `${branch}:${defaultBranch}`;
 }
 
 export function invalidateBranchRouteCache(branch?: string): void {
@@ -97,11 +41,11 @@ export function invalidateBranchRouteCache(branch?: string): void {
 		inflightRouteFetches.clear();
 		branchStatusCache.clear();
 		inflightBranchStatusFetches.clear();
+		getContentStore().invalidateCache();
 		return;
 	}
 
-	const repo = getRepo();
-	const prefix = `${repo.fullName}:${branch}:`;
+	const prefix = `${branch}:`;
 	for (const key of routeCache.keys()) {
 		if (key.startsWith(prefix)) routeCache.delete(key);
 	}
@@ -114,6 +58,7 @@ export function invalidateBranchRouteCache(branch?: string): void {
 	for (const key of inflightBranchStatusFetches.keys()) {
 		if (key.startsWith(prefix)) inflightBranchStatusFetches.delete(key);
 	}
+	getContentStore().invalidateCache();
 }
 
 export async function getBranchStatus(
@@ -130,33 +75,18 @@ export async function getBranchStatus(
 	const inflight = inflightBranchStatusFetches.get(key);
 	if (inflight) return inflight;
 
-	const promise = (async () => {
-		const octokit = getOctokit();
-		const repo = getRepo();
-		try {
-			const { data: comparison } = await octokit.request(
-				'GET /repos/{owner}/{repo}/compare/{basehead}',
-				{
-					owner: repo.owner,
-					repo: repo.name,
-					basehead: `${defaultBranch}...${branch}`
-				}
-			);
-			const status: BranchStatus = {
-				aheadBy: comparison.ahead_by,
-				behindBy: comparison.behind_by
-			};
+	const store = getContentStore();
+	const promise = store.getStatus()
+		.then((status) => {
 			branchStatusCache.set(key, {
 				expiresAt: Date.now() + BRANCH_STATUS_CACHE_TTL_MS,
 				status
 			});
 			return status;
-		} catch {
-			return { behindBy: 0, aheadBy: 0 };
-		}
-	})().finally(() => {
-		inflightBranchStatusFetches.delete(key);
-	});
+		})
+		.finally(() => {
+			inflightBranchStatusFetches.delete(key);
+		});
 
 	inflightBranchStatusFetches.set(key, promise);
 	return promise;
@@ -179,7 +109,8 @@ export async function getBranchRouteSnapshot(
 	const inflight = inflightRouteFetches.get(key);
 	if (inflight) return inflight;
 
-	const promise = fetchRepoTree(branch)
+	const store = getContentStore();
+	const promise = store.getTree(routesRoot)
 		.then((tree) => {
 			const snapshot = {
 				tree,

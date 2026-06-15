@@ -12,7 +12,7 @@ import {
 import { getAuth } from './auth.ts';
 import { getAdminPath, getCoreConfig, getCoreConfigIssues } from './config.ts';
 import { isSetupComplete } from './setup.ts';
-import { getOctokit, getRepo } from './github.ts';
+import { isLocalMode, getLocalStore } from './content-store.ts';
 import { Buffer } from 'node:buffer';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
@@ -50,7 +50,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	// Serve draft branch images from GitHub if not found locally
+	// Serve images from the appropriate source
 	const ext = '.' + path.split('.').pop()?.toLowerCase();
 	if (IMAGE_EXTENSIONS.includes(ext)) {
 		const { mediaDir } = getCoreConfig();
@@ -58,39 +58,68 @@ export const handle: Handle = async ({ event, resolve }) => {
 			.map((p) => p.replace(/^\/+|\/+$/g, ''))
 			.filter(Boolean)
 			.join('/');
-		const branch = 'brixter-draft';
 
-		try {
-			const octokit = getOctokit();
-			const repo = getRepo();
-			const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-				owner: repo.owner,
-				repo: repo.name,
-				path: repoPath,
-				ref: branch
-			});
+		// In local mode, read directly from filesystem
+		if (isLocalMode()) {
+			const localStore = getLocalStore();
+			if (localStore) {
+				try {
+					const buffer = localStore.readBufferSync(repoPath);
+					const contentType = path.endsWith('.svg')
+						? 'image/svg+xml'
+						: path.endsWith('.webp')
+							? 'image/webp'
+							: path.endsWith('.png')
+								? 'image/png'
+								: path.endsWith('.gif')
+									? 'image/gif'
+									: 'image/jpeg';
 
-			const file = data as { content?: string; encoding?: string };
-			if (file.content && file.encoding === 'base64') {
-				const contentType = path.endsWith('.svg')
-					? 'image/svg+xml'
-					: path.endsWith('.webp')
-						? 'image/webp'
-						: path.endsWith('.png')
-							? 'image/png'
-							: path.endsWith('.gif')
-								? 'image/gif'
-								: 'image/jpeg';
-
-				return new Response(Buffer.from(file.content, 'base64'), {
-					headers: {
-						'Content-Type': contentType,
-						'Cache-Control': 'private, max-age=3600'
-					}
-				});
+					return new Response(new Uint8Array(buffer), {
+						headers: {
+							'Content-Type': contentType,
+							'Cache-Control': 'private, max-age=3600'
+						}
+					});
+				} catch {
+					// Fall through to normal resolution
+				}
 			}
-		} catch (err) {
-			// Fall through to normal SvelteKit resolution/404 if not found on GitHub
+		} else {
+			// GitHub mode
+			try {
+				const { getOctokit, getRepo } = await import('./github.ts');
+				const octokit = getOctokit();
+				const repo = getRepo();
+				const { data } = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+					owner: repo.owner,
+					repo: repo.name,
+					path: repoPath,
+					ref: 'brixter-draft'
+				});
+
+				const file = data as { content?: string; encoding?: string };
+				if (file.content && file.encoding === 'base64') {
+					const contentType = path.endsWith('.svg')
+						? 'image/svg+xml'
+						: path.endsWith('.webp')
+							? 'image/webp'
+							: path.endsWith('.png')
+								? 'image/png'
+								: path.endsWith('.gif')
+									? 'image/gif'
+									: 'image/jpeg';
+
+					return new Response(Buffer.from(file.content, 'base64'), {
+						headers: {
+							'Content-Type': contentType,
+							'Cache-Control': 'private, max-age=3600'
+						}
+					});
+				}
+			} catch (err) {
+				// Fall through to normal SvelteKit resolution/404 if not found on GitHub
+			}
 		}
 	}
 

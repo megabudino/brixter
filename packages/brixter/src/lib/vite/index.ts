@@ -277,6 +277,11 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 		name: 'brixter',
 		enforce: 'pre',
 		config(userConfig, env) {
+			// Auto-enable local mode on dev servers (no GitHub needed)
+			if (env.mode !== 'production' && !process.env.BRIXTER_MODE) {
+				process.env.BRIXTER_MODE = 'local';
+			}
+
 			const root = path.resolve(userConfig.root ?? process.cwd());
 
 			// Resolve the brix directory to a filesystem path so we can check

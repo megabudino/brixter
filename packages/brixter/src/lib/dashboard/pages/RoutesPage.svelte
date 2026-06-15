@@ -819,10 +819,10 @@
 						class="btn-brutal-flat inline-flex h-10 cursor-pointer items-center gap-2 px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{#if saving}
-							<Spinner /> Committing…
-						{:else}
-							Commit
-						{/if}
+						<Spinner /> {data.isLocal ? 'Saving…' : 'Committing…'}
+					{:else}
+						{data.isLocal ? 'Save' : 'Commit'}
+					{/if}
 					</button>
 				</form>
 			</div>
