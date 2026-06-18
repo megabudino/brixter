@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	addCollectionItem,
 	createBlock,
+	createBuilderDefaultsFromFields,
 	createBuilderDocument,
 	createBuilderFallbackProps,
 	getCollectionItems,
@@ -13,6 +14,7 @@ import {
 	reorderCollectionItem,
 	serializeToBrixYaml,
 	serializeToMdsvex,
+	STANDARD_SEO_FIELDS,
 	updatePropsAtPath
 } from './core';
 import { createBrixDefinitions } from './svelte/adapter';
@@ -281,5 +283,43 @@ components:
 			pageBriks
 		);
 		expect(output).toContain('headline: ""');
+	});
+});
+
+describe('standard SEO fields', () => {
+	it('produces sensible defaults for the new field kinds', () => {
+		const defaults = createBuilderDefaultsFromFields(STANDARD_SEO_FIELDS);
+
+		expect(defaults.title).toBe('');
+		expect(defaults.description).toBe('');
+		expect(defaults.canonical).toBe('');
+		expect(defaults.robots).toBe('index,follow');
+		expect(defaults.jsonLd).toBeNull();
+		expect(defaults.og).toMatchObject({ type: 'website' });
+		expect(defaults.twitter).toMatchObject({ card: 'summary_large_image' });
+	});
+
+	it('round-trips nested SEO metadata through brix yaml', () => {
+		const output = serializeToBrixYaml(
+			{
+				title: 'Home',
+				description: 'Welcome',
+				metadata: {
+					canonical: 'https://example.com',
+					og: { title: 'Home', image: '/og.png' },
+					jsonLd: { '@context': 'https://schema.org', '@type': 'WebSite' }
+				},
+				blocks: []
+			},
+			pageBriks
+		);
+
+		const reparsed = parseBrixYamlDocument(output, pageBriks);
+		expect(reparsed.title).toBe('Home');
+		expect(reparsed.metadata).toMatchObject({
+			canonical: 'https://example.com',
+			og: { title: 'Home', image: '/og.png' },
+			jsonLd: { '@context': 'https://schema.org', '@type': 'WebSite' }
+		});
 	});
 });

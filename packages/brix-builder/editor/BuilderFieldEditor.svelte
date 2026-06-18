@@ -52,6 +52,41 @@
 			stringValue.length > 120 ||
 			/quote|subtitle|description|content/i.test(label)
 	);
+	const selectValue = $derived(
+		typeof value === 'string' ? value : (field.options?.[0]?.value ?? '')
+	);
+
+	let jsonDraft = $state<string | null>(null);
+	let jsonError = $state<string | null>(null);
+	const jsonDisplay = $derived(jsonDraft !== null ? jsonDraft : stringifyJson(value));
+
+	function stringifyJson(source: unknown): string {
+		if (source === null || source === undefined) {
+			return '';
+		}
+		try {
+			return JSON.stringify(source, null, 2);
+		} catch {
+			return '';
+		}
+	}
+
+	function updateJson(nextValue: string): void {
+		jsonDraft = nextValue;
+		const trimmed = nextValue.trim();
+		if (!trimmed) {
+			jsonError = null;
+			onChange(path, null);
+			return;
+		}
+		try {
+			const parsed = JSON.parse(trimmed);
+			jsonError = null;
+			onChange(path, parsed);
+		} catch (error) {
+			jsonError = error instanceof Error ? error.message : 'Invalid JSON';
+		}
+	}
 
 	function updateText(nextValue: string): void {
 		onChange(path, nextValue);
@@ -265,6 +300,77 @@
 				Choose
 			</button>
 		</div>
+	</label>
+{:else if fieldKind === 'select'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
+		<select
+			value={selectValue}
+			class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
+			onchange={(event) => updateText(event.currentTarget.value)}>
+			{#each field.options ?? [] as option (option.value)}
+				<option value={option.value}>{option.label ?? option.value}</option>
+			{/each}
+		</select>
+	</label>
+{:else if fieldKind === 'url'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
+		<input
+			type="url"
+			value={stringValue}
+			placeholder="https://"
+			class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
+			oninput={(event) => updateText(event.currentTarget.value)} />
+	</label>
+{:else if fieldKind === 'textarea'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
+		<textarea
+			value={stringValue}
+			class="min-h-24 w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
+			oninput={(event) => updateText(event.currentTarget.value)}></textarea>
+	</label>
+{:else if fieldKind === 'date'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
+		<input
+			type="date"
+			value={stringValue}
+			class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
+			oninput={(event) => updateText(event.currentTarget.value)} />
+	</label>
+{:else if fieldKind === 'color'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
+		<div class="flex flex-wrap gap-2">
+			<input
+				type="color"
+				value={stringValue || '#000000'}
+				class="h-[46px] w-14 shrink-0 cursor-pointer border border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-800"
+				oninput={(event) => updateText(event.currentTarget.value)} />
+			<input
+				type="text"
+				value={stringValue}
+				placeholder="#000000"
+				class="min-w-0 flex-1 border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:outline-none focus:ring-1 focus:ring-[#FDE047] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
+				oninput={(event) => updateText(event.currentTarget.value)} />
+		</div>
+	</label>
+{:else if fieldKind === 'json'}
+	<label class="block">
+		<span class="mb-1 block text-sm font-medium bx-text-label">{label}</span>
+		<textarea
+			value={jsonDisplay}
+			spellcheck="false"
+			class="min-h-32 w-full border bg-white px-4 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 {jsonError
+				? 'border-red-400 focus:border-red-400 focus:ring-red-400 dark:border-red-700'
+				: 'border-gray-300 focus:border-[#FDE047] focus:ring-[#FDE047] dark:border-gray-700 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]'}"
+			placeholder={'{\n  "@context": "https://schema.org"\n}'}
+			oninput={(event) => updateJson(event.currentTarget.value)}></textarea>
+		{#if jsonError}
+			<p class="mt-1 text-xs bx-text-error">{jsonError}</p>
+		{/if}
 	</label>
 {:else}
 	<label class="block">

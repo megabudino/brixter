@@ -132,6 +132,17 @@ function resolveFieldKind(value: string | undefined, tagName: string): BuilderFi
 		return value;
 	}
 
+	if (
+		value === 'select' ||
+		value === 'url' ||
+		value === 'textarea' ||
+		value === 'date' ||
+		value === 'color' ||
+		value === 'json'
+	) {
+		return value;
+	}
+
 	if (tagName.toLowerCase() === 'img') {
 		return 'image';
 	}

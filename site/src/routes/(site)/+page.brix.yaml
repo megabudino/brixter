@@ -1,5 +1,8 @@
 title: Brixter CMS
 description: A visual CMS for SvelteKit, versioned in your repository.
+og:
+  ? image
+jsonLd: {}
 components:
   - type: Hero
     props:

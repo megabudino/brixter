@@ -13,7 +13,18 @@ export type BuilderFieldKind =
 	| 'image'
 	| 'icon'
 	| 'richtext-inline'
-	| 'richtext-block';
+	| 'richtext-block'
+	| 'select'
+	| 'url'
+	| 'textarea'
+	| 'date'
+	| 'color'
+	| 'json';
+
+export interface BuilderFieldOption {
+	label?: string;
+	value: string;
+}
 
 export interface BuilderRichTextValue {
 	kind: 'richtext';
@@ -27,6 +38,7 @@ export interface BuilderField {
 	label?: string;
 	description?: string;
 	default?: unknown;
+	options?: BuilderFieldOption[];
 	fields?: BuilderFields;
 	item?: BuilderField;
 	itemLabel?: string;
@@ -38,6 +50,72 @@ export interface BuilderField {
 }
 
 export type BuilderFields = Record<string, BuilderField>;
+
+/**
+ * Standard SEO/page metadata fields always available in the page inspector.
+ *
+ * `title` and `description` are routed to the top-level document fields; every
+ * other key is stored under `document.metadata` and rendered into the page
+ * `<head>` by the injected `BrixSeo` component (see the Vite plugin).
+ */
+export const STANDARD_SEO_FIELDS: BuilderFields = {
+	title: { kind: 'text', label: 'Page Title' },
+	description: { kind: 'textarea', label: 'Description' },
+	canonical: { kind: 'url', label: 'Canonical URL' },
+	robots: {
+		kind: 'select',
+		label: 'Robots',
+		default: 'index,follow',
+		options: [
+			{ label: 'Index, follow', value: 'index,follow' },
+			{ label: 'No index', value: 'noindex' },
+			{ label: 'No follow', value: 'nofollow' },
+			{ label: 'No index, no follow', value: 'noindex,nofollow' }
+		]
+	},
+	og: {
+		kind: 'object',
+		label: 'Open Graph',
+		fields: {
+			title: { kind: 'text', label: 'og:title' },
+			description: { kind: 'textarea', label: 'og:description' },
+			image: { kind: 'image', label: 'og:image' },
+			url: { kind: 'url', label: 'og:url' },
+			type: {
+				kind: 'select',
+				label: 'og:type',
+				default: 'website',
+				options: [
+					{ label: 'Website', value: 'website' },
+					{ label: 'Article', value: 'article' },
+					{ label: 'Product', value: 'product' },
+					{ label: 'Profile', value: 'profile' }
+				]
+			}
+		}
+	},
+	twitter: {
+		kind: 'object',
+		label: 'Twitter',
+		fields: {
+			card: {
+				kind: 'select',
+				label: 'twitter:card',
+				default: 'summary_large_image',
+				options: [
+					{ label: 'Summary', value: 'summary' },
+					{ label: 'Summary large image', value: 'summary_large_image' },
+					{ label: 'App', value: 'app' },
+					{ label: 'Player', value: 'player' }
+				]
+			},
+			title: { kind: 'text', label: 'twitter:title' },
+			description: { kind: 'textarea', label: 'twitter:description' },
+			image: { kind: 'image', label: 'twitter:image' }
+		}
+	},
+	jsonLd: { kind: 'json', label: 'JSON-LD (structured data)' }
+};
 
 export interface BuilderBlock {
 	id: string;
@@ -893,7 +971,7 @@ function findDefinitionForBrixType(
 	);
 }
 
-function toComponentName(value: string): string {
+export function toComponentName(value: string): string {
 	const normalized = value.trim().replace(/\.(svelte|ts|js)$/i, '');
 	if (/^[A-Z][A-Za-z0-9]*$/.test(normalized)) return normalized;
 	return normalized
@@ -995,6 +1073,13 @@ function createBuilderFieldDefault(field: BuilderField, defaultValue = field.def
 		);
 	}
 
+	if (kind === 'select') {
+		if (defaultValue !== undefined && defaultValue !== null) {
+			return cloneValue(defaultValue);
+		}
+		return field.options?.[0]?.value ?? '';
+	}
+
 	return cloneValue(defaultValue ?? getPrimitiveDefault(kind));
 }
 
@@ -1036,6 +1121,10 @@ function getPrimitiveDefault(kind: BuilderFieldKind): unknown {
 
 	if (kind === 'number') {
 		return 0;
+	}
+
+	if (kind === 'json') {
+		return null;
 	}
 
 	return '';

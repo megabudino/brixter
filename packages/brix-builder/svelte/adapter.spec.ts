@@ -1,6 +1,55 @@
 import { describe, expect, it } from 'vitest';
-import { createBrixDefinitions } from './adapter';
+import { createBrixDefinitions, createLayoutDefinitions } from './adapter';
 import { createBrikSchemaFromMarkup } from './markup-schema';
+
+describe('createLayoutDefinitions', () => {
+	it('builds layout definitions from layoutFields and markup', () => {
+		const definitions = createLayoutDefinitions(
+			{
+				'../lib/brixter/layouts/Marketing.svelte': {
+					default: {} as never,
+					layoutDescription: 'Marketing wrapper.',
+					layoutFields: {
+						accent: { kind: 'color', default: '#FDE047' },
+						headerVariant: {
+							kind: 'select',
+							default: 'solid',
+							options: [
+								{ label: 'Solid', value: 'solid' },
+								{ label: 'Transparent', value: 'transparent' }
+							]
+						}
+					}
+				}
+			},
+			{
+				'../lib/brixter/layouts/Marketing.svelte': `
+					<div data-brixter-field="banner" data-brixter-default="Hello">{banner}</div>
+				`
+			}
+		);
+
+		expect(definitions).toHaveLength(1);
+		expect(definitions[0]?.name).toBe('Marketing');
+		expect(definitions[0]?.description).toBe('Marketing wrapper.');
+		expect(definitions[0]?.fields.accent?.kind).toBe('color');
+		expect(definitions[0]?.fields.headerVariant?.kind).toBe('select');
+		expect(definitions[0]?.fields.banner?.default).toBe('Hello');
+		expect(definitions[0]?.defaults).toMatchObject({
+			accent: '#FDE047',
+			headerVariant: 'solid',
+			banner: 'Hello'
+		});
+	});
+
+	it('normalizes the layout name from the file name', () => {
+		const definitions = createLayoutDefinitions({
+			'../lib/brixter/layouts/blog-post.svelte': { default: {} as never }
+		});
+
+		expect(definitions[0]?.name).toBe('BlogPost');
+	});
+});
 
 describe('createBrikSchemaFromMarkup', () => {
 	it('builds preview fields from markup attributes', () => {

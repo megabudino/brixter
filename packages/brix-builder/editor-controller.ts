@@ -25,7 +25,8 @@ export interface DraggedCollectionItemState {
 }
 
 export interface PendingFileEditState {
-	blockId: string;
+	/** `null` targets a page-level metadata field instead of a block. */
+	blockId: string | null;
 	path: string;
 }
 
@@ -186,6 +187,63 @@ export function updatePropAtPath(
 	syncBlockProps(state, block, updatePropsAtPath(block.props, path, value));
 }
 
+/**
+ * Page-level metadata. `title`/`description` are routed to the top-level
+ * document fields; every other field is stored under `document.metadata`.
+ */
+export function getPageFieldValue(document: BuilderDocument, key: string): unknown {
+	if (key === 'title') return document.title;
+	if (key === 'description') return document.description;
+	return (document.metadata ?? {})[key];
+}
+
+export function setPageField(state: EditorControllerState, path: string, value: unknown): void {
+	const document = state.document;
+	if (path === 'title') {
+		document.title = typeof value === 'string' ? value : String(value ?? '');
+		return;
+	}
+	if (path === 'description') {
+		document.description = typeof value === 'string' ? value : String(value ?? '');
+		return;
+	}
+	document.metadata = updatePropsAtPath(document.metadata ?? {}, path, value);
+}
+
+export function setDocumentLayout(state: EditorControllerState, layout: string | null): void {
+	if (layout && layout.trim()) {
+		state.document.layout = layout.trim();
+	} else {
+		delete state.document.layout;
+	}
+}
+
+export function addPageItem(state: EditorControllerState, collection: BuilderCollection): void {
+	state.document.metadata = addCollectionItem(state.document.metadata ?? {}, collection);
+}
+
+export function removePageItem(
+	state: EditorControllerState,
+	collection: BuilderCollection,
+	index: number
+): void {
+	state.document.metadata = removeCollectionItem(state.document.metadata ?? {}, collection, index);
+}
+
+export function movePageItem(
+	state: EditorControllerState,
+	collection: BuilderCollection,
+	index: number,
+	direction: -1 | 1
+): void {
+	state.document.metadata = moveCollectionItem(
+		state.document.metadata ?? {},
+		collection,
+		index,
+		direction
+	);
+}
+
 export function queueFileEdit(
 	state: EditorControllerState,
 	blockId: string,
@@ -194,21 +252,32 @@ export function queueFileEdit(
 	state.pendingFileEdit = { blockId, path };
 }
 
+export function queuePageFileEdit(state: EditorControllerState, path: string): void {
+	state.pendingFileEdit = { blockId: null, path };
+}
+
 export function applyFileToPendingEdit(
 	state: EditorControllerState,
 	dataUrl: string
 ): BuilderBlock | null {
-	if (!state.pendingFileEdit) {
+	const pending = state.pendingFileEdit;
+	if (!pending) {
 		return null;
 	}
 
-	const block = state.document.blocks.find((entry) => entry.id === state.pendingFileEdit?.blockId);
+	if (pending.blockId === null) {
+		setPageField(state, pending.path, dataUrl);
+		state.pendingFileEdit = null;
+		return null;
+	}
+
+	const block = state.document.blocks.find((entry) => entry.id === pending.blockId);
 	if (!block) {
 		state.pendingFileEdit = null;
 		return null;
 	}
 
-	syncBlockProps(state, block, updatePropsAtPath(block.props, state.pendingFileEdit.path, dataUrl));
+	syncBlockProps(state, block, updatePropsAtPath(block.props, pending.path, dataUrl));
 	state.pendingFileEdit = null;
 	return block;
 }

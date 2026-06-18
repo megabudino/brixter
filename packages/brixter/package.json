@@ -66,6 +66,11 @@
 			"svelte": "./src/ui/index.ts",
 			"default": "./src/ui/index.ts"
 		},
+		"./seo": {
+			"types": "./src/seo/BrixSeo.svelte",
+			"svelte": "./src/seo/BrixSeo.svelte",
+			"default": "./src/seo/BrixSeo.svelte"
+		},
 		"./sveltekit": {
 			"types": "./src/sveltekit/index.d.ts",
 			"svelte": "./src/sveltekit/component.ts",

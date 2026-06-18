@@ -22,7 +22,12 @@
 		Trash2
 	} from 'lucide-svelte';
 	import { Spinner } from 'brixter/ui';
-	import { BrixEditor, createBrixDefinitions, SHORTCUTS } from '@brixter/brix-builder';
+	import {
+		BrixEditor,
+		createBrixDefinitions,
+		createLayoutDefinitions,
+		SHORTCUTS
+	} from '@brixter/brix-builder';
 	import { MediaPicker, IconPicker } from 'brixter/editor';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
@@ -46,6 +51,15 @@
 				eager: true
 			})
 		} as Record<string, string>
+	);
+
+	const layoutDefinitions = createLayoutDefinitions(
+		import.meta.glob('$lib/brixter/layouts/*.svelte', { eager: true }),
+		import.meta.glob('$lib/brixter/layouts/*.svelte', {
+			query: '?raw',
+			import: 'default',
+			eager: true
+		}) as Record<string, string>
 	);
 
 	let merging = $state(false);
@@ -577,6 +591,7 @@
 			{#if brixDefinitions.length > 0}
 				<BrixEditor
 					definitions={brixDefinitions}
+					layouts={layoutDefinitions}
 					chrome="embedded"
 					bind:pageFlowOpen
 					bind:inspectorOpen

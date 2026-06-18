@@ -84,6 +84,12 @@ export function compileBrixYaml(
 		closingLayout = '</BrixLayout>';
 	}
 
+	const seoEnabled = options.seo !== false;
+	const seoImport = seoEnabled ? `import BrixSeo from 'brixter/seo';` : '';
+	const seoHead = seoEnabled
+		? '<svelte:head><BrixSeo {...metadata} /></svelte:head>'
+		: '';
+
 	const componentScripts = blocks.filter((block) => block.startsWith('const ')).join('\n');
 	const componentMarkup = blocks.filter((block) => !block.startsWith('const ')).join('\n');
 	const destructured =
@@ -94,9 +100,10 @@ export const metadata = ${literal(metadata)};
 </script>
 
 <script>
-${[layoutImport, ...imports, destructured, componentScripts].filter(Boolean).join('\n')}
+${[seoImport, layoutImport, ...imports, destructured, componentScripts].filter(Boolean).join('\n')}
 </script>
 
+${seoHead}
 ${openingLayout}
 ${componentMarkup}
 ${closingLayout}

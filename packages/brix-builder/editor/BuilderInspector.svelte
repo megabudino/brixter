@@ -1,19 +1,26 @@
 <script lang="ts">
 	import { getCollectionItemSummary, type BuilderBlock, type BuilderFields } from '../core.js';
+	import type { LayoutDefinition } from '../svelte/adapter.js';
 	import type { BuilderRenderDefinition } from './contracts.js';
 	import BuilderFieldEditor from './BuilderFieldEditor.svelte';
 
 	let {
-		title,
-		description,
 		activeBlock,
 		activeDefinition,
 		inspectorFields,
+		pageFields,
+		pageValues,
+		layouts,
+		currentLayout,
 		propsError,
 		mdsvexOutput,
 		copied,
-		onTitleChange,
-		onDescriptionChange,
+		onLayoutChange,
+		onPageFieldChange,
+		onPageQueueFileEdit,
+		onPageAddItem,
+		onPageRemoveItem,
+		onPageMoveItem,
 		onFieldChange,
 		onQueueFileEdit,
 		onAddItem,
@@ -22,16 +29,22 @@
 		onCopyMdsvex,
 		onDeselectBlock
 	}: {
-		title: string;
-		description: string;
 		activeBlock: BuilderBlock | null;
 		activeDefinition: BuilderRenderDefinition | null;
 		inspectorFields: BuilderFields;
+		pageFields: BuilderFields;
+		pageValues: Record<string, unknown>;
+		layouts: LayoutDefinition[];
+		currentLayout: string;
 		propsError: string | null;
 		mdsvexOutput: string;
 		copied: boolean;
-		onTitleChange: (value: string) => void;
-		onDescriptionChange: (value: string) => void;
+		onLayoutChange: (name: string) => void;
+		onPageFieldChange: (path: string, value: unknown) => void;
+		onPageQueueFileEdit: (path: string) => void;
+		onPageAddItem: (path: string) => void;
+		onPageRemoveItem: (path: string, index: number) => void;
+		onPageMoveItem: (path: string, index: number, direction: -1 | 1) => void;
 		onFieldChange: (block: BuilderBlock, path: string, value: unknown) => void;
 		onQueueFileEdit: (blockId: string, path: string) => void;
 		onAddItem: (block: BuilderBlock, path: string) => void;
@@ -42,6 +55,7 @@
 	} = $props();
 
 	const inspectorEntries = $derived(Object.entries(inspectorFields));
+	const pageEntries = $derived(Object.entries(pageFields));
 </script>
 
 <aside
@@ -98,24 +112,35 @@
 			<section class="p-4 dark:border-gray-700">
 				<h3 class="bx-text-muted mb-4 text-[11px] font-semibold tracking-wide uppercase">Page</h3>
 				<div class="space-y-4">
-					<label class="block">
-						<span class="bx-text-label mb-1 block text-sm font-medium">Page Title</span>
-						<input
-							value={title}
-							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
-							placeholder="Page Title"
-							oninput={(event) => onTitleChange(event.currentTarget.value)}
+					{#if layouts.length > 0}
+						<label class="block">
+							<span class="bx-text-label mb-1 block text-sm font-medium">Layout</span>
+							<select
+								value={currentLayout}
+								class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
+								onchange={(event) => onLayoutChange(event.currentTarget.value)}
+							>
+								<option value="">No layout</option>
+								{#each layouts as layout (layout.name)}
+									<option value={layout.name}>{layout.name}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
+
+					{#each pageEntries as [fieldKey, fieldDefinition] (fieldKey)}
+						<BuilderFieldEditor
+							{fieldKey}
+							field={fieldDefinition}
+							path={fieldKey}
+							value={pageValues[fieldKey]}
+							onChange={onPageFieldChange}
+							onQueueFileEdit={onPageQueueFileEdit}
+							onAddItem={onPageAddItem}
+							onRemoveItem={onPageRemoveItem}
+							onMoveItem={onPageMoveItem}
 						/>
-					</label>
-					<label class="block">
-						<span class="bx-text-label mb-1 block text-sm font-medium">Description</span>
-						<input
-							value={description}
-							class="block w-full border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#FDE047] focus:ring-1 focus:ring-[#FDE047] focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-[#FACC15] dark:focus:ring-[#FACC15]"
-							placeholder="Description for the frontmatter"
-							oninput={(event) => onDescriptionChange(event.currentTarget.value)}
-						/>
-					</label>
+					{/each}
 				</div>
 			</section>
 		{/if}

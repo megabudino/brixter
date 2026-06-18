@@ -9,7 +9,8 @@ import type {
 import {
 	createBuilderCollectionsFromFields,
 	createBuilderDefaultsFromFields,
-	createBuilderPreviewBindingsFromFields
+	createBuilderPreviewBindingsFromFields,
+	toComponentName
 } from '../core.js';
 import { createBrikSchemaFromMarkup, mergeBuilderFields } from './markup-schema.js';
 
@@ -23,8 +24,22 @@ interface BrikModule {
 	brikCollections?: BuilderCollection[];
 }
 
+interface LayoutModule {
+	default: Component<Record<string, unknown>>;
+	layoutFields?: BuilderFields;
+	layoutDefaults?: Record<string, unknown>;
+	layoutDescription?: string;
+}
+
 export interface BrikDefinition extends BuilderDefinition {
 	component: Component<Record<string, unknown>>;
+}
+
+export interface LayoutDefinition {
+	name: string;
+	description: string;
+	fields: BuilderFields;
+	defaults: Record<string, unknown>;
 }
 
 export function createBrixDefinitions(
@@ -42,6 +57,42 @@ export function createBrixDefinitions(
 
 			return a.type.localeCompare(b.type);
 		});
+}
+
+export function createLayoutDefinitions(
+	layoutModules: Record<string, unknown>,
+	layoutSources: Record<string, string> = {}
+): LayoutDefinition[] {
+	return Object.entries(layoutModules)
+		.map(([path, module]) =>
+			createLayoutDefinition(path, module as LayoutModule, layoutSources[path] ?? '')
+		)
+		.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function createLayoutDefinition(
+	path: string,
+	module: LayoutModule,
+	source: string
+): LayoutDefinition {
+	const fileName = path.split('/').pop()?.replace(/\.svelte$/, '') ?? path;
+	const name = toComponentName(fileName);
+	const markupFields = source ? createBrikSchemaFromMarkup(source) : {};
+	const fields = mergeBuilderFields(markupFields, cloneValue(module.layoutFields ?? {}));
+	const defaults =
+		Object.keys(fields).length > 0
+			? mergeDefaults(
+					createBuilderDefaultsFromFields(fields),
+					cloneValue(module.layoutDefaults ?? {})
+				)
+			: cloneValue(module.layoutDefaults ?? {});
+
+	return {
+		name,
+		description: module.layoutDescription ?? `Layout ${humanizeType(name)}.`,
+		fields,
+		defaults
+	};
 }
 
 function createDefinition(path: string, module: BrikModule, source: string): BrikDefinition {

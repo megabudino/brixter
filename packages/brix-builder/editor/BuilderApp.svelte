@@ -16,13 +16,21 @@
 		moveItem as moveItemInState,
 		openReorderModal as openReorderModalInState,
 		queueFileEdit as queueFileEditInState,
+		queuePageFileEdit as queuePageFileEditInState,
 		removeBlock as removeBlockFromState,
 		removeItem as removeItemFromState,
 		setBlockError,
+		setPageField as setPageFieldInState,
+		setDocumentLayout as setDocumentLayoutInState,
+		getPageFieldValue,
+		addPageItem as addPageItemToState,
+		removePageItem as removePageItemFromState,
+		movePageItem as movePageItemInState,
 		updatePropAtPath
 	} from '../editor-controller.js';
 	import {
 		createInspectorFieldsFromFields,
+		createBuilderCollectionsFromFields,
 		getCollectionItemSummary,
 		normalizeBuilderPropsForRender,
 		parseBrixYamlDocument,
@@ -30,11 +38,16 @@
 		serializeToMdsvex,
 		getFieldByPath,
 		inferBuilderFieldKind,
+		toComponentName,
+		STANDARD_SEO_FIELDS,
 		type BuilderBlock,
+		type BuilderCollection,
 		type BuilderDocument,
 		type BuilderPreviewBinding,
 		type BuilderRichTextValue
 	} from '../core.js';
+	import type { LayoutDefinition } from '../svelte/adapter.js';
+	import { mergeBuilderFields } from '../svelte/markup-schema.js';
 	import { attachPreviewEditableFields } from '../preview/enhance-editable-fields.js';
 	import { describeFieldElement, logFieldEditEvent } from '../preview/field-edit-debug.js';
 	import {
@@ -57,6 +70,7 @@
 
 	let {
 		definitions,
+		layouts = [],
 		initialDocument,
 		initialBrixYaml,
 		chrome = 'standalone',
@@ -70,6 +84,7 @@
 		viewportSize = $bindable<'desktop' | 'tablet' | 'mobile'>('desktop')
 	}: {
 		definitions: BuilderRenderDefinition[];
+		layouts?: LayoutDefinition[];
 		initialDocument?: BuilderDocument;
 		initialBrixYaml?: string;
 		chrome?: 'standalone' | 'embedded';
@@ -182,6 +197,25 @@
 	const inspectorFields = $derived(
 		activeDefinition ? createInspectorFieldsFromFields(activeDefinition.fields) : {}
 	);
+
+	const activeLayout = $derived.by(() => {
+		const layoutName = controller?.document.layout;
+		if (!layoutName) return null;
+		const normalized = toComponentName(layoutName);
+		return layouts.find((layout) => layout.name === normalized) ?? null;
+	});
+	const pageFieldsSchema = $derived(
+		mergeBuilderFields(STANDARD_SEO_FIELDS, activeLayout?.fields ?? {})
+	);
+	const pageFields = $derived(createInspectorFieldsFromFields(pageFieldsSchema));
+	const pageCollections = $derived(createBuilderCollectionsFromFields(pageFieldsSchema));
+	const pageValues = $derived.by(() => {
+		const document = controller?.document;
+		if (!document) return {} as Record<string, unknown>;
+		return Object.fromEntries(
+			Object.keys(pageFields).map((key) => [key, getPageFieldValue(document, key)])
+		);
+	});
 
 	function insertBlock(type: string, index: number): void {
 		if (!controller) return;
@@ -451,11 +485,13 @@
 				clearPendingFileEdit(controller);
 			}
 		} catch (error) {
-			setBlockError(
-				controller,
-				pending.blockId,
-				error instanceof Error ? error.message : 'Impossibile leggere il file selezionato.'
-			);
+			if (pending.blockId) {
+				setBlockError(
+					controller,
+					pending.blockId,
+					error instanceof Error ? error.message : 'Impossibile leggere il file selezionato.'
+				);
+			}
 			clearPendingFileEdit(controller);
 		} finally {
 			target.value = '';
@@ -544,14 +580,69 @@
 		updateFieldValue(block, path, value);
 	}
 
-	function updateDocumentTitle(value: string): void {
+	function updatePageField(path: string, value: unknown): void {
 		if (!controller) return;
-		controller.document.title = value;
+		setPageFieldInState(controller, path, value);
 	}
 
-	function updateDocumentDescription(value: string): void {
+	function changeLayout(name: string): void {
 		if (!controller) return;
-		controller.document.description = value;
+		setDocumentLayoutInState(controller, name);
+	}
+
+	function findPageCollection(path: string): BuilderCollection | null {
+		return pageCollections.find((entry) => entry.path === path) ?? null;
+	}
+
+	function addPageItem(path: string): void {
+		if (!controller) return;
+		const collection = findPageCollection(path);
+		if (!collection) return;
+		addPageItemToState(controller, collection);
+	}
+
+	function removePageItem(path: string, index: number): void {
+		if (!controller) return;
+		const collection = findPageCollection(path);
+		if (!collection) return;
+		removePageItemFromState(controller, collection, index);
+	}
+
+	function movePageItem(path: string, index: number, direction: -1 | 1): void {
+		if (!controller) return;
+		const collection = findPageCollection(path);
+		if (!collection) return;
+		movePageItemInState(controller, collection, index, direction);
+	}
+
+	function queuePageFileEdit(path: string): void {
+		if (!controller) return;
+
+		const field = getFieldByPath(pageFieldsSchema, path);
+		const kind = field ? inferBuilderFieldKind(field) : null;
+
+		if (kind === 'icon') {
+			queuePageFileEditInState(controller, path);
+			if (onpickIcon) {
+				onpickIcon((iconSvg) => {
+					if (!controller) return;
+					applyFileToPendingEdit(controller, iconSvg);
+				});
+			} else {
+				clearPendingFileEdit(controller);
+			}
+			return;
+		}
+
+		queuePageFileEditInState(controller, path);
+		if (onpickImage) {
+			onpickImage((imageUrl) => {
+				if (!controller) return;
+				applyFileToPendingEdit(controller, imageUrl);
+			});
+		} else {
+			openFilePicker();
+		}
 	}
 
 	$effect(() => {
@@ -1105,16 +1196,22 @@
 		{#if inspectorOpen && !previewMode}
 			<div class="relative shrink-0" style="width: {inspectorWidth}px">
 				<BuilderInspector
-					title={controller?.document.title ?? ''}
-					description={controller?.document.description ?? ''}
 					{activeBlock}
 					{activeDefinition}
 					{inspectorFields}
+					{pageFields}
+					{pageValues}
+					{layouts}
+					currentLayout={controller?.document.layout ?? ''}
 					propsError={activeBlock ? (controller?.propsErrors[activeBlock.id] ?? null) : null}
 					{mdsvexOutput}
 					copied={controller?.copied ?? false}
-					onTitleChange={updateDocumentTitle}
-					onDescriptionChange={updateDocumentDescription}
+					onLayoutChange={changeLayout}
+					onPageFieldChange={updatePageField}
+					onPageQueueFileEdit={queuePageFileEdit}
+					onPageAddItem={addPageItem}
+					onPageRemoveItem={removePageItem}
+					onPageMoveItem={movePageItem}
 					onFieldChange={updateFieldValue}
 					onQueueFileEdit={queueFileEdit}
 					onAddItem={addItem}

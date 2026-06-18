@@ -51,6 +51,13 @@ export interface BrixterPluginOptions {
 	 * Optional layout name used when a `.brix.yaml` file omits `layout`.
 	 */
 	defaultLayout?: string;
+	/**
+	 * Inject a `<BrixSeo>` component into every compiled `.brix.yaml` page so
+	 * standard SEO metadata is rendered into `<head>` regardless of layout.
+	 *
+	 * @default true
+	 */
+	seo?: boolean;
 }
 
 interface BuildRepoInfo {
