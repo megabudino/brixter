@@ -74,6 +74,17 @@
 		return (source as Record<string, unknown>)[key];
 	}
 
+	function getItemKey(item: unknown, index: number): string {
+		if (item && typeof item === 'object' && !Array.isArray(item)) {
+			const id = (item as Record<string, unknown>)._bxid;
+			if (typeof id === 'string' && id) {
+				return id;
+			}
+		}
+
+		return `${path}-${index}`;
+	}
+
 	function getItemLabel(item: unknown, index: number): string {
 		if (
 			field.summaryField &&
@@ -131,7 +142,7 @@
 			<p class="bx-text-muted text-sm">No items configured.</p>
 		{/if}
 
-		{#each arrayItems as item, index (`${path}-${index}`)}
+		{#each arrayItems as item, index (getItemKey(item, index))}
 			<div class="space-y-3 border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
 				<div class="flex items-center justify-between gap-3">
 					<p class="bx-text-heading text-sm font-medium">{getItemLabel(item, index)}</p>

@@ -1,7 +1,7 @@
 import { parse } from 'svelte/compiler';
 import MagicString from 'magic-string';
 import { createBuilderFieldsFromMarkup } from './markup-schema.js';
-import type { BuilderFields } from '../core.js';
+import { BUILDER_ITEM_ID_KEY, type BuilderFields } from '../core.js';
 
 export interface BrixterPreprocessorOptions {
 	disable?: boolean;
@@ -215,7 +215,15 @@ function transformAnnotatedElements(
 			const colName = getAttrString(collectionAttr);
 			if (colName && itemVars.has(colName)) {
 				const itemVar = itemVars.get(colName)!;
-				s.appendLeft(node.start, `{#each ${colName} as ${itemVar}}\n`);
+				const indexVar = `${itemVar}_i`;
+				// Key by the stable item id so the builder can reorder the collection
+				// without reusing DOM nodes positionally (which strands inline editors
+				// on the wrong item). Published props have the id stripped, so fall
+				// back to the index where reordering never happens.
+				s.appendLeft(
+					node.start,
+					`{#each ${colName} as ${itemVar}, ${indexVar} (${itemVar}?.['${BUILDER_ITEM_ID_KEY}'] ?? ${indexVar})}\n`
+				);
 				s.appendRight(node.end, `\n{/each}`);
 			}
 		}

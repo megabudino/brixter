@@ -180,7 +180,12 @@ function createBuilderFallbackValue(field: BuilderField, key: string): unknown {
 
 	if (kind === 'array') {
 		const item = field.item ? createBuilderFallbackValue(field.item, field.itemLabel ?? key) : {};
-		return [item, cloneValue(item), cloneValue(item)];
+		// Deterministic ids: this fallback array is recomputed on every render for
+		// collections without persisted data, so per-render random ids would make
+		// the keyed {#each} remount its items continuously.
+		return [cloneValue(item), cloneValue(item), cloneValue(item)].map((entry, index) =>
+			withFallbackItemId(entry, index)
+		);
 	}
 
 	if (kind === 'boolean') {
@@ -594,7 +599,10 @@ export function addCollectionItem(
 	collection: BuilderCollection
 ): Record<string, unknown> {
 	const items = getCollectionItems(props, collection);
-	return updatePropsAtPath(props, collection.path, [...items, cloneValue(collection.defaultItem)]);
+	return updatePropsAtPath(props, collection.path, [
+		...items,
+		assignBuilderItemId(cloneValue(collection.defaultItem))
+	]);
 }
 
 export function removeCollectionItem(
@@ -700,7 +708,7 @@ export function serializeToMdsvex(
 
 		for (const { block, index } of componentBlocks) {
 			scriptLines.push(
-				`\tconst blockProps${index + 1} = ${JSON.stringify(normalizeBuilderPropsForRender(block.props), null, 2)};`
+				`\tconst blockProps${index + 1} = ${JSON.stringify(stripBuilderItemIds(normalizeBuilderPropsForRender(block.props)), null, 2)};`
 			);
 		}
 
@@ -797,7 +805,10 @@ export function serializeToBrixYaml(
 		.filter((entry) => entry.definition.mode === 'component')
 		.map(({ block }) => ({
 			type: block.type,
-			props: normalizeBuilderPropsForRender(block.props) as Record<string, unknown>
+			props: stripBuilderItemIds(normalizeBuilderPropsForRender(block.props)) as Record<
+				string,
+				unknown
+			>
 		}));
 
 	return stringifyYaml(output).trimEnd() + '\n';
@@ -805,6 +816,60 @@ export function serializeToBrixYaml(
 
 function cloneValue<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
+}
+
+/**
+ * Stable identity attached to every collection item so that {#each} blocks can
+ * be keyed by item identity instead of position. Without it, reordering a
+ * collection reuses DOM nodes/components positionally, which leaves imperatively
+ * mounted inline editors (and stateful rich-text editors) bound to the wrong
+ * item — content appears duplicated onto a neighbouring element. The id is kept
+ * in editor/preview props but stripped from serialized output via
+ * {@link stripBuilderItemIds}.
+ */
+export const BUILDER_ITEM_ID_KEY = '_bxid';
+
+/** Always assigns a fresh id (used when creating brand new items). */
+function assignBuilderItemId(item: unknown): unknown {
+	if (!isRecord(item)) {
+		return item;
+	}
+	return { ...item, [BUILDER_ITEM_ID_KEY]: createId() };
+}
+
+/** Stable per-position id for transient fallback/default items. */
+function withFallbackItemId(item: unknown, index: number): unknown {
+	if (!isRecord(item)) {
+		return item;
+	}
+	return { ...item, [BUILDER_ITEM_ID_KEY]: `__bx-default-${index}` };
+}
+
+/** Assigns an id only when one is missing (used while hydrating existing data). */
+function ensureBuilderItemId(item: unknown): unknown {
+	if (!isRecord(item)) {
+		return item;
+	}
+	const existing = item[BUILDER_ITEM_ID_KEY];
+	if (typeof existing === 'string' && existing) {
+		return item;
+	}
+	return { ...item, [BUILDER_ITEM_ID_KEY]: createId() };
+}
+
+/** Recursively removes the internal item id so serialized output stays clean. */
+function stripBuilderItemIds(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		return value.map(stripBuilderItemIds);
+	}
+	if (isRecord(value)) {
+		return Object.fromEntries(
+			Object.entries(value)
+				.filter(([key]) => key !== BUILDER_ITEM_ID_KEY)
+				.map(([key, entry]) => [key, stripBuilderItemIds(entry)])
+		);
+	}
+	return value;
 }
 
 function getBrixYamlMetadata(document: Record<string, unknown>): Record<string, unknown> {
@@ -882,7 +947,9 @@ function hydrateBuilderValue(value: unknown, field: BuilderField, defaultValue: 
 			return [];
 		}
 		return value.map((entry) =>
-			field.item ? hydrateBuilderValue(entry, field.item, undefined) : cloneValue(entry)
+			ensureBuilderItemId(
+				field.item ? hydrateBuilderValue(entry, field.item, undefined) : cloneValue(entry)
+			)
 		);
 	}
 
