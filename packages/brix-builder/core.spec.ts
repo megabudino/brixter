@@ -87,6 +87,17 @@ const galleryBriks = createBrixDefinitions({
 	}
 });
 
+const imageBriks = createBrixDefinitions({
+	'../lib/brixter/brix/Banner.brix.svelte': {
+		default: {} as never,
+		brikFields: {
+			image: {
+				kind: 'image'
+			}
+		}
+	}
+});
+
 describe('brix definitions', () => {
 	it('discovers briks from the provided modules', () => {
 		expect(pageBriks.map((brik) => brik.type)).toEqual(['Markdown', 'Hero']);
@@ -196,6 +207,23 @@ describe('serializeToMdsvex', () => {
 			'Paesaggio Estivo'
 		);
 	});
+
+	it('re-injects field placeholders into collection items at render time', () => {
+		// Round-trip: a saved item with an empty image (img: "") must still show
+		// the visual placeholder in the builder, not a broken image.
+		const definition = getDefinition('Gallery', galleryBriks);
+		const merged = createBuilderFallbackProps(definition, {
+			pieces: [
+				{ src: '', title: 'Build better pages' },
+				{ src: '', title: 'Another' }
+			]
+		}) as { pieces: Array<Record<string, string>> };
+
+		expect(merged.pieces).toHaveLength(2);
+		expect(merged.pieces[0].src).toContain('data:image/svg+xml');
+		expect(merged.pieces[0].title).toBe('Build better pages');
+		expect(merged.pieces[1].src).toContain('data:image/svg+xml');
+	});
 });
 
 describe('brix yaml round-trip', () => {
@@ -259,6 +287,26 @@ components:
 		expect(output).toContain('type: Hero');
 		expect(output).toContain('headline: Titolo YAML');
 		expect(output).not.toContain('type: Markdown');
+	});
+
+	it('strips image placeholder fallbacks instead of persisting them', () => {
+		// createBlock bakes the visual image placeholder (a data:image/svg+xml URL)
+		// into props for fields without a default. It must never reach the file.
+		const block = createBlock('Banner', imageBriks);
+		expect(block.props.image).toContain('data:image/svg+xml');
+
+		const output = serializeToBrixYaml(
+			{
+				title: 'Home',
+				description: 'Landing page',
+				metadata: {},
+				blocks: [block]
+			},
+			imageBriks
+		);
+
+		expect(output).not.toContain('data:image/svg+xml');
+		expect(output).toContain('image: ""');
 	});
 
 	it('preserves empty strings in raw props during update and serialization', () => {

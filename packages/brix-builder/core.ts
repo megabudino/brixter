@@ -299,7 +299,19 @@ function mergeFallbackValues(fallbackValue: unknown, value: unknown): unknown {
 	}
 
 	if (Array.isArray(value)) {
-		return value.length > 0 ? value : fallbackValue;
+		if (value.length === 0) {
+			return fallbackValue;
+		}
+		// Merge field fallbacks into each item so empty fields inside collection
+		// items still get their render-time placeholder (e.g. an unset image),
+		// just like top-level fields. The fallback array is a template list; reuse
+		// the first entry for items beyond its length.
+		if (Array.isArray(fallbackValue) && fallbackValue.length > 0) {
+			return value.map((item, index) =>
+				mergeFallbackValues(fallbackValue[index] ?? fallbackValue[0], item)
+			);
+		}
+		return value;
 	}
 
 	if (isRecord(value) && isRecord(fallbackValue)) {
@@ -786,7 +798,7 @@ export function serializeToMdsvex(
 
 		for (const { block, index } of componentBlocks) {
 			scriptLines.push(
-				`\tconst blockProps${index + 1} = ${JSON.stringify(stripBuilderItemIds(normalizeBuilderPropsForRender(block.props)), null, 2)};`
+				`\tconst blockProps${index + 1} = ${JSON.stringify(stripBuilderPlaceholders(stripBuilderItemIds(normalizeBuilderPropsForRender(block.props))), null, 2)};`
 			);
 		}
 
@@ -883,10 +895,9 @@ export function serializeToBrixYaml(
 		.filter((entry) => entry.definition.mode === 'component')
 		.map(({ block }) => ({
 			type: block.type,
-			props: stripBuilderItemIds(normalizeBuilderPropsForRender(block.props)) as Record<
-				string,
-				unknown
-			>
+			props: stripBuilderPlaceholders(
+				stripBuilderItemIds(normalizeBuilderPropsForRender(block.props))
+			) as Record<string, unknown>
 		}));
 
 	return stringifyYaml(output).trimEnd() + '\n';
@@ -1159,8 +1170,7 @@ function isHrefKey(key: string): boolean {
 	return key.toLowerCase() === 'href' || key.toLowerCase().endsWith('url');
 }
 
-function createImageFallback(): string {
-	const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-hidden="true">
+const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-hidden="true">
 	<g transform="translate(160 120)" stroke="#a3a3a3" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 		<g transform="translate(-12 -12)">
 			<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
@@ -1169,7 +1179,11 @@ function createImageFallback(): string {
 		</g>
 	</g>
 </svg>`;
-	return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+
+const IMAGE_FALLBACK_DATA_URL = `data:image/svg+xml,${encodeURIComponent(IMAGE_FALLBACK_SVG)}`;
+
+function createImageFallback(): string {
+	return IMAGE_FALLBACK_DATA_URL;
 }
 
 function parsePath(path: string): Array<string | number> {
@@ -1256,8 +1270,39 @@ function createId(): string {
 	return `block-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+const ICON_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`;
+
 function createIconFallback(): string {
-	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`;
+	return ICON_FALLBACK_SVG;
+}
+
+/**
+ * The image/icon fallbacks are visual placeholders shown in the builder preview
+ * for fields that have no value yet (re-injected at render time by
+ * {@link mergeFallbackValues}). They must never be persisted: the canonical
+ * "no value" representation is an empty string. This strips any placeholder that
+ * leaked into props — e.g. baked in by {@link createBlock} — before serializing.
+ */
+function isBuilderPlaceholderValue(value: unknown): boolean {
+	return value === IMAGE_FALLBACK_DATA_URL || value === ICON_FALLBACK_SVG;
+}
+
+function stripBuilderPlaceholders(value: unknown): unknown {
+	if (typeof value === 'string') {
+		return isBuilderPlaceholderValue(value) ? '' : value;
+	}
+
+	if (Array.isArray(value)) {
+		return value.map((entry) => stripBuilderPlaceholders(entry));
+	}
+
+	if (isRecord(value)) {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, entry]) => [key, stripBuilderPlaceholders(entry)])
+		);
+	}
+
+	return value;
 }
 
 export function getFieldByRawPath(fields: BuilderFields, rawPath: string): BuilderField | null {

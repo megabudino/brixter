@@ -1,3 +1,19 @@
-title: "Test"
-description: ''
-components: []
+title: Test
+description: ""
+components:
+  - type: Test
+    props:
+      eyebrow: Gallery
+      headline: A beautiful collection of images.
+      description: Browse through this curated selection of visuals, each with its own
+        title and caption.
+      images:
+        - img: /brix-builder-demo.gif
+          title: Build better pages faster
+          caption: Caption
+        - img: ""
+          title: Build better pages faster
+          caption: Caption
+        - img: ""
+          title: Build better pages faster
+          caption: Caption

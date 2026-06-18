@@ -6,6 +6,22 @@ import { Buffer } from 'node:buffer';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
 
+/**
+ * Maps a repo-relative media file path to the URL the site serves it at, by
+ * stripping the media root (e.g. `static`) and rooting the result. This mirrors
+ * the GitHub-mode CDN-url transform in RoutesPage and is both a loadable
+ * thumbnail src (the dev server serves static assets) and the value persisted
+ * into the brik props.
+ */
+function toPublicMediaUrl(repoPath: string, mediaRoot: string): string {
+	const normalized = normalizeRepoPath(repoPath);
+	const base = normalizeRepoPath(mediaRoot);
+	if (!base) return `/${normalized}`;
+	if (normalized === base) return '/';
+	if (normalized.startsWith(`${base}/`)) return `/${normalized.slice(base.length + 1)}`;
+	return `/${normalized}`;
+}
+
 function apiPath(pathname: string): string {
 	const marker = '/admin/api/';
 	if (pathname.startsWith(marker)) return pathname.slice(marker.length);
@@ -120,7 +136,14 @@ async function mediaPicker(event: RequestEvent) {
 			.sort((a: ContentEntry, b: ContentEntry) => {
 				if (a.type === b.type) return (a.name ?? '').localeCompare(b.name ?? '');
 				return a.type === 'dir' ? -1 : 1;
-			});
+			})
+			// Local mode has no CDN download_url; derive the served public URL so
+			// the picker can render thumbnails and persist a usable image src.
+			.map((item: ContentEntry) =>
+				item.type === 'file' && !item.downloadUrl
+					? { ...item, downloadUrl: toPublicMediaUrl(item.path, mediaRoot) }
+					: item
+			);
 
 		return json({ path: queryPath, entries: filtered });
 	} catch (err: unknown) {
