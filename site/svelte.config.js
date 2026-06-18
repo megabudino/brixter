@@ -1,7 +1,15 @@
 import adapter from '@sveltejs/adapter-auto';
 import { relative, sep } from 'node:path';
-import { brixter } from '../packages/brix-builder/dist/svelte/preprocess.js';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+// Dev (`BRIXTER_SOURCE=1`, run under the tsx loader) imports the preprocessor
+// straight from source so edits to `preprocess.ts` apply without rebuilding the
+// package. Build/check/prepare use the compiled `dist` (no TS loader needed).
+const { brixter } = await import(
+	process.env.BRIXTER_SOURCE
+		? '../packages/brix-builder/svelte/preprocess.ts'
+		: '../packages/brix-builder/dist/svelte/preprocess.js'
+);
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
