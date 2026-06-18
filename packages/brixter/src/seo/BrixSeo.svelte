@@ -21,6 +21,8 @@
 		image?: string;
 	}
 
+	import { page } from '$app/stores';
+
 	let {
 		title,
 		description,
@@ -42,24 +44,42 @@
 	const jsonLdBlocks = $derived(
 		jsonLd == null ? [] : Array.isArray(jsonLd) ? jsonLd.filter(Boolean) : [jsonLd]
 	);
+
+	/**
+	 * Social crawlers (og:image, twitter:image, og:url) fetch the page out of
+	 * context and don't resolve relative paths, so they need absolute URLs.
+	 * Root-relative values (e.g. `/images/og.png` from the media picker) are
+	 * resolved against the request origin — under adapter-node this is the
+	 * `ORIGIN` env. Already-absolute and protocol-relative URLs pass through.
+	 */
+	function absolutize(value: string | undefined): string | undefined {
+		if (!value || !value.startsWith('/') || value.startsWith('//')) return value;
+		const origin = $page.url.origin;
+		return origin ? `${origin}${value}` : value;
+	}
+
+	const ogImage = $derived(absolutize(og?.image));
+	const ogUrl = $derived(absolutize(og?.url));
+	const twitterImage = $derived(absolutize(twitter?.image));
+	const canonicalUrl = $derived(absolutize(canonical));
 </script>
 
 <svelte:head>
 	{#if title}<title>{title}</title>{/if}
 	{#if description}<meta name="description" content={description} />{/if}
 	{#if robots}<meta name="robots" content={robots} />{/if}
-	{#if canonical}<link rel="canonical" href={canonical} />{/if}
+	{#if canonicalUrl}<link rel="canonical" href={canonicalUrl} />{/if}
 
 	{#if og?.title}<meta property="og:title" content={og.title} />{/if}
 	{#if og?.description}<meta property="og:description" content={og.description} />{/if}
-	{#if og?.image}<meta property="og:image" content={og.image} />{/if}
-	{#if og?.url}<meta property="og:url" content={og.url} />{/if}
+	{#if ogImage}<meta property="og:image" content={ogImage} />{/if}
+	{#if ogUrl}<meta property="og:url" content={ogUrl} />{/if}
 	{#if og?.type}<meta property="og:type" content={og.type} />{/if}
 
 	{#if twitter?.card}<meta name="twitter:card" content={twitter.card} />{/if}
 	{#if twitter?.title}<meta name="twitter:title" content={twitter.title} />{/if}
 	{#if twitter?.description}<meta name="twitter:description" content={twitter.description} />{/if}
-	{#if twitter?.image}<meta name="twitter:image" content={twitter.image} />{/if}
+	{#if twitterImage}<meta name="twitter:image" content={twitterImage} />{/if}
 
 	{#each jsonLdBlocks as block, index (index)}
 		{@html `<script type="application/ld+json">${JSON.stringify(block)}<\/script>`}
