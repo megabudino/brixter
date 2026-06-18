@@ -291,7 +291,7 @@
 										></div>
 										<button
 											type="button"
-											class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+											class="collection-add-button bx-btn-brutal-icon absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}"
 											aria-label={`Aggiungi ${overlay.label}`}
 											onclick={(event) => {
 												event.stopPropagation();
@@ -318,7 +318,7 @@
 											class={hoveredCollectionItem ===
 											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
 												? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
-												: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
+												: 'collection-item-toolbar pointer-events-none absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
 										>
 											<button
 												type="button"
@@ -424,7 +424,7 @@
 										></div>
 										<button
 											type="button"
-											class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+											class="collection-add-button bx-btn-brutal-icon absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}"
 											aria-label={`Aggiungi ${overlay.label}`}
 											onclick={(event) => {
 												event.stopPropagation();
@@ -451,7 +451,7 @@
 											class={hoveredCollectionItem ===
 											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
 												? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
-												: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
+												: 'collection-item-toolbar pointer-events-none absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
 										>
 											<button
 												type="button"

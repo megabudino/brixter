@@ -231,9 +231,9 @@ function transformAnnotatedElements(
 				if (node.name === 'img' && kind === 'image') {
 					const srcAttr = attrs.find((a) => a.name === 'src');
 					if (srcAttr) {
-						s.overwrite(srcAttr.start, srcAttr.end, `src={${rawPath}}`);
+						s.overwrite(srcAttr.start, srcAttr.end, `src=${expr}`);
 					} else {
-						s.appendLeft(node.start + node.name.length + 1, ` src={${rawPath}}`);
+						s.appendLeft(node.start + node.name.length + 1, ` src=${expr}`);
 					}
 					// Drop children (if any)
 					if (node.children?.length) {
