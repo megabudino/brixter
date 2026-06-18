@@ -190,10 +190,21 @@
 		};
 	}
 
-	$effect(() => attachPreviewInteractionGuard(document));
+	let rootElement = $state<HTMLElement | undefined>();
+
+	$effect(() => {
+		// Attach to the document that actually hosts the rendered preview (the
+		// builder iframe), not the ambient global `document` of the parent realm.
+		const previewDocument = rootElement?.ownerDocument;
+		if (!previewDocument) {
+			return;
+		}
+
+		return attachPreviewInteractionGuard(previewDocument);
+	});
 </script>
 
-<div onclick={(event) => {
+<div bind:this={rootElement} onclick={(event) => {
 	if (!(event.target as Element).closest('[data-brixter-preview-block]')) {
 		onDeselectBlock();
 	}

@@ -1,113 +1,56 @@
-import {
-	INTERACTIVE_SELECTOR,
-	isEditorInteractionTarget,
-	isFieldActivationTarget,
-	isPreviewContentInteractiveTarget,
-	syncNeutralizedInteractiveElements,
-} from './interactive-content.js';
+const NAVIGATION_LINK_SELECTOR = 'a[href]';
+const PREVIEW_CONTENT_SELECTOR = '[data-brixter-preview-content]';
 
-function markInert(element: HTMLElement): void {
-	if (element.dataset.builderPreviewInert === 'true') {
-		return;
-	}
-
-	if (element.hasAttribute('tabindex')) {
-		element.dataset.builderPreviewInertTabindex = element.getAttribute('tabindex') ?? '';
-	}
-
-	element.dataset.builderPreviewInert = 'true';
-	element.setAttribute('tabindex', '-1');
-	element.setAttribute('aria-disabled', 'true');
+function isWithinPreviewContent(target: EventTarget | null): target is Element {
+	return target instanceof Element && target.closest(PREVIEW_CONTENT_SELECTOR) !== null;
 }
 
-function syncInertInteractiveElements(root: ParentNode): void {
-	syncNeutralizedInteractiveElements(root);
-
-	for (const element of root.querySelectorAll<HTMLElement>(INTERACTIVE_SELECTOR)) {
-		if (!element.closest('[data-brixter-preview-content]')) {
-			continue;
-		}
-
-		markInert(element);
-	}
-}
-
-function blockInteractiveAction(event: Event): void {
+/**
+ * Cancels the browser's default navigation for links inside the preview canvas
+ * (including modifier/middle clicks that would open a new tab).
+ *
+ * We intentionally call only `preventDefault()` and never `stopPropagation()`:
+ * the component's own click handlers (accordion toggles, tabs, …) still run,
+ * so local interactivity keeps working — only the destructive navigation that
+ * would replace the preview is suppressed.
+ */
+function blockLinkNavigation(event: Event): void {
 	const target = event.target;
-	if (!(target instanceof Element) || !isPreviewContentInteractiveTarget(target)) {
+	if (!(target instanceof Element)) {
 		return;
 	}
 
-	if (isEditorInteractionTarget(target)) {
-		return;
-	}
-
-	if (event.type === 'mousedown' && isFieldActivationTarget(target)) {
+	const link = target.closest(NAVIGATION_LINK_SELECTOR);
+	if (!link || !link.closest(PREVIEW_CONTENT_SELECTOR)) {
 		return;
 	}
 
 	event.preventDefault();
-	event.stopPropagation();
 }
 
-function blockInteractiveKeydown(event: KeyboardEvent): void {
-	if (event.key !== 'Enter' && event.key !== ' ') {
-		return;
+function blockFormSubmission(event: Event): void {
+	if (isWithinPreviewContent(event.target)) {
+		event.preventDefault();
 	}
-
-	const target = event.target;
-	if (!(target instanceof Element) || !isPreviewContentInteractiveTarget(target)) {
-		return;
-	}
-
-	if (isEditorInteractionTarget(target)) {
-		return;
-	}
-
-	event.preventDefault();
-	event.stopPropagation();
 }
 
+/**
+ * Installs the preview navigation guard on the document that actually hosts the
+ * rendered preview (the builder iframe document). A single capture-phase
+ * listener covers every current and future link, so no per-element
+ * neutralization or MutationObserver bookkeeping is required.
+ */
 export function attachPreviewInteractionGuard(document: Document): () => void {
 	document.body.setAttribute('data-brixter-preview-canvas', 'true');
-	syncInertInteractiveElements(document);
 
-	const observer = new MutationObserver((records) => {
-		for (const record of records) {
-			if (record.type === 'childList') {
-				for (const node of record.addedNodes) {
-					if (node instanceof HTMLElement) {
-						syncInertInteractiveElements(node);
-					}
-				}
-				continue;
-			}
-
-			if (record.type === 'attributes' && record.target instanceof HTMLElement) {
-				syncInertInteractiveElements(record.target);
-			}
-		}
-	});
-
-	observer.observe(document.body, {
-		attributes: true,
-		attributeFilter: ['href', 'role', 'type', 'for', 'data-brixter-field-enhanced'],
-		childList: true,
-		subtree: true,
-	});
-
-	const events = ['click', 'auxclick', 'mousedown', 'pointerdown', 'submit'] as const;
-	for (const type of events) {
-		document.addEventListener(type, blockInteractiveAction, true);
-	}
-	document.addEventListener('keydown', blockInteractiveKeydown, true);
+	document.addEventListener('click', blockLinkNavigation, true);
+	document.addEventListener('auxclick', blockLinkNavigation, true);
+	document.addEventListener('submit', blockFormSubmission, true);
 
 	return () => {
-		observer.disconnect();
-		for (const type of events) {
-			document.removeEventListener(type, blockInteractiveAction, true);
-		}
-		document.removeEventListener('keydown', blockInteractiveKeydown, true);
+		document.removeEventListener('click', blockLinkNavigation, true);
+		document.removeEventListener('auxclick', blockLinkNavigation, true);
+		document.removeEventListener('submit', blockFormSubmission, true);
 		document.body.removeAttribute('data-brixter-preview-canvas');
 	};
 }

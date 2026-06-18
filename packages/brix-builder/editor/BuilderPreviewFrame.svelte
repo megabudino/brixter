@@ -377,48 +377,6 @@ body[data-brixter-preview-page-overflow='true']::before {
 	outline-offset: -2px;
 }
 
-body[data-brixter-preview-canvas] [data-brixter-preview-content] :is(
-	a,
-	button,
-	input[type='submit'],
-	input[type='button'],
-	input[type='reset'],
-	input[type='checkbox'],
-	input[type='radio'],
-	label[for],
-	select,
-	textarea,
-	summary,
-	[role='button'],
-	[role='link']
-),
-body[data-brixter-preview-canvas] [data-brixter-preview-content] :is(
-	a,
-	button,
-	input[type='submit'],
-	input[type='button'],
-	input[type='reset'],
-	input[type='checkbox'],
-	input[type='radio'],
-	label[for],
-	select,
-	textarea,
-	summary,
-	[role='button'],
-	[role='link']
-) * {
-	pointer-events: none !important;
-}
-
-body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='pending'],
-body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-preview-field-editor,
-body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-preview-text-editor,
-body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .ProseMirror,
-body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-richtext-inline-editor,
-body[data-brixter-preview-canvas] [data-brixter-preview-content] [data-brixter-field-enhanced='true'] .builder-richtext-mount {
-	pointer-events: auto !important;
-}
-
 [data-brixter-field][data-brixter-kind='icon']:empty::before {
 	content: '+';
 	font-family: inherit;
