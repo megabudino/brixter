@@ -10,9 +10,15 @@ export function syncPreviewHeadAssets(
 			'link[rel="stylesheet"], link[rel="preconnect"], style'
 		)) {
 			const clone = asset.cloneNode(true) as HTMLElement;
-			clone.dataset.builderPreviewHeadAsset = 'true';
+			clone.dataset.brixterPreviewHeadAsset = 'true';
 			if (asset instanceof HTMLLinkElement && clone instanceof HTMLLinkElement && asset.href) {
-				clone.href = asset.href;
+				// Prefer the URL the stylesheet actually loaded from. When the host app is
+				// mounted behind a path rewrite (e.g. the CMS served at /admin), SvelteKit/Vite
+				// inject stylesheet links with relative hrefs during client-side navigation, so
+				// `link.href` resolves against the page URL into a wrong, 404ing path. The
+				// associated `CSSStyleSheet.href` keeps the real, loaded URL. This only surfaces
+				// in production builds (dev injects absolute `<style>`/href assets).
+				clone.href = asset.sheet?.href ?? asset.href;
 			}
 			frameDocument.head.append(clone);
 		}
