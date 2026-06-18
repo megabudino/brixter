@@ -50,7 +50,7 @@ describe('createBrixDefinitions', () => {
 	it('merges markup preview fields with inspector-only module fields', () => {
 		const definitions = createBrixDefinitions(
 			{
-				'../lib/brixter/brix/Cta.svelte': {
+				'../lib/brixter/brix/Cta.brix.svelte': {
 					default: {} as never,
 					brikFields: {
 						cta: {
@@ -68,7 +68,7 @@ describe('createBrixDefinitions', () => {
 				}
 			},
 			{
-				'../lib/brixter/brix/Cta.svelte': `
+				'../lib/brixter/brix/Cta.brix.svelte': `
 					<div>
 						<h2
 							data-brixter-field="headline"

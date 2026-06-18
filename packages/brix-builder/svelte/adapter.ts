@@ -45,8 +45,7 @@ export function createBrixDefinitions(
 }
 
 function createDefinition(path: string, module: BrikModule, source: string): BrikDefinition {
-	const isBrixSvelte = path.endsWith('.brix.svelte');
-	const type = path.split('/').pop()?.replace('.brix.svelte', '').replace('.svelte', '') ?? path;
+	const type = path.split('/').pop()?.replace('.brix.svelte', '') ?? path;
 	const markupFields = source ? createBrikSchemaFromMarkup(source) : {};
 	const fields = mergeBuilderFields(markupFields, cloneValue(module.brikFields ?? {}));
 	const defaults =
@@ -64,7 +63,7 @@ function createDefinition(path: string, module: BrikModule, source: string): Bri
 
 	return {
 		type,
-		path: toLibImportPath(type, isBrixSvelte),
+		path: `$lib/brixter/brix/${type}.brix.svelte`,
 		description: module.brikDescription ?? `Brik ${humanizeType(type)}.`,
 		mode: module.brikMode ?? 'component',
 		component: module.default,
@@ -73,11 +72,6 @@ function createDefinition(path: string, module: BrikModule, source: string): Bri
 		collections,
 		fields
 	};
-}
-
-function toLibImportPath(type: string, isBrixSvelte: boolean): string {
-	const ext = isBrixSvelte ? '.brix.svelte' : '.svelte';
-	return `$lib/brixter/brix/${type}${ext}`;
 }
 
 function humanizeType(type: string): string {

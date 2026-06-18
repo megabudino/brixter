@@ -19,14 +19,14 @@ import { createBrixDefinitions } from './svelte/adapter';
 
 const pageBriks = createBrixDefinitions(
 	{
-		'../lib/brixter/brix/Markdown.svelte': {
+		'../lib/brixter/brix/Markdown.brix.svelte': {
 			default: {} as never,
 			brikMode: 'markdown',
 			brikDefaults: {
 				content: '## Nuovo brik'
 			}
 		},
-		'../lib/brixter/brix/Hero.svelte': {
+		'../lib/brixter/brix/Hero.brix.svelte': {
 			default: {} as never,
 			brikFields: {
 				cta: {
@@ -40,7 +40,7 @@ const pageBriks = createBrixDefinitions(
 		}
 	},
 	{
-		'../lib/brixter/brix/Hero.svelte': `
+		'../lib/brixter/brix/Hero.brix.svelte': `
 			<section>
 				<h1 data-brixter-field="headline" data-brixter-default="Titolo">
 					{headline}
@@ -54,7 +54,7 @@ const pageBriks = createBrixDefinitions(
 );
 
 const galleryBriks = createBrixDefinitions({
-	'../lib/brixter/brix/Gallery.svelte': {
+	'../lib/brixter/brix/Gallery.brix.svelte': {
 		default: {} as never,
 		brikFields: {
 			pieces: {
@@ -98,10 +98,10 @@ describe('serializeToMdsvex', () => {
 		const output = serializeToMdsvex(document, pageBriks);
 
 		expect(output).toContain('title: Pagina Brixter');
-		expect(output).toContain("import Hero from '$lib/brixter/brix/Hero.svelte';");
+		expect(output).toContain("import Hero from '$lib/brixter/brix/Hero.brix.svelte';");
 		expect(output).toContain('<Hero {...blockProps2} />');
 		expect(output).toContain('## Nuovo brik');
-		expect(output).not.toContain("import Markdown from '$lib/brixter/brix/Markdown.svelte';");
+		expect(output).not.toContain("import Markdown from '$lib/brixter/brix/Markdown.brix.svelte';");
 	});
 
 	it('creates generic briks from inferred defaults', () => {

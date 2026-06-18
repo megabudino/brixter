@@ -102,13 +102,15 @@ export function getActiveReorderContext(
 	};
 }
 
-export function addBlock(
+export function insertBlock(
 	state: EditorControllerState,
 	definitions: BuilderDefinition[],
-	type: string
+	type: string,
+	index: number
 ): BuilderBlock {
 	const block = createBlock(type, definitions);
-	state.document.blocks.push(block);
+	const at = Math.max(0, Math.min(index, state.document.blocks.length));
+	state.document.blocks.splice(at, 0, block);
 	return block;
 }
 

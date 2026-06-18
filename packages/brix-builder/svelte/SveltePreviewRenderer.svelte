@@ -26,13 +26,11 @@
 		onPreviewKeydown,
 		onSelectBlock,
 		onDeselectBlock,
-		onAddBlockBefore,
-		onAddBlockAfter,
 		onAddItem,
 		onRemoveItem,
 		onMoveItem,
 		onOpenReorderModal,
-		onOpenInserterModal,
+		onOpenInserter,
 		previewMode = false
 	}: BuilderAppPreviewProps & { definitions: BrikDefinition[] } = $props();
 
@@ -200,285 +198,304 @@
 		onDeselectBlock();
 	}
 }}>
-	{#each blocks as block, blockIndex (block.id)}
-		{@const definition = getBuilderDefinition(block.type, definitions)}
-		{#if !propsErrors[block.id]}
-			{@const BlockComponent = definition.component}
-			{@const renderProps = getRenderProps(block)}
-			{@const liveProps = normalizeBuilderPropsForRender(
-				createBuilderFallbackProps(definition, block.props)
-			) as Record<string, unknown>}
-			{@const hasPreviewBindings = definition.previewBindings.length > 0}
-			{#if hasPreviewBindings}
-				<div
-					data-brixter-preview-block={block.id}
-					use:previewContainer={{
-						block,
-						definition,
-						editing: getEditingContext(block.id, block.props, hasPreviewBindings)
-					}}
-					class="group relative scroll-mt-0.5 scroll-mb-0.5 transition"
-					class:cursor-pointer={!previewMode}
-					role={previewMode ? undefined : "button"}
-					tabindex={previewMode ? undefined : 0}
-					aria-label={previewMode ? undefined : `Modifica elementi del brik ${definition.type}`}
-					onclick={previewMode ? undefined : (event: MouseEvent) => onPreviewClick(block, event)}
-					onkeydown={previewMode ? undefined : (event: KeyboardEvent) => onPreviewKeydown(block, event)}
-					onmousemove={previewMode ? undefined : (event: MouseEvent) =>
-						updateHoverStates(
-							block.id,
-							previewOverlays[block.id] ?? [],
-							previewCollectionOverlays[block.id] ?? [],
-							event
-						)}
-					onmouseleave={previewMode ? undefined : () => {
-						hoveredCollectionItem = null;
-						hoveredCollection = null;
-					}}
-				>
-					{#if !previewMode}
-						<PreviewBlockInserter
-							placement="before"
-							edgeInset={blockIndex === 0}
-							onToggle={() => onOpenInserterModal(block.id, 'before')}
-						/>
-					{/if}
-					<div data-brixter-preview-content>
-						<BlockComponent {...renderProps} />
-					</div>
-					{#if activeBlockId === block.id && !previewMode}
-						<div
-							class="pointer-events-none absolute inset-px z-30 border-2 border-[#FDE047] dark:border-[#FACC15]"
-						></div>
-					{/if}
-
-					{#if definition.collections.length > 0 && !previewMode}
-						<div class="pointer-events-none absolute inset-0">
-							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
-								<div
-									class="collection-overlay pointer-events-none absolute z-10"
-									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
-								>
-									<div
-										class="collection-outline absolute inset-0 outline outline-1 outline-[#FDE047] transition outline-dashed dark:outline-[#FACC15] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
-									></div>
-									<button
-										type="button"
-										class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
-										aria-label={`Aggiungi ${overlay.label}`}
-										onclick={(event) => {
-											event.stopPropagation();
-											onAddItem(block, overlay.collectionPath);
-										}}
-									>
-										+
-									</button>
-								</div>
-							{/each}
-
-							{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
-								<div
-									class="collection-item-overlay pointer-events-none absolute z-20"
-									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
-								>
-									<div
-										class={hoveredCollectionItem ===
-										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
-									></div>
-									<div
-										class={hoveredCollectionItem ===
-										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
-											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
-									>
-										<button
-											type="button"
-											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
-											}}
-										>
-											↑
-										</button>
-										<button
-											type="button"
-											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
-											}}
-										>
-											↓
-										</button>
-										<button
-											type="button"
-											class="h-full px-2.5 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-											onclick={(event) => {
-												event.stopPropagation();
-												onRemoveItem(block, overlay.collectionPath, overlay.index);
-											}}
-										>
-											×
-										</button>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-
-					{#if !previewMode}
-						<PreviewBlockInserter
-							placement="after"
-							edgeInset={blockIndex === blocks.length - 1}
-							onToggle={() => onOpenInserterModal(block.id, 'after')}
-						/>
-					{/if}
+	{#if blocks.length == 0}
+		{#if !previewMode}
+			<div class="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-12 text-center">
+				<div class="space-y-1">
+					<p class="bx-text-heading text-lg font-semibold">Your page is empty</p>
+					<p class="bx-text-muted text-sm">Add your first brik to start building.</p>
 				</div>
-			{:else}
-				<div
-					data-brixter-preview-block={block.id}
-					use:previewContainer={{
-						block,
-						definition,
-						editing: getEditingContext(block.id, block.props, hasPreviewBindings)
-					}}
-					class="group relative scroll-mt-0.5 scroll-mb-0.5 transition"
-					class:cursor-pointer={!previewMode}
-					role={previewMode ? undefined : "button"}
-					tabindex={previewMode ? undefined : 0}
-					aria-label={previewMode ? undefined : `Seleziona brik ${definition.type}`}
-					onclick={previewMode ? undefined : () => onSelectBlock(block.id)}
-					onkeydown={previewMode ? undefined : (event: KeyboardEvent) => {
-						if (event.key === 'Enter' || event.key === ' ') {
-							event.preventDefault();
-							onSelectBlock(block.id);
-						}
-					}}
-					onmousemove={previewMode ? undefined : (event: MouseEvent) =>
-						updateHoverStates(
-							block.id,
-							previewOverlays[block.id] ?? [],
-							previewCollectionOverlays[block.id] ?? [],
-							event
-						)}
-					onmouseleave={previewMode ? undefined : () => {
-						hoveredCollectionItem = null;
-						hoveredCollection = null;
-					}}
+				<button
+					type="button"
+					class="bx-btn-brutal flex items-center gap-2 px-4 py-2 text-sm font-medium"
+					onclick={() => onOpenInserter(0)}
 				>
-					{#if !previewMode}
-						<PreviewBlockInserter
-							placement="before"
-							edgeInset={blockIndex === 0}
-							onToggle={() => onOpenInserterModal(block.id, 'before')}
-						/>
-					{/if}
-					<div data-brixter-preview-content>
-						<BlockComponent {...renderProps} />
-					</div>
-					{#if activeBlockId === block.id && !previewMode}
-						<div
-							class="pointer-events-none absolute inset-px z-30 border-2 border-[#FDE047] dark:border-[#FACC15]"
-						></div>
-					{/if}
-
-					{#if definition.collections.length > 0 && !previewMode}
-						<div class="pointer-events-none absolute inset-0">
-							{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
-								<div
-									class="collection-overlay pointer-events-none absolute z-10"
-									style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
-								>
-									<div
-										class="collection-outline absolute inset-0 outline outline-1 outline-[#FDE047] transition outline-dashed dark:outline-[#FACC15] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
-									></div>
-									<button
-										type="button"
-										class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
-										aria-label={`Aggiungi ${overlay.label}`}
-										onclick={(event) => {
-											event.stopPropagation();
-											onAddItem(block, overlay.collectionPath);
-										}}
-									>
-										+
-									</button>
-								</div>
-							{/each}
-
-							{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
-								<div
-									class="collection-item-overlay pointer-events-none absolute z-20"
-									style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
-								>
-									<div
-										class={hoveredCollectionItem ===
-										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
-											: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
-									></div>
-									<div
-										class={hoveredCollectionItem ===
-										getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-											? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
-											: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
-									>
-										<button
-											type="button"
-											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												onMoveItem(block, overlay.collectionPath, overlay.index, -1);
-											}}
-										>
-											↑
-										</button>
-										<button
-											type="button"
-											class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												onMoveItem(block, overlay.collectionPath, overlay.index, 1);
-											}}
-										>
-											↓
-										</button>
-										<button
-											type="button"
-											class="h-full px-2.5 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-											onclick={(event) => {
-												event.stopPropagation();
-												onRemoveItem(block, overlay.collectionPath, overlay.index);
-											}}
-										>
-											×
-										</button>
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-
-					{#if !previewMode}
-						<PreviewBlockInserter
-							placement="after"
-							edgeInset={blockIndex === blocks.length - 1}
-							onToggle={() => onOpenInserterModal(block.id, 'after')}
-						/>
-					{/if}
-				</div>
-			{/if}
-		{:else}
-			<div
-				class="border border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
-			>
-				Correggi i contenuti di questo brik per vedere di nuovo la preview.
+					<span class="text-lg leading-none">+</span>
+					Add the first brik
+				</button>
 			</div>
 		{/if}
-	{/each}
+	{:else}
+		{#each blocks as block, blockIndex (block.id)}
+			{@const definition = getBuilderDefinition(block.type, definitions)}
+			{#if !propsErrors[block.id]}
+				{@const BlockComponent = definition.component}
+				{@const renderProps = getRenderProps(block)}
+				{@const liveProps = normalizeBuilderPropsForRender(
+					createBuilderFallbackProps(definition, block.props)
+				) as Record<string, unknown>}
+				{@const hasPreviewBindings = definition.previewBindings.length > 0}
+				{#if hasPreviewBindings}
+					<div
+						data-brixter-preview-block={block.id}
+						use:previewContainer={{
+							block,
+							definition,
+							editing: getEditingContext(block.id, block.props, hasPreviewBindings)
+						}}
+						class="group relative scroll-mt-0.5 scroll-mb-0.5 transition"
+						class:cursor-pointer={!previewMode}
+						role={previewMode ? undefined : "button"}
+						tabindex={previewMode ? undefined : 0}
+						aria-label={previewMode ? undefined : `Modifica elementi del brik ${definition.type}`}
+						onclick={previewMode ? undefined : (event: MouseEvent) => onPreviewClick(block, event)}
+						onkeydown={previewMode ? undefined : (event: KeyboardEvent) => onPreviewKeydown(block, event)}
+						onmousemove={previewMode ? undefined : (event: MouseEvent) =>
+							updateHoverStates(
+								block.id,
+								previewOverlays[block.id] ?? [],
+								previewCollectionOverlays[block.id] ?? [],
+								event
+							)}
+						onmouseleave={previewMode ? undefined : () => {
+							hoveredCollectionItem = null;
+							hoveredCollection = null;
+						}}
+					>
+						{#if !previewMode}
+							<PreviewBlockInserter
+								placement="before"
+								edgeInset={blockIndex === 0}
+								onToggle={() => onOpenInserter(blockIndex)}
+							/>
+						{/if}
+						<div data-brixter-preview-content>
+							<BlockComponent {...renderProps} />
+						</div>
+						{#if activeBlockId === block.id && !previewMode}
+							<div
+								class="pointer-events-none absolute inset-px z-30 border-2 border-[#FDE047] dark:border-[#FACC15]"
+							></div>
+						{/if}
+
+						{#if definition.collections.length > 0 && !previewMode}
+							<div class="pointer-events-none absolute inset-0">
+								{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
+									<div
+										class="collection-overlay pointer-events-none absolute z-10"
+										style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+									>
+										<div
+											class="collection-outline absolute inset-0 outline outline-1 outline-[#FDE047] transition outline-dashed dark:outline-[#FACC15] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										></div>
+										<button
+											type="button"
+											class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+											aria-label={`Aggiungi ${overlay.label}`}
+											onclick={(event) => {
+												event.stopPropagation();
+												onAddItem(block, overlay.collectionPath);
+											}}
+										>
+											+
+										</button>
+									</div>
+								{/each}
+
+								{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+									<div
+										class="collection-item-overlay pointer-events-none absolute z-20"
+										style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+									>
+										<div
+											class={hoveredCollectionItem ===
+											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+												? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+												: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
+										></div>
+										<div
+											class={hoveredCollectionItem ===
+											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+												? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
+												: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
+										>
+											<button
+												type="button"
+												class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													onMoveItem(block, overlay.collectionPath, overlay.index, -1);
+												}}
+											>
+												↑
+											</button>
+											<button
+												type="button"
+												class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													onMoveItem(block, overlay.collectionPath, overlay.index, 1);
+												}}
+											>
+												↓
+											</button>
+											<button
+												type="button"
+												class="h-full px-2.5 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+												onclick={(event) => {
+													event.stopPropagation();
+													onRemoveItem(block, overlay.collectionPath, overlay.index);
+												}}
+											>
+												×
+											</button>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if !previewMode}
+							<PreviewBlockInserter
+								placement="after"
+								edgeInset={blockIndex === blocks.length - 1}
+								onToggle={() => onOpenInserter(blockIndex + 1)}
+							/>
+						{/if}
+					</div>
+				{:else}
+					<div
+						data-brixter-preview-block={block.id}
+						use:previewContainer={{
+							block,
+							definition,
+							editing: getEditingContext(block.id, block.props, hasPreviewBindings)
+						}}
+						class="group relative scroll-mt-0.5 scroll-mb-0.5 transition"
+						class:cursor-pointer={!previewMode}
+						role={previewMode ? undefined : "button"}
+						tabindex={previewMode ? undefined : 0}
+						aria-label={previewMode ? undefined : `Seleziona brik ${definition.type}`}
+						onclick={previewMode ? undefined : () => onSelectBlock(block.id)}
+						onkeydown={previewMode ? undefined : (event: KeyboardEvent) => {
+							if (event.key === 'Enter' || event.key === ' ') {
+								event.preventDefault();
+								onSelectBlock(block.id);
+							}
+						}}
+						onmousemove={previewMode ? undefined : (event: MouseEvent) =>
+							updateHoverStates(
+								block.id,
+								previewOverlays[block.id] ?? [],
+								previewCollectionOverlays[block.id] ?? [],
+								event
+							)}
+						onmouseleave={previewMode ? undefined : () => {
+							hoveredCollectionItem = null;
+							hoveredCollection = null;
+						}}
+					>
+						{#if !previewMode}
+							<PreviewBlockInserter
+								placement="before"
+								edgeInset={blockIndex === 0}
+								onToggle={() => onOpenInserter(blockIndex)}
+							/>
+						{/if}
+						<div data-brixter-preview-content>
+							<BlockComponent {...renderProps} />
+						</div>
+						{#if activeBlockId === block.id && !previewMode}
+							<div
+								class="pointer-events-none absolute inset-px z-30 border-2 border-[#FDE047] dark:border-[#FACC15]"
+							></div>
+						{/if}
+
+						{#if definition.collections.length > 0 && !previewMode}
+							<div class="pointer-events-none absolute inset-0">
+								{#each previewCollectionOverlays[block.id] ?? [] as overlay (overlay.collectionPath)}
+									<div
+										class="collection-overlay pointer-events-none absolute z-10"
+										style={`top:${overlay.top}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+									>
+										<div
+											class="collection-outline absolute inset-0 outline outline-1 outline-[#FDE047] transition outline-dashed dark:outline-[#FACC15] {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+										></div>
+										<button
+											type="button"
+											class="collection-add-button bx-btn-brutal-icon pointer-events-auto absolute top-full left-1/2 flex h-7 w-7 -translate-x-1/2 translate-y-2 items-center justify-center text-lg leading-none transition {hoveredCollection === `${block.id}:${overlay.collectionPath}` ? 'opacity-100' : 'opacity-0'}"
+											aria-label={`Aggiungi ${overlay.label}`}
+											onclick={(event) => {
+												event.stopPropagation();
+												onAddItem(block, overlay.collectionPath);
+											}}
+										>
+											+
+										</button>
+									</div>
+								{/each}
+
+								{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+									<div
+										class="collection-item-overlay pointer-events-none absolute z-20"
+										style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
+									>
+										<div
+											class={hoveredCollectionItem ===
+											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+												? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+												: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
+										></div>
+										<div
+											class={hoveredCollectionItem ===
+											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
+												? 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'
+												: 'collection-item-toolbar pointer-events-auto absolute top-0 left-0 flex h-8 -translate-y-full items-center overflow-hidden border border-gray-300 bg-white text-xs text-gray-900 opacity-0 shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'}
+										>
+											<button
+												type="button"
+												class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													onMoveItem(block, overlay.collectionPath, overlay.index, -1);
+												}}
+											>
+												↑
+											</button>
+											<button
+												type="button"
+												class="h-full border-r border-gray-200 px-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													onMoveItem(block, overlay.collectionPath, overlay.index, 1);
+												}}
+											>
+												↓
+											</button>
+											<button
+												type="button"
+												class="h-full px-2.5 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+												onclick={(event) => {
+													event.stopPropagation();
+													onRemoveItem(block, overlay.collectionPath, overlay.index);
+												}}
+											>
+												×
+											</button>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if !previewMode}
+							<PreviewBlockInserter
+								placement="after"
+								edgeInset={blockIndex === blocks.length - 1}
+								onToggle={() => onOpenInserter(blockIndex + 1)}
+							/>
+						{/if}
+					</div>
+				{/if}
+			{:else}
+				<div
+					class="border border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
+				>
+					Correggi i contenuti di questo brik per vedere di nuovo la preview.
+				</div>
+			{/if}
+		{/each}
+	{/if}
 </div>
 
 

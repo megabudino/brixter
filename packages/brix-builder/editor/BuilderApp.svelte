@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {
-		addBlock as addBlockToState,
+		insertBlock as insertBlockToState,
 		addItem as addItemToState,
 		applyFileToPendingEdit,
 		clearPendingFileEdit,
@@ -88,7 +88,7 @@
 	let previewCollectionOverlays = $state<Record<string, PreviewCollectionOverlay[]>>({});
 	let initialized = $state(false);
 	let activeFieldEdit = $state<PreviewFieldEdit | null>(null);
-	let inserterModal = $state<{ blockId: string; placement: 'before' | 'after' } | null>(null);
+	let inserterModal = $state<{ index: number } | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	const previewBlockElements = new Map<string, HTMLElement>();
 	const pageFlowShortcutKey = SHORTCUTS.togglePageFlow.key;
@@ -183,45 +183,9 @@
 		activeDefinition ? createInspectorFieldsFromFields(activeDefinition.fields) : {}
 	);
 
-	function addBlock(type: string): void {
+	function insertBlock(type: string, index: number): void {
 		if (!controller) return;
-		const block = addBlockToState(controller, definitions, type);
-		activeBlockId = block.id;
-	}
-
-	function addBlockAfter(blockId: string, type: string): void {
-		if (!controller) return;
-
-		const targetIndex = controller.document.blocks.findIndex((block) => block.id === blockId);
-		const block = addBlockToState(controller, definitions, type);
-
-		if (targetIndex !== -1) {
-			controller.document.blocks = [
-				...controller.document.blocks.slice(0, targetIndex + 1),
-				block,
-				...controller.document.blocks
-					.slice(targetIndex + 1)
-					.filter((entry) => entry.id !== block.id)
-			];
-		}
-
-		activeBlockId = block.id;
-	}
-
-	function addBlockBefore(blockId: string, type: string): void {
-		if (!controller) return;
-
-		const targetIndex = controller.document.blocks.findIndex((block) => block.id === blockId);
-		const block = addBlockToState(controller, definitions, type);
-
-		if (targetIndex !== -1) {
-			controller.document.blocks = [
-				...controller.document.blocks.slice(0, targetIndex),
-				block,
-				...controller.document.blocks.slice(targetIndex).filter((entry) => entry.id !== block.id)
-			];
-		}
-
+		const block = insertBlockToState(controller, definitions, type, index);
 		activeBlockId = block.id;
 	}
 
@@ -545,8 +509,8 @@
 		closeReorderModalInState(controller);
 	}
 
-	function openInserterModal(blockId: string, placement: 'before' | 'after'): void {
-		inserterModal = { blockId, placement };
+	function openInserter(index: number): void {
+		inserterModal = { index };
 	}
 
 	function closeInserterModal(): void {
@@ -555,11 +519,7 @@
 
 	function insertFromModal(type: string): void {
 		if (!inserterModal) return;
-		if (inserterModal.placement === 'before') {
-			addBlockBefore(inserterModal.blockId, type);
-		} else {
-			addBlockAfter(inserterModal.blockId, type);
-		}
+		insertBlock(type, inserterModal.index);
 		inserterModal = null;
 	}
 
@@ -790,13 +750,11 @@
 		onUpdateRichText: updatePreviewRichText,
 		onUpdateText: updatePreviewText,
 		onQueueFileEdit: queueFileEdit,
-		onAddBlockBefore: addBlockBefore,
-		onAddBlockAfter: addBlockAfter,
 		onAddItem: addItem,
 		onRemoveItem: removeItem,
 		onMoveItem: moveItem,
 		onOpenReorderModal: openReorderModal,
-		onOpenInserterModal: openInserterModal,
+		onOpenInserter: openInserter,
 		onDeselectBlock: deselectBlock,
 		previewMode,
 		viewportSize
@@ -881,7 +839,7 @@
 				<button
 					type="button"
 					class="bx-btn-brutal-icon flex h-9 w-9 items-center justify-center text-xl leading-none"
-					onclick={() => definitions[0] && addBlock(definitions[0].type)}
+					onclick={() => openInserter(controller?.document.blocks.length ?? 0)}
 					aria-label="Aggiungi brik"
 				>
 					+
@@ -1201,9 +1159,7 @@
 				<div>
 					<h2 class="bx-text-heading text-lg font-semibold">Add component</h2>
 					<p class="bx-text-muted mt-1 text-sm">
-						Choose the component to insert {inserterModal.placement === 'before'
-							? 'before'
-							: 'after'} this section.
+						Choose the component to add to your page.
 					</p>
 				</div>
 				<button

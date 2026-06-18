@@ -51,8 +51,6 @@ export interface BuilderAppPreviewProps {
 	onUpdateRichText: (block: BuilderBlock, path: string, value: BuilderRichTextValue) => void;
 	onUpdateText: (block: BuilderBlock, path: string, value: string) => void;
 	onQueueFileEdit: (blockId: string, path: string) => void;
-	onAddBlockBefore: (blockId: string, type: string) => void;
-	onAddBlockAfter: (blockId: string, type: string) => void;
 	onAddItem: (block: BuilderBlock, collectionPath: string) => void;
 	onRemoveItem: (block: BuilderBlock, collectionPath: string, index: number) => void;
 	onMoveItem: (
@@ -62,7 +60,7 @@ export interface BuilderAppPreviewProps {
 		direction: -1 | 1
 	) => void;
 	onOpenReorderModal: (blockId: string, collectionPath: string) => void;
-	onOpenInserterModal: (blockId: string, placement: 'before' | 'after') => void;
+	onOpenInserter: (index: number) => void;
 	onDeselectBlock: () => void;
 	previewMode?: boolean;
 	viewportSize?: 'desktop' | 'tablet' | 'mobile';

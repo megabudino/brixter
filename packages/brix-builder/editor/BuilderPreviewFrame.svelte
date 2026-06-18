@@ -21,13 +21,11 @@
 		onUpdateRichText,
 		onUpdateText,
 		onQueueFileEdit,
-		onAddBlockBefore,
-		onAddBlockAfter,
 		onAddItem,
 		onRemoveItem,
 		onMoveItem,
 		onOpenReorderModal,
-		onOpenInserterModal,
+		onOpenInserter,
 		onDeselectBlock,
 		onKeydown,
 		previewMode = false,
@@ -59,13 +57,11 @@
 		rendererProps.onUpdateRichText = onUpdateRichText;
 		rendererProps.onUpdateText = onUpdateText;
 		rendererProps.onQueueFileEdit = onQueueFileEdit;
-		rendererProps.onAddBlockBefore = onAddBlockBefore;
-		rendererProps.onAddBlockAfter = onAddBlockAfter;
 		rendererProps.onAddItem = onAddItem;
 		rendererProps.onRemoveItem = onRemoveItem;
 		rendererProps.onMoveItem = onMoveItem;
 		rendererProps.onOpenReorderModal = onOpenReorderModal;
-		rendererProps.onOpenInserterModal = onOpenInserterModal;
+		rendererProps.onOpenInserter = onOpenInserter;
 		rendererProps.onDeselectBlock = onDeselectBlock;
 		rendererProps.previewMode = previewMode;
 		rendererProps.viewportSize = viewportSize;
