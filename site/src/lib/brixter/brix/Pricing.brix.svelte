@@ -76,7 +76,6 @@
 			<p
 				class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
 				data-brixter-field="eyebrow"
-				data-brixter-default="Pricing"
 			>
 				Pricing
 			</p>
@@ -85,7 +84,6 @@
 				class="font-display text-heading text-3xl md:text-4xl"
 				data-brixter-field="headline"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="Simple pricing that scales with you."
 			>
 				Simple pricing that scales with you.
 			</h2>
@@ -94,7 +92,6 @@
 				class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
 				data-brixter-field="description"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="Click any plan card to edit just that plan in the inspector sidebar."
 			>
 				Click any plan card to edit just that plan in the inspector sidebar.
 			</p>
@@ -102,14 +99,14 @@
 
 		<div class="mt-12 grid gap-6 md:grid-cols-3">
 			<article
-				class="flex flex-col border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800"
+				class="flex flex-col border-2 border-gray-200 bg-gray-50 p-6 transition-colors data-[accent=blue]:border-blue-500 data-[accent=green]:border-green-500 data-[accent=yellow]:border-yellow-400 data-[featured=true]:ring-2 data-[featured=true]:ring-[#FDE047] data-[featured=true]:ring-offset-2 dark:border-gray-700 dark:bg-gray-800"
 				data-brixter-collection-item="plans"
+				data-brixter-bind="data-accent:plans[].accent; data-featured:plans[].featured"
 			>
 				<p
 					class="mb-3 inline-block self-start border border-gray-300 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300"
 					data-brixter-field="plans[].badge"
 					data-brixter-label="Badge"
-					data-brixter-default="Badge"
 				>
 					Badge
 				</p>
@@ -118,7 +115,6 @@
 					class="text-heading text-xl font-semibold"
 					data-brixter-field="plans[].name"
 					data-brixter-label="Plan name"
-					data-brixter-default="Plan name"
 				>
 					Plan name
 				</h3>
@@ -128,7 +124,6 @@
 						class="text-heading text-4xl font-bold"
 						data-brixter-field="plans[].price"
 						data-brixter-label="Price"
-						data-brixter-default="$0"
 					>
 						$0
 					</span>
@@ -136,7 +131,6 @@
 						class="text-muted text-sm"
 						data-brixter-field="plans[].period"
 						data-brixter-label="Billing period"
-						data-brixter-default="/mo"
 					>
 						/mo
 					</span>
@@ -147,7 +141,6 @@
 					data-brixter-field="plans[].description"
 					data-brixter-kind="richtext-inline"
 					data-brixter-label="Description"
-					data-brixter-default="A short description of what this plan includes."
 				>
 					A short description of what this plan includes.
 				</p>
@@ -158,7 +151,6 @@
 					data-brixter-field="plans[].ctaLabel"
 					data-brixter-label="Button label"
 					data-brixter-bind="href:plans[].ctaHref"
-					data-brixter-default="Get started"
 				>
 					Get started
 				</a>

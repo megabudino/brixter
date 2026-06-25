@@ -6,6 +6,8 @@
 		normalizeBuilderPropsForRender,
 		resolveImagePropsForRender,
 		getFieldByPath,
+		getValueAtPath,
+		updatePropsAtPath,
 		inferBuilderFieldKind
 	} from '../core.js';
 	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
@@ -108,8 +110,21 @@
 		const liveProps = normalizeBuilderPropsForRender(
 			createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 		) as Record<string, unknown>;
-		if (activeFieldEdit?.blockId === block.id && blockRenderSnapshots[block.id]) {
-			return resolveImages(blockRenderSnapshots[block.id], definition);
+
+		// While a text/richtext field is edited inline, freeze ONLY that field to
+		// its snapshot value so the live contenteditable isn't clobbered. Every
+		// other prop renders live, so edits made in the inspector (or to other
+		// fields) update the preview immediately instead of waiting for the edit
+		// to close.
+		const edit = activeFieldEdit;
+		const snapshot = edit?.blockId === block.id ? blockRenderSnapshots[block.id] : undefined;
+		if (edit && snapshot) {
+			try {
+				const frozen = updatePropsAtPath(liveProps, edit.path, getValueAtPath(snapshot, edit.path));
+				return resolveImages(frozen, definition);
+			} catch {
+				return resolveImages(snapshot, definition);
+			}
 		}
 
 		return resolveImages(liveProps, definition);

@@ -24,7 +24,7 @@ describe('createLayoutDefinitions', () => {
 			},
 			{
 				'../lib/brixter/layouts/Marketing.svelte': `
-					<div data-brixter-field="banner" data-brixter-default="Hello">{banner}</div>
+					<div data-brixter-field="banner">Hello</div>
 				`
 			}
 		);
@@ -62,13 +62,12 @@ describe('createBrikSchemaFromMarkup', () => {
 				<h2
 					data-brixter-field="headline"
 					data-brixter-kind="richtext-inline"
-					data-brixter-default="Titolo"
 				>
-					{@html headline}
+					Titolo
 				</h2>
 				<div data-brixter-collection-item="articles">
-					<h3 data-brixter-field="articles[].title" data-brixter-default="Nuovo articolo">
-						{article.title}
+					<h3 data-brixter-field="articles[].title">
+						Nuovo articolo
 					</h3>
 				</div>
 			</section>
@@ -122,12 +121,11 @@ describe('createBrixDefinitions', () => {
 						<h2
 							data-brixter-field="headline"
 							data-brixter-kind="richtext-inline"
-							data-brixter-default="Titolo"
 						>
-							{@html headline}
+							Titolo
 						</h2>
-						<a data-brixter-field="cta.label" data-brixter-default="Parliamone">
-							{cta.label}
+						<a data-brixter-field="cta.label">
+							Parliamone
 						</a>
 					</div>
 				`

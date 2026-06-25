@@ -19,7 +19,6 @@
 			<p
 				class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
 				data-brixter-field="eyebrow"
-				data-brixter-default="Gallery"
 			>
 				Gallery
 			</p>
@@ -28,7 +27,6 @@
 				class="font-display text-heading text-3xl md:text-4xl"
 				data-brixter-field="headline"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="A beautiful collection of images."
 			>
 				A beautiful collection of images.
 			</h2>
@@ -37,7 +35,6 @@
 				class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
 				data-brixter-field="description"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="Browse through this curated selection of visuals, each with its own title and caption."
 			>
 				Browse through this curated selection of visuals, each with its own title and caption.
 			</p>
@@ -59,7 +56,6 @@
 					<h3
 						class="text-heading text-base font-semibold"
 						data-brixter-field="images[].title"
-						data-brixter-default="Image title"
 					>
 						Image title
 					</h3>
@@ -67,7 +63,6 @@
 						class="text-secondary mt-1 text-sm leading-5"
 						data-brixter-field="images[].caption"
 						data-brixter-kind="richtext-inline"
-						data-brixter-default="A short caption describing this image."
 					>
 						A short caption describing this image.
 					</p>

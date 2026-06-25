@@ -171,8 +171,7 @@ export function attachPreviewEditableFields(
 			let defaultString = resolveDefaultText(defaultValue);
 
 			if (!defaultString) {
-				defaultString = element.getAttribute('data-brixter-default') || 
-				                (fieldDef ? getFallbackText(rawPath.split('.').at(-1) || '') : '');
+				defaultString = fieldDef ? getFallbackText(rawPath.split('.').at(-1) || '') : '';
 			}
 
 			let plainDefaultString = defaultString.replace(/<[^>]*>/g, '').trim();

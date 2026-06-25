@@ -19,7 +19,6 @@
 			<p
 				class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
 				data-brixter-field="eyebrow"
-				data-brixter-default="Why it exists"
 			>
 				Why it exists
 			</p>
@@ -28,7 +27,6 @@
 				class="font-display text-heading text-3xl md:text-4xl"
 				data-brixter-field="headline"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="The hard part is not creating pages. It is keeping them alive."
 			>
 				The hard part is not creating pages. It is keeping them alive.
 			</h2>
@@ -42,7 +40,6 @@
 				<h3
 					class="text-heading text-lg font-semibold"
 					data-brixter-field="points[].title"
-					data-brixter-default="Every change becomes a request"
 				>
 					Every change becomes a request
 				</h3>
@@ -50,7 +47,6 @@
 					class="text-secondary mt-3 text-sm leading-6"
 					data-brixter-field="points[].text"
 					data-brixter-kind="richtext-inline"
-					data-brixter-default="Headlines, sections, CTAs: small edits interrupt engineering work and slow the whole team down."
 				>
 					Headlines, sections, CTAs: small edits interrupt engineering work and slow the whole team down.
 				</p>

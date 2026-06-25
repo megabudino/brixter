@@ -303,43 +303,29 @@ function transformAnnotatedElements(
 						const first = children[0];
 						const last = children[children.length - 1];
 
-						// Capture the author's original static text as the field
-						// placeholder (rendered greyed by the editor chrome via
-						// `data-brixter-default`). Skip when the markup already holds an
-						// expression (e.g. hand-written `{item.title}`) or an explicit
-						// `data-brixter-default` attribute.
-						const hasExpression = children.some((child) => child.type !== 'Text');
-						const hasDefaultAttr = attrs.some((a) => a.name === 'data-brixter-default');
-						if (node.name && !hasExpression && !hasDefaultAttr) {
-							const original = s.original.slice(first.start, last.end);
-							const placeholder = original.replace(/<[^>]*>/g, '').trim();
-							if (placeholder) {
-								s.appendLeft(
-									node.start + node.name.length + 1,
-									` data-brixter-default="${escapeAttribute(placeholder)}"`
-								);
-							}
-						}
-
 						s.overwrite(first.start, last.end, expr);
 					}
 				}
 			}
 
-			// --- data-brixter-bind: explicit HTML attribute → field path wiring ---
-			const bindAttr = attrs.find((a) => a.name === 'data-brixter-bind');
-			if (bindAttr && node.name) {
-				const bindValue = getAttrString(bindAttr);
-				if (bindValue) {
-					const bindings = parseBindings(bindValue);
-					for (const [htmlAttr, fieldPath] of bindings) {
-						const resolvedPath = resolvePath(fieldPath, itemVars);
-						const existingHtmlAttr = attrs.find((a) => a.name === htmlAttr);
-						if (existingHtmlAttr) {
-							s.overwrite(existingHtmlAttr.start, existingHtmlAttr.end, `${htmlAttr}={${resolvedPath}}`);
-						} else {
-							s.appendLeft(node.start + node.name.length + 1, ` ${htmlAttr}={${resolvedPath}}`);
-						}
+		}
+
+		// --- data-brixter-bind: explicit HTML attribute → field path wiring ---
+		// Runs for any annotated element, independent of data-brixter-field, so a
+		// bind can live on a collection-item container (or any element) to wire a
+		// prop value onto an HTML attribute (e.g. data-accent, style, href).
+		const bindAttr = attrs.find((a) => a.name === 'data-brixter-bind');
+		if (bindAttr && node.name) {
+			const bindValue = getAttrString(bindAttr);
+			if (bindValue) {
+				const bindings = parseBindings(bindValue);
+				for (const [htmlAttr, fieldPath] of bindings) {
+					const resolvedPath = resolvePath(fieldPath, itemVars);
+					const existingHtmlAttr = attrs.find((a) => a.name === htmlAttr);
+					if (existingHtmlAttr) {
+						s.overwrite(existingHtmlAttr.start, existingHtmlAttr.end, `${htmlAttr}={${resolvedPath}}`);
+					} else {
+						s.appendLeft(node.start + node.name.length + 1, ` ${htmlAttr}={${resolvedPath}}`);
 					}
 				}
 			}
@@ -371,17 +357,6 @@ function resolvePath(path: string, itemVars: Map<string, string>): string {
 	if (!itemVar) return path.replace('[]', '[0]');
 
 	return itemVar + rest;
-}
-
-// ---------------------------------------------------------------------------
-// Utilities
-// ---------------------------------------------------------------------------
-
-function escapeAttribute(value: string): string {
-	return value
-		.replace(/&/g, '&amp;')
-		.replace(/"/g, '&quot;')
-		.replace(/\s+/g, ' ');
 }
 
 function singularize(word: string): string {

@@ -2,7 +2,6 @@ import type { BuilderField, BuilderFieldKind, BuilderFields } from '../core.js';
 
 const BUILDER_FIELD_ATTRIBUTE = 'data-brixter-field';
 const BUILDER_KIND_ATTRIBUTE = 'data-brixter-kind';
-const BUILDER_DEFAULT_ATTRIBUTE = 'data-brixter-default';
 const BUILDER_LABEL_ATTRIBUTE = 'data-brixter-label';
 const BUILDER_PREVIEW_LABEL_ATTRIBUTE = 'data-brixter-preview-label';
 
@@ -16,24 +15,30 @@ export function createBuilderFieldsFromMarkup(source: string): BuilderFields {
 	const markup = stripNonMarkupContent(source);
 
 	for (const tag of getStartTags(markup)) {
-		const tagName = getTagName(tag);
+		const tagName = getTagName(tag.source);
 		if (!tagName) {
 			continue;
 		}
 
-		const attributes = parseAttributes(tag.slice(tagName.length + 1, -1));
+		const attributes = parseAttributes(tag.source.slice(tagName.length + 1, -1));
 		const path = attributes[BUILDER_FIELD_ATTRIBUTE];
 		if (!path) {
 			continue;
 		}
 
-		insertMarkupField(fields, tokenizePath(path), {
+		const markupDefault = getStaticTextContentDefault(markup, tag, tagName);
+		const field: BuilderField = {
 			kind: resolveFieldKind(attributes[BUILDER_KIND_ATTRIBUTE], tagName),
 			label: attributes[BUILDER_LABEL_ATTRIBUTE],
-			default: attributes[BUILDER_DEFAULT_ATTRIBUTE],
 			previewInMarkup: true,
 			previewLabel: attributes[BUILDER_PREVIEW_LABEL_ATTRIBUTE]
-		});
+		};
+
+		if (markupDefault) {
+			field.default = markupDefault;
+		}
+
+		insertMarkupField(fields, tokenizePath(path), field);
 	}
 
 	return fields;
@@ -157,8 +162,14 @@ function stripNonMarkupContent(source: string): string {
 		.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-function getStartTags(source: string): string[] {
-	const tags: string[] = [];
+interface StartTag {
+	source: string;
+	start: number;
+	end: number;
+}
+
+function getStartTags(source: string): StartTag[] {
+	const tags: StartTag[] = [];
 
 	for (let index = 0; index < source.length; index += 1) {
 		if (source[index] !== '<') {
@@ -203,7 +214,11 @@ function getStartTags(source: string): string[] {
 			}
 
 			if (character === '>' && braceDepth === 0) {
-				tags.push(source.slice(index, cursor + 1));
+				tags.push({
+					source: source.slice(index, cursor + 1),
+					start: index,
+					end: cursor + 1
+				});
 				index = cursor;
 				break;
 			}
@@ -218,6 +233,56 @@ function getStartTags(source: string): string[] {
 function getTagName(tag: string): string | null {
 	const match = tag.match(/^<([A-Za-z][A-Za-z0-9:_-]*)\b/);
 	return match?.[1] ?? null;
+}
+
+function getStaticTextContentDefault(source: string, tag: StartTag, tagName: string): string | undefined {
+	if (isVoidElement(tagName) || /\/\s*>$/.test(tag.source)) {
+		return undefined;
+	}
+
+	const closeStart = findMatchingCloseTag(source, tag, tagName);
+	if (closeStart === -1) {
+		return undefined;
+	}
+
+	const content = source.slice(tag.end, closeStart);
+	if (!content.trim() || content.includes('{')) {
+		return undefined;
+	}
+
+	const text = content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+	return text || undefined;
+}
+
+function findMatchingCloseTag(source: string, tag: StartTag, tagName: string): number {
+	const tagPattern = new RegExp(`<\\/?${escapeRegExp(tagName)}\\b[^>]*>`, 'gi');
+	let depth = 1;
+
+	for (const match of source.slice(tag.end).matchAll(tagPattern)) {
+		const matchText = match[0];
+		const matchStart = tag.end + (match.index ?? 0);
+		if (matchText.startsWith('</')) {
+			depth -= 1;
+			if (depth === 0) {
+				return matchStart;
+			}
+			continue;
+		}
+
+		if (!/\/\s*>$/.test(matchText)) {
+			depth += 1;
+		}
+	}
+
+	return -1;
+}
+
+function isVoidElement(tagName: string): boolean {
+	return /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i.test(tagName);
+}
+
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function parseAttributes(source: string): Record<string, string> {
