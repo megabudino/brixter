@@ -17,3 +17,36 @@ components:
         - img: ""
           title: Build better pages faster
           caption: Caption
+  - type: Pricing
+    props:
+      eyebrow: Pricing
+      headline: Simple pricing that scales with you.
+      description: Click any plan card to edit just that plan in the inspector sidebar.
+      plans:
+        - badge: ""
+          name: Starter
+          price: $0
+          period: /mo
+          description: For trying things out on a single project.
+          ctaLabel: Get started
+          ctaHref: "#"
+          accent: yellow
+          featured: false
+        - badge: Most popular
+          name: Pro
+          price: $29
+          period: /mo
+          description: For growing teams that ship every week.
+          ctaLabel: Start free trial
+          ctaHref: "#"
+          accent: blue
+          featured: true
+        - badge: ""
+          name: Scale
+          price: $99
+          period: /mo
+          description: For high-volume sites that need more headroom.
+          ctaLabel: Contact sales
+          ctaHref: "#"
+          accent: green
+          featured: false

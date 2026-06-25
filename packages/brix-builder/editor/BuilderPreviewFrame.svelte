@@ -13,6 +13,7 @@
 		previewCollectionOverlays,
 		activeBlockId,
 		activeFieldEdit,
+		activeCollectionItem,
 		previewContainer,
 		onPreviewClick,
 		onPreviewKeydown,
@@ -50,6 +51,7 @@
 		rendererProps.previewCollectionOverlays = previewCollectionOverlays;
 		rendererProps.activeBlockId = activeBlockId;
 		rendererProps.activeFieldEdit = activeFieldEdit;
+		rendererProps.activeCollectionItem = activeCollectionItem;
 		rendererProps.previewContainer = previewContainer;
 		rendererProps.onPreviewClick = onPreviewClick;
 		rendererProps.onPreviewKeydown = onPreviewKeydown;

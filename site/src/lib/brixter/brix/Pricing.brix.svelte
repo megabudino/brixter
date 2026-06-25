@@ -1,0 +1,168 @@
+<script module lang="ts">
+	export const brikDescription =
+		'Pricing plans. Click any card in the preview to edit that exact plan in the inspector.';
+
+	export const brikFields = {
+		plans: {
+			label: 'Plans',
+			itemLabel: 'Plan',
+			summaryField: 'name',
+			item: {
+				fields: {
+					// Inspector-only fields: these have no inline (click-to-edit) preview
+					// representation, so the only way to edit them is to select the card
+					// and use the focused per-item editor in the inspector.
+					ctaHref: { kind: 'url', label: 'Button link' },
+					featured: { kind: 'boolean', label: 'Highlight as featured' },
+					accent: {
+						kind: 'select',
+						label: 'Accent color',
+						options: [
+							{ value: 'yellow', label: 'Yellow' },
+							{ value: 'blue', label: 'Blue' },
+							{ value: 'green', label: 'Green' }
+						]
+					}
+				}
+			}
+		}
+	};
+
+	export const brikDefaults = {
+		eyebrow: 'Pricing',
+		headline: 'Simple pricing that scales with you.',
+		description: 'Click any plan card to edit just that plan in the inspector sidebar.',
+		plans: [
+			{
+				badge: '',
+				name: 'Starter',
+				price: '$0',
+				period: '/mo',
+				description: 'For trying things out on a single project.',
+				ctaLabel: 'Get started',
+				ctaHref: '#',
+				accent: 'yellow',
+				featured: false
+			},
+			{
+				badge: 'Most popular',
+				name: 'Pro',
+				price: '$29',
+				period: '/mo',
+				description: 'For growing teams that ship every week.',
+				ctaLabel: 'Start free trial',
+				ctaHref: '#',
+				accent: 'blue',
+				featured: true
+			},
+			{
+				badge: '',
+				name: 'Scale',
+				price: '$99',
+				period: '/mo',
+				description: 'For high-volume sites that need more headroom.',
+				ctaLabel: 'Contact sales',
+				ctaHref: '#',
+				accent: 'green',
+				featured: false
+			}
+		]
+	};
+</script>
+
+<section class="bg-white px-6 py-20 dark:bg-gray-900">
+	<div class="mx-auto max-w-5xl">
+		<div class="text-center">
+			<p
+				class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
+				data-brixter-field="eyebrow"
+				data-brixter-default="Pricing"
+			>
+				Pricing
+			</p>
+
+			<h2
+				class="font-display text-heading text-3xl md:text-4xl"
+				data-brixter-field="headline"
+				data-brixter-kind="richtext-inline"
+				data-brixter-default="Simple pricing that scales with you."
+			>
+				Simple pricing that scales with you.
+			</h2>
+
+			<p
+				class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
+				data-brixter-field="description"
+				data-brixter-kind="richtext-inline"
+				data-brixter-default="Click any plan card to edit just that plan in the inspector sidebar."
+			>
+				Click any plan card to edit just that plan in the inspector sidebar.
+			</p>
+		</div>
+
+		<div class="mt-12 grid gap-6 md:grid-cols-3">
+			<article
+				class="flex flex-col border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800"
+				data-brixter-collection-item="plans"
+			>
+				<p
+					class="mb-3 inline-block self-start border border-gray-300 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300"
+					data-brixter-field="plans[].badge"
+					data-brixter-label="Badge"
+					data-brixter-default="Badge"
+				>
+					Badge
+				</p>
+
+				<h3
+					class="text-heading text-xl font-semibold"
+					data-brixter-field="plans[].name"
+					data-brixter-label="Plan name"
+					data-brixter-default="Plan name"
+				>
+					Plan name
+				</h3>
+
+				<div class="mt-4 flex items-baseline gap-1">
+					<span
+						class="text-heading text-4xl font-bold"
+						data-brixter-field="plans[].price"
+						data-brixter-label="Price"
+						data-brixter-default="$0"
+					>
+						$0
+					</span>
+					<span
+						class="text-muted text-sm"
+						data-brixter-field="plans[].period"
+						data-brixter-label="Billing period"
+						data-brixter-default="/mo"
+					>
+						/mo
+					</span>
+				</div>
+
+				<p
+					class="text-secondary mt-4 text-sm leading-6"
+					data-brixter-field="plans[].description"
+					data-brixter-kind="richtext-inline"
+					data-brixter-label="Description"
+					data-brixter-default="A short description of what this plan includes."
+				>
+					A short description of what this plan includes.
+				</p>
+
+				<a
+					href="#"
+					class="btn-site-primary mt-6 inline-flex items-center justify-center px-4 py-2 text-sm font-medium"
+					data-brixter-field="plans[].ctaLabel"
+					data-brixter-label="Button label"
+					data-brixter-bind="href:plans[].ctaHref"
+					data-brixter-default="Get started"
+				>
+					Get started
+				</a>
+			</article>
+		</div>
+	</div>
+</section>

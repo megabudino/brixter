@@ -22,6 +22,7 @@
 		previewCollectionOverlays,
 		activeBlockId,
 		activeFieldEdit,
+		activeCollectionItem,
 		previewContainer,
 		onPreviewClick,
 		onPreviewKeydown,
@@ -319,14 +320,19 @@
 								{/each}
 
 								{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+									{@const isSelectedItem =
+										activeCollectionItem?.blockId === block.id &&
+										activeCollectionItem?.collectionPath === overlay.collectionPath &&
+										activeCollectionItem?.index === overlay.index}
 									<div
 										class="collection-item-overlay pointer-events-none absolute z-20"
 										style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 									>
 										<div
 											class={hoveredCollectionItem ===
-											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-												? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+												getCollectionItemKey(block.id, overlay.collectionPath, overlay.index) ||
+											isSelectedItem
+												? `collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15] ${isSelectedItem ? 'outline-2' : ''}`
 												: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
 										></div>
 										<div
@@ -392,13 +398,8 @@
 						role={previewMode ? undefined : "button"}
 						tabindex={previewMode ? undefined : 0}
 						aria-label={previewMode ? undefined : `Seleziona brik ${definition.type}`}
-						onclick={previewMode ? undefined : () => onSelectBlock(block.id)}
-						onkeydown={previewMode ? undefined : (event: KeyboardEvent) => {
-							if (event.key === 'Enter' || event.key === ' ') {
-								event.preventDefault();
-								onSelectBlock(block.id);
-							}
-						}}
+						onclick={previewMode ? undefined : (event: MouseEvent) => onPreviewClick(block, event)}
+						onkeydown={previewMode ? undefined : (event: KeyboardEvent) => onPreviewKeydown(block, event)}
 						onmousemove={previewMode ? undefined : (event: MouseEvent) =>
 							updateHoverStates(
 								block.id,
@@ -452,14 +453,19 @@
 								{/each}
 
 								{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+									{@const isSelectedItem =
+										activeCollectionItem?.blockId === block.id &&
+										activeCollectionItem?.collectionPath === overlay.collectionPath &&
+										activeCollectionItem?.index === overlay.index}
 									<div
 										class="collection-item-overlay pointer-events-none absolute z-20"
 										style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 									>
 										<div
 											class={hoveredCollectionItem ===
-											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-												? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+												getCollectionItemKey(block.id, overlay.collectionPath, overlay.index) ||
+											isSelectedItem
+												? `collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15] ${isSelectedItem ? 'outline-2' : ''}`
 												: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
 										></div>
 										<div

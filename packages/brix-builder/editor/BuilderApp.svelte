@@ -31,12 +31,14 @@
 	import {
 		createInspectorFieldsFromFields,
 		createBuilderCollectionsFromFields,
+		getCollectionItems,
 		getCollectionItemSummary,
 		normalizeBuilderPropsForRender,
 		parseBrixYamlDocument,
 		serializeToBrixYaml,
 		serializeToMdsvex,
 		getFieldByPath,
+		getValueAtPath,
 		inferBuilderFieldKind,
 		toComponentName,
 		STANDARD_SEO_FIELDS,
@@ -53,6 +55,7 @@
 	import {
 		attachPreviewContainer,
 		materializeFieldPath,
+		resolveCollectionItemAtPoint,
 		resolvePreviewBindingAtPoint,
 		type PreviewCollectionOverlay,
 		type PreviewOverlay
@@ -105,6 +108,11 @@
 	let previewCollectionOverlays = $state<Record<string, PreviewCollectionOverlay[]>>({});
 	let initialized = $state(false);
 	let activeFieldEdit = $state<PreviewFieldEdit | null>(null);
+	let activeCollectionItem = $state<{
+		blockId: string;
+		collectionPath: string;
+		index: number;
+	} | null>(null);
 	let inserterModal = $state<{ index: number } | null>(null);
 	let pageFlowShortcutModifier = $state<'command' | 'control'>('command');
 	const previewBlockElements = new Map<string, HTMLElement>();
@@ -175,6 +183,25 @@
 		}
 	});
 
+	$effect(() => {
+		const focus = activeCollectionItem;
+		if (!focus) {
+			return;
+		}
+
+		const blocks = controller?.document.blocks ?? [];
+		const block = blocks.find((entry) => entry.id === focus.blockId);
+		if (!block || focus.blockId !== activeBlockId) {
+			activeCollectionItem = null;
+			return;
+		}
+
+		const items = getValueAtPath(block.props, focus.collectionPath);
+		if (!Array.isArray(items) || focus.index < 0 || focus.index >= items.length) {
+			activeCollectionItem = null;
+		}
+	});
+
 	const mdsvexOutput = $derived(
 		serializeToMdsvex(
 			controller?.document ?? { title: '', description: '', blocks: [] },
@@ -198,6 +225,34 @@
 	);
 	const inspectorFields = $derived(
 		activeDefinition ? createInspectorFieldsFromFields(activeDefinition.fields) : {}
+	);
+	const inspectorFocusItem = $derived(
+		activeCollectionItem && activeCollectionItem.blockId === activeBlockId
+			? { collectionPath: activeCollectionItem.collectionPath, index: activeCollectionItem.index }
+			: null
+	);
+
+	// Page-flow tree: each brik plus its collections rendered as child items.
+	// Reactive, so item labels track inline edits to their summary field.
+	const pageFlowNodes = $derived(
+		(controller?.document.blocks ?? []).map((block) => {
+			const definition = getBuilderDefinition(block.type, definitions);
+			return {
+				block,
+				collections: (definition?.collections ?? []).map((collection) => ({
+					path: collection.path,
+					label: collection.label,
+					items: getCollectionItems(block.props, collection).map((item, index) => ({
+						index,
+						key:
+							(item as Record<string, unknown>)?._bxid != null
+								? String((item as Record<string, unknown>)._bxid)
+								: `${collection.path}-${index}`,
+						label: getCollectionItemSummary(item, collection, index)
+					}))
+				}))
+			};
+		})
 	);
 
 	const activeLayout = $derived.by(() => {
@@ -298,6 +353,15 @@
 		updatePropAtPath(controller, block, path, value);
 	}
 
+	function clearCollectionItem(): void {
+		activeCollectionItem = null;
+	}
+
+	function selectCollectionItem(blockId: string, collectionPath: string, index: number): void {
+		selectBlock(blockId);
+		activeCollectionItem = { blockId, collectionPath, index };
+	}
+
 	function queueFileEdit(blockId: string, path: string): void {
 		if (!controller) return;
 
@@ -392,7 +456,40 @@
 			clientX: event instanceof MouseEvent ? event.clientX : undefined,
 			clientY: event instanceof MouseEvent ? event.clientY : undefined
 		});
-		if (!resolvedBinding) {
+
+		// Materialized field path of the clicked field, e.g. "plans[1].name".
+		const matchedElement =
+			resolvedBinding && isHTMLElement(resolvedBinding.matchedElement)
+				? resolvedBinding.matchedElement
+				: null;
+		const fieldPath = resolvedBinding
+			? (matchedElement?.getAttribute('data-brixter-field') != null
+					? (materializeFieldPath(
+							matchedElement.getAttribute('data-brixter-field') as string,
+							container,
+							matchedElement
+						) ?? resolvedBinding.path)
+					: resolvedBinding.path)
+			: null;
+
+		// Resolve which collection item was selected. Prefer the materialized
+		// field path (robust — same mechanism that targets inline edits); fall
+		// back to a DOM walk for clicks that don't land on a field (item padding).
+		const pathItem = fieldPath
+			? collectionItemFromPath(fieldPath, definition.collections)
+			: null;
+		const domItem =
+			pathItem ??
+			resolveCollectionItemAtPoint({
+				collections: definition.collections,
+				container,
+				target: event.target
+			});
+		activeCollectionItem = domItem
+			? { blockId: block.id, collectionPath: domItem.collectionPath, index: domItem.index }
+			: null;
+
+		if (!resolvedBinding || !fieldPath || !matchedElement) {
 			logFieldEditEvent('block-click', 'no binding — closing field edit', { blockId: block.id });
 			closeFieldEdit();
 			return;
@@ -400,43 +497,48 @@
 
 		logFieldEditEvent('block-click', 'binding resolved', {
 			blockId: block.id,
-			path: resolvedBinding.path,
+			path: fieldPath,
 			bindingType: resolvedBinding.binding.type,
-			...describeFieldElement(resolvedBinding.matchedElement)
+			...describeFieldElement(matchedElement)
 		});
 
 		event.preventDefault();
 
 		if (resolvedBinding.binding.type === 'image' || resolvedBinding.binding.type === 'icon') {
-			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
-			const rawPath = matchedElement.getAttribute('data-brixter-field');
-			const path =
-				rawPath != null
-					? (materializeFieldPath(rawPath, container, matchedElement) ?? resolvedBinding.path)
-					: resolvedBinding.path;
-
-			activeFieldEdit = {
-				blockId: block.id,
-				path,
-				caretOffset: null
-			};
+			activeFieldEdit = { blockId: block.id, path: fieldPath, caretOffset: null };
 			return;
 		}
 
 		if (resolvedBinding.binding.type === 'richtext' || resolvedBinding.binding.type === 'text') {
-			const matchedElement = resolvedBinding.matchedElement as HTMLElement;
-			const rawPath = matchedElement.getAttribute('data-brixter-field');
-			const path =
-				rawPath != null
-					? (materializeFieldPath(rawPath, container, matchedElement) ?? resolvedBinding.path)
-					: resolvedBinding.path;
-
 			activeFieldEdit = {
 				blockId: block.id,
-				path,
+				path: fieldPath,
 				caretOffset: getClickCaretOffset(matchedElement, event)
 			};
 		}
+	}
+
+	function collectionItemFromPath(
+		path: string,
+		collections: { path: string }[]
+	): { collectionPath: string; index: number } | null {
+		const match = path.match(/^(.*?)\[(\d+)\]/);
+		if (!match) return null;
+		const collectionPath = match[1];
+		if (!collections.some((collection) => collection.path === collectionPath)) return null;
+		return { collectionPath, index: Number(match[2]) };
+	}
+
+	// Sync the selected collection item to the field being edited inline. Enhanced
+	// fields swallow the click (capture-phase mousedown) so it never reaches the
+	// block's onclick — `onFocusField` is the reliable signal. A non-collection
+	// field (e.g. the brik headline) clears the item selection.
+	function selectCollectionItemForFieldPath(block: BuilderBlock, path: string): void {
+		const definition = getBuilderDefinition(block.type, definitions);
+		const item = collectionItemFromPath(path, definition?.collections ?? []);
+		activeCollectionItem = item
+			? { blockId: block.id, collectionPath: item.collectionPath, index: item.index }
+			: null;
 	}
 
 	function handlePreviewKeydown(block: BuilderBlock, event: KeyboardEvent): void {
@@ -728,6 +830,28 @@
 		let blockId = params.block.id;
 		previewBlockElements.set(blockId, node);
 
+		// Capture-phase selection: fires on the block container *before* any
+		// enhanced field's capture-phase mousedown (which stops propagation), so
+		// clicking anywhere inside a collection item — its editable fields OR its
+		// background/padding — selects that item.
+		let selectionParams = params;
+		const handleSelectionMousedown = (event: Event) => {
+			const item = resolveCollectionItemAtPoint({
+				collections: selectionParams.definition.collections,
+				container: node,
+				target: event.target
+			});
+			if (item) {
+				selectBlock(selectionParams.block.id, { forceScroll: false });
+				activeCollectionItem = {
+					blockId: selectionParams.block.id,
+					collectionPath: item.collectionPath,
+					index: item.index
+				};
+			}
+		};
+		node.addEventListener('mousedown', handleSelectionMousedown, true);
+
 		const onOverlaysChange = (blockId: string, overlays: PreviewOverlay[]) => {
 			if (overlays.length === 0) {
 				delete previewOverlays[blockId];
@@ -758,6 +882,7 @@
 			onFocusField: (path, caretOffset) => {
 				activeFieldEdit = { blockId: params.block.id, path, caretOffset };
 				selectBlock(params.block.id, { forceScroll: false });
+				selectCollectionItemForFieldPath(params.block, path);
 			}
 		});
 		const action = attachPreviewContainer(node, {
@@ -769,6 +894,7 @@
 
 		return {
 			update(nextParams) {
+				selectionParams = nextParams;
 				if (blockId !== nextParams.block.id) {
 					previewBlockElements.delete(blockId);
 					blockId = nextParams.block.id;
@@ -789,6 +915,7 @@
 					onFocusField: (path, caretOffset) => {
 						activeFieldEdit = { blockId: nextParams.block.id, path, caretOffset };
 						selectBlock(nextParams.block.id, { forceScroll: false });
+						selectCollectionItemForFieldPath(nextParams.block, path);
 					}
 				});
 				action.update({
@@ -799,6 +926,7 @@
 				});
 			},
 			destroy() {
+				node.removeEventListener('mousedown', handleSelectionMousedown, true);
 				previewBlockElements.delete(blockId);
 				editableFields.destroy();
 				action.destroy();
@@ -825,6 +953,7 @@
 		previewCollectionOverlays,
 		activeBlockId,
 		activeFieldEdit,
+		activeCollectionItem,
 		previewContainer,
 		onPreviewClick: handlePreviewClick,
 		onPreviewKeydown: handlePreviewKeydown,
@@ -1163,9 +1292,11 @@
 		{#if pageFlowOpen && !previewMode}
 			<div class="relative shrink-0" style="width: {pageFlowWidth}px">
 				<PageFlowSidebar
-					blocks={controller?.document.blocks ?? []}
+					nodes={pageFlowNodes}
 					{activeBlockId}
+					{activeCollectionItem}
 					onSelectBlock={selectBlock}
+					onSelectCollectionItem={selectCollectionItem}
 					onDeselectBlock={deselectBlock}
 					onMoveBlock={moveBlock}
 					onRemoveBlock={removeBlock}
@@ -1192,6 +1323,7 @@
 					{activeBlock}
 					{activeDefinition}
 					{inspectorFields}
+					focusedItem={inspectorFocusItem}
 					{pageFields}
 					{pageValues}
 					{layouts}
@@ -1212,6 +1344,7 @@
 					onMoveItem={moveItem}
 					onCopyMdsvex={copyMdsvex}
 					onDeselectBlock={deselectBlock}
+					onClearCollectionItem={clearCollectionItem}
 				/>
 				<div
 					class="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-[#FDE047]/30 dark:hover:bg-[#FACC15]/30"
