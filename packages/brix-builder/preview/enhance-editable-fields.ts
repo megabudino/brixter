@@ -197,9 +197,12 @@ export function attachPreviewEditableFields(
 
 			if (resolveFieldKind(element) === 'icon' && isEmpty) {
 				element.setAttribute('data-brixter-icon-empty', 'true');
-				const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle" style="width: 100%; height: 100%; opacity: 0.4; stroke-dasharray: 4 4;"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`;
-				if (element.innerHTML.trim() !== placeholderSvg) {
-					element.innerHTML = placeholderSvg;
+				// Keep the host empty so the fixed-size `:empty::before` placeholder
+				// (a dashed `+` box) renders. Injecting a `width:100%/height:100%` SVG
+				// here would collapse to ~0×0 on hosts that sized themselves from the
+				// previous icon, leaving no clickable target to reopen the picker.
+				if (element.innerHTML.trim() !== '') {
+					element.innerHTML = '';
 				}
 			} else if (resolveFieldKind(element) === 'icon') {
 				element.removeAttribute('data-brixter-icon-empty');

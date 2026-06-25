@@ -19,11 +19,19 @@
 	let coords = $state({ top: 0, left: 0, width: 0, height: 0 });
 	let isOpen = $state(false);
 
-	let hasIcon = $derived(
-		element &&
-		!element.hasAttribute('data-brixter-icon-empty') &&
-		element.innerHTML.trim() !== ''
-	);
+	// Read from the DOM imperatively: the host's `data-brixter-icon-empty` attribute
+	// and `innerHTML` are mutated outside Svelte's reactivity (and this editor instance
+	// persists across remove/add), so a `$derived` would never recompute. We refresh
+	// this explicitly when the menu opens and whenever the host element mutates.
+	let hasIcon = $state(false);
+
+	function refreshHasIcon() {
+		hasIcon = Boolean(
+			element &&
+			!element.hasAttribute('data-brixter-icon-empty') &&
+			element.innerHTML.trim() !== ''
+		);
+	}
 
 	function updateCoords() {
 		const rect = element.getBoundingClientRect();
@@ -54,6 +62,7 @@
 
 	onMount(() => {
 		updateCoords();
+		refreshHasIcon();
 
 		const win = element.ownerDocument.defaultView || window;
 		win.addEventListener('scroll', updateCoords, { passive: true });
@@ -62,6 +71,7 @@
 		// Click to activate and open menu
 		const handleElementClick = (event: MouseEvent) => {
 			event.stopPropagation();
+			refreshHasIcon();
 			isOpen = true;
 			onFocus();
 			updateCoords();
@@ -88,6 +98,7 @@
 		// Observe changes in element structure to update coordinates
 		const observer = new MutationObserver(() => {
 			updateCoords();
+			refreshHasIcon();
 		});
 		observer.observe(element, { attributes: true, childList: true, subtree: true });
 

@@ -240,12 +240,15 @@ async function iconPicker(event: RequestEvent) {
 	const relativePath = url.searchParams.get('path') ?? '';
 	const targetPath = relativePath ? `${iconsBase}/${relativePath}` : iconsBase;
 
-	// In local mode, read direct from filesystem
+	// In local mode, read direct from filesystem. Mirror the GitHub branch's shape so
+	// the picker behaves identically: `path` relative to iconsBase (for navigation) and
+	// a `downloadUrl` pointing at the repo-image proxy (which serves SVGs from disk in
+	// local mode). `item.path` from listDirectory is the full repo path repoImage reads.
 	if (isLocalMode()) {
 		const store = getContentStore();
 		try {
 			const entries = await store.listDirectory(targetPath);
-			const filtered = entries
+			const mapped = entries
 				.filter((item: ContentEntry) => {
 					if (item.type === 'dir') return true;
 					return item.name.toLowerCase().endsWith('.svg');
@@ -253,9 +256,17 @@ async function iconPicker(event: RequestEvent) {
 				.sort((a: ContentEntry, b: ContentEntry) => {
 					if (a.type === b.type) return (a.name ?? '').localeCompare(b.name ?? '');
 					return a.type === 'dir' ? -1 : 1;
-				});
+				})
+				.map((item: ContentEntry) => ({
+					name: item.name,
+					path: relativePath ? `${relativePath}/${item.name}` : item.name,
+					type: item.type,
+					downloadUrl: item.type === 'dir'
+						? null
+						: `/admin/api/repo-image?branch=${branch}&path=${item.path}`
+				}));
 
-			return json({ path: targetPath, entries: filtered });
+			return json({ path: targetPath, entries: mapped });
 		} catch {
 			return json({ path: targetPath, entries: [] });
 		}
