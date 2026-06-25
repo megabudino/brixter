@@ -54,35 +54,26 @@ describe('brixter preprocessor — injected prop defaults', () => {
 	});
 });
 
-describe('brixter preprocessor — placeholder capture', () => {
-	it('captures the original markup text into data-brixter-default', () => {
+describe('brixter preprocessor — markup defaults', () => {
+	it('keeps static markup defaults in the generated schema without emitting data-brixter-default', () => {
 		const code = run(`
 <section>
 	<h1 data-brixter-field="headline" data-brixter-kind="richtext-inline">Headline goes here.</h1>
 </section>
 `);
 
-		expect(code).toContain('data-brixter-default="Headline goes here."');
+		expect(code).toContain('"default":"Headline goes here."');
+		expect(code).not.toContain('data-brixter-default');
 	});
 
-	it('does not capture when the markup already holds an expression', () => {
+	it('does not infer defaults when the markup already holds an expression', () => {
 		const code = run(`
 <section>
 	<h2 data-brixter-field="title">{title}</h2>
 </section>
 `);
 
+		expect(code).not.toContain('"default"');
 		expect(code).not.toContain('data-brixter-default');
-	});
-
-	it('does not override an explicit data-brixter-default', () => {
-		const code = run(`
-<section>
-	<h2 data-brixter-field="title" data-brixter-default="Custom">Titolo</h2>
-</section>
-`);
-
-		expect(code).toContain('data-brixter-default="Custom"');
-		expect(code).not.toContain('data-brixter-default="Titolo"');
 	});
 });

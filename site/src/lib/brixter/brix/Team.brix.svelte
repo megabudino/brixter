@@ -20,7 +20,6 @@
 				<p
 					class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
 					data-brixter-field="eyebrow"
-					data-brixter-default="Team"
 				>
 					Team
 				</p>
@@ -29,7 +28,6 @@
 					class="font-display text-heading text-3xl md:text-4xl"
 					data-brixter-field="headline"
 					data-brixter-kind="richtext-inline"
-					data-brixter-default="Built for people who live between product, code, and content."
 				>
 					Built for people who live between product, code, and content.
 				</h2>
@@ -39,7 +37,6 @@
 				class="text-secondary text-base leading-7"
 				data-brixter-field="description"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="Brixter removes friction from marketing pages without turning your project into an opaque platform."
 			>
 				Brixter removes friction from marketing pages without turning your project into an opaque platform.
 			</p>
@@ -50,17 +47,16 @@
 				class="border border-gray-300 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-800"
 				data-brixter-collection-item="members"
 			>
-				<h3 class="text-heading text-lg font-semibold" data-brixter-field="members[].name" data-brixter-default="Developer">
+				<h3 class="text-heading text-lg font-semibold" data-brixter-field="members[].name">
 					Developer
 				</h3>
-				<p class="text-muted mt-1 text-sm" data-brixter-field="members[].role" data-brixter-default="Components and repository">
+				<p class="text-muted mt-1 text-sm" data-brixter-field="members[].role">
 					Components and repository
 				</p>
 				<p
 					class="text-secondary mt-4 text-sm leading-6"
 					data-brixter-field="members[].bio"
 					data-brixter-kind="richtext-inline"
-					data-brixter-default="Defines briks, maintains the design system, and reviews changes like regular code."
 				>
 					Defines briks, maintains the design system, and reviews changes like regular code.
 				</p>

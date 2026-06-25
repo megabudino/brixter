@@ -154,6 +154,35 @@ export function resolvePreviewBindingAtPoint<
 	return null;
 }
 
+export function resolveCollectionItemAtPoint(params: {
+	collections: { path: string }[];
+	container: HTMLElement;
+	target: EventTarget | null;
+}): { collectionPath: string; index: number } | null {
+	const { collections, container, target } = params;
+	if (!isElement(target)) {
+		return null;
+	}
+
+	const item = target.closest('[data-brixter-collection-item]');
+	if (!isElement(item) || !container.contains(item)) {
+		return null;
+	}
+
+	const collectionPath = item.getAttribute('data-brixter-collection-item');
+	if (!collectionPath || !collections.some((collection) => collection.path === collectionPath)) {
+		return null;
+	}
+
+	const selector = `[data-brixter-collection-item="${collectionPath}"]`;
+	const index = Array.from(container.querySelectorAll(selector)).indexOf(item);
+	if (index === -1) {
+		return null;
+	}
+
+	return { collectionPath, index };
+}
+
 export function getCollectionPreviewElements(
 	container: HTMLElement,
 	collection: { previewSelector?: string }

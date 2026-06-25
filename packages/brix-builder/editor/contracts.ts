@@ -43,6 +43,7 @@ export interface BuilderAppPreviewProps {
 	previewCollectionOverlays: Record<string, PreviewCollectionOverlay[]>;
 	activeBlockId: string | null;
 	activeFieldEdit: PreviewFieldEdit | null;
+	activeCollectionItem: { blockId: string; collectionPath: string; index: number } | null;
 	previewContainer: PreviewContainerAction;
 	onPreviewClick: (block: BuilderBlock, event: MouseEvent) => void;
 	onPreviewKeydown: (block: BuilderBlock, event: KeyboardEvent) => void;

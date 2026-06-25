@@ -27,7 +27,7 @@ You get **all of this for free** just from markup annotations:
 
 4. **Collection `{#each}` wrapping** — elements marked with `data-brixter-collection-item="collectionName"` are automatically wrapped in `{#each collectionName as item}` / `{/each}` at build time.
 
-5. **Svelte expression replacement** — static text/element content is replaced with `{fieldName}` (or `{@html fieldName ?? ''}` for richtext/icons).
+5. **Static markup defaults + Svelte expression replacement** — static text/element content is inferred as the field default, then replaced with `{fieldName}` (or `{@html fieldName ?? ''}` for richtext/icons).
 
 6. **`data-brixter-bind` wiring** — `data-brixter-bind="href:cta.href"` rewrites the `href` attribute to `href={cta.href}` (useful for links, images, etc.).
 
@@ -77,16 +77,6 @@ Values follow dot-path + `[]` notation:
 | `"text"`, `"boolean"`, `"number"` | Explicit scalar kinds if needed. |
 
 If omitted: `<img>` → `"image"`, everything else → `"text"`.
-
-### `data-brixter-default` (optional)
-
-Sets a default value directly in markup. The preprocessor reads this during schema inference:
-
-```svelte
-<h1 data-brixter-field="headline" data-brixter-default="Welcome to Brixter">
-  Welcome to Brixter
-</h1>
-```
 
 ### `data-brixter-collection-item` (marks repeating containers)
 
@@ -157,7 +147,7 @@ All fields are inferred from markup:
 ```
 
 The preprocessor automatically:
-- Infers `brixterSchema = { statement: { kind: "richtext-inline" }, note: { kind: "richtext-inline" } }`
+- Infers `brixterSchema = { statement: { kind: "richtext-inline", default: "A short bridge statement between problem and offer." }, note: { kind: "richtext-inline", default: "A supporting note that follows the statement." } }`
 - Injects `let { statement, note } = $props()`
 - Replaces text content with `{@html statement ?? ''}` and `{@html note ?? ''}`
 
@@ -330,7 +320,7 @@ components:
 
 - **Default to zero `<script module>` metadata.** Start with just `brikDescription` and see if the markup alone is enough.
 - **Add `brikFields` incrementally.** If a collection needs a `label`, add it. If a nested field needs a `default`, add just that field. The preprocessor merges — you never duplicate what markup already expresses.
-- **Use `data-brixter-default` for simple defaults** (strings) instead of putting them in `brikFields`. Reserve `brikFields` defaults for complex values (icons, nested objects) or for fields that have no element (like `href`).
+- **Use plain static markup text for simple defaults.** Reserve `brikFields` defaults for complex values (icons, nested objects) or for fields that have no element (like `href`).
 - **Always provide `summaryField` for collections.** It's the field shown in the sidebar list for each item (usually `title`, `name`, or `label`).
 - **The `[]` syntax in `data-brixter-field` is mandatory** for collection item fields. Write `features[].title`, not `features.title`.
 - **`data-brixter-bind` replaces static attribute values** with dynamic Svelte expressions. Use it for `href`, `src`, `target`, `alt`, or any attribute that should come from props.

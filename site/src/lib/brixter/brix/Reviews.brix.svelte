@@ -19,7 +19,6 @@
 			<p
 				class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
 				data-brixter-field="eyebrow"
-				data-brixter-default="Social proof"
 			>
 				Social proof
 			</p>
@@ -28,7 +27,6 @@
 				class="font-display text-heading text-3xl md:text-4xl"
 				data-brixter-field="headline"
 				data-brixter-kind="richtext-inline"
-				data-brixter-default="Built for teams that refuse to choose between speed and control."
 			>
 				Built for teams that refuse to choose between speed and control.
 			</h2>
@@ -43,7 +41,6 @@
 					class="text-secondary text-sm leading-6"
 					data-brixter-field="reviews[].quote"
 					data-brixter-kind="richtext-inline"
-					data-brixter-default="I can finally update a landing page without opening an issue for every headline."
 				>
 					I can finally update a landing page without opening an issue for every headline.
 				</blockquote>
@@ -51,11 +48,10 @@
 					<p
 						class="text-heading text-sm font-semibold"
 						data-brixter-field="reviews[].author"
-						data-brixter-default="Marketing Lead"
 					>
 						Marketing Lead
 					</p>
-					<p class="text-muted mt-1 text-xs" data-brixter-field="reviews[].role" data-brixter-default="Growth team">
+					<p class="text-muted mt-1 text-xs" data-brixter-field="reviews[].role">
 						Growth team
 					</p>
 				</figcaption>

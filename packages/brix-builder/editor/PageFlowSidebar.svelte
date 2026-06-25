@@ -1,10 +1,29 @@
 <script lang="ts">
 	import type { BuilderBlock } from '../core.js';
 
+	interface PageFlowItem {
+		index: number;
+		key: string;
+		label: string;
+	}
+
+	interface PageFlowCollection {
+		path: string;
+		label: string;
+		items: PageFlowItem[];
+	}
+
+	interface PageFlowNode {
+		block: BuilderBlock;
+		collections: PageFlowCollection[];
+	}
+
 	let {
-		blocks,
+		nodes,
 		activeBlockId,
+		activeCollectionItem,
 		onSelectBlock,
+		onSelectCollectionItem,
 		onDeselectBlock,
 		onMoveBlock,
 		onRemoveBlock,
@@ -12,9 +31,11 @@
 		onAllowDrop,
 		onDrop
 	}: {
-		blocks: BuilderBlock[];
+		nodes: PageFlowNode[];
 		activeBlockId: string | null;
+		activeCollectionItem: { blockId: string; collectionPath: string; index: number } | null;
 		onSelectBlock: (blockId: string) => void;
+		onSelectCollectionItem: (blockId: string, collectionPath: string, index: number) => void;
 		onDeselectBlock: () => void;
 		onMoveBlock: (blockId: string, direction: -1 | 1) => void;
 		onRemoveBlock: (blockId: string) => void;
@@ -23,9 +44,48 @@
 		onDrop: (blockId: string) => void;
 	} = $props();
 
+	const blocks = $derived(nodes.map((node) => node.block));
+
 	let openActionBlockId = $state<string | null>(null);
 	let draggedBlockId = $state<string | null>(null);
 	let dropTargetBlockId = $state<string | null>(null);
+	let collapsed = $state<Set<string>>(new Set());
+
+	// Keep the brik that owns the current selection expanded.
+	$effect(() => {
+		if (activeCollectionItem && collapsed.has(activeCollectionItem.blockId)) {
+			const next = new Set(collapsed);
+			next.delete(activeCollectionItem.blockId);
+			collapsed = next;
+		}
+	});
+
+	function hasChildren(node: PageFlowNode): boolean {
+		return node.collections.some((collection) => collection.items.length > 0);
+	}
+
+	function isExpanded(blockId: string): boolean {
+		return !collapsed.has(blockId);
+	}
+
+	function toggleExpanded(blockId: string, event: MouseEvent): void {
+		event.stopPropagation();
+		const next = new Set(collapsed);
+		if (next.has(blockId)) {
+			next.delete(blockId);
+		} else {
+			next.add(blockId);
+		}
+		collapsed = next;
+	}
+
+	function isItemActive(blockId: string, collectionPath: string, index: number): boolean {
+		return (
+			activeCollectionItem?.blockId === blockId &&
+			activeCollectionItem?.collectionPath === collectionPath &&
+			activeCollectionItem?.index === index
+		);
+	}
 
 	function toggleActionMenu(blockId: string, event: MouseEvent): void {
 		event.stopPropagation();
@@ -97,18 +157,21 @@
 
 <aside class="flex h-full min-h-0 w-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" aria-label="Page flow" onclick={(event) => { if (!(event.target as Element).closest('[data-page-flow-block]')) onDeselectBlock(); }}>
 	<div class="min-h-0 flex-1 overflow-y-auto py-2">
-		{#if blocks.length === 0}
+		{#if nodes.length === 0}
 			<p class="bx-text-muted mx-3 px-4 py-6 text-sm dark:border-gray-600">
 				No brix on the page.
 			</p>
 		{/if}
 
 		<div role="list" aria-label="Page flow">
-			{#each blocks as block (block.id)}
+			{#each nodes as node (node.block.id)}
+				{@const block = node.block}
 				{@const dropPlacement = getDropPlacement(block.id)}
+				{@const expandable = hasChildren(node)}
+				{@const expanded = isExpanded(block.id)}
 				<div
 					data-page-flow-block
-					class={activeBlockId === block.id
+					class={activeBlockId === block.id && !activeCollectionItem
 						? 'relative flex items-center gap-2 border-l-4 border-[#FDE047] bg-yellow-50 px-3 py-2 text-gray-900 dark:border-[#FACC15] dark:bg-yellow-950/40 dark:text-gray-100'
 						: 'relative flex items-center gap-2 border-l-4 border-transparent px-3 py-2 text-gray-900 transition-colors hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700'}
 					role="listitem"
@@ -128,6 +191,22 @@
 						class="absolute inset-0 z-0 cursor-pointer"
 						aria-label={`Select brik ${block.type}`}
 						onclick={() => onSelectBlock(block.id)}></button>
+
+					{#if expandable}
+						<button
+							type="button"
+							class="relative z-20 -ml-1 flex h-4 w-4 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400"
+							aria-label={expanded ? `Collapse ${block.type}` : `Expand ${block.type}`}
+							aria-expanded={expanded}
+							onclick={(event) => toggleExpanded(block.id, event)}>
+							<svg class="h-3 w-3 transition-transform {expanded ? 'rotate-90' : ''}" viewBox="0 0 16 16" aria-hidden="true">
+								<path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+						</button>
+					{:else}
+						<span class="relative z-10 h-4 w-4 shrink-0"></span>
+					{/if}
+
 					<span class="pointer-events-none relative z-10 min-w-0 flex-1 truncate text-sm font-medium">
 						{block.type}
 					</span>
@@ -192,6 +271,32 @@
 						{/if}
 					</div>
 				</div>
+
+				{#if expandable && expanded}
+					{@const multiCollection = node.collections.filter((c) => c.items.length > 0).length > 1}
+					{#each node.collections as collection (collection.path)}
+						{#if collection.items.length > 0}
+							{#if multiCollection}
+								<p class="bx-text-muted px-3 py-1 pl-11 text-[11px] font-semibold tracking-wide uppercase">
+									{collection.label}
+								</p>
+							{/if}
+							{#each collection.items as item (item.key)}
+								<div data-page-flow-block role="listitem">
+									<button
+										type="button"
+										class={isItemActive(block.id, collection.path, item.index)
+											? 'flex w-full items-center gap-2 border-l-4 border-[#FDE047] bg-yellow-50 py-1.5 pr-3 pl-11 text-left text-gray-900 dark:border-[#FACC15] dark:bg-yellow-950/40 dark:text-gray-100'
+											: 'flex w-full items-center gap-2 border-l-4 border-transparent py-1.5 pr-3 pl-11 text-left text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}
+										onclick={() => onSelectCollectionItem(block.id, collection.path, item.index)}>
+										<span class="shrink-0 text-gray-400 dark:text-gray-500">•</span>
+										<span class="min-w-0 flex-1 truncate text-sm">{item.label}</span>
+									</button>
+								</div>
+							{/each}
+						{/if}
+					{/each}
+				{/if}
 			{/each}
 		</div>
 	</div>

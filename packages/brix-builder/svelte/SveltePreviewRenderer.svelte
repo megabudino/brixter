@@ -6,6 +6,8 @@
 		normalizeBuilderPropsForRender,
 		resolveImagePropsForRender,
 		getFieldByPath,
+		getValueAtPath,
+		updatePropsAtPath,
 		inferBuilderFieldKind
 	} from '../core.js';
 	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
@@ -22,6 +24,7 @@
 		previewCollectionOverlays,
 		activeBlockId,
 		activeFieldEdit,
+		activeCollectionItem,
 		previewContainer,
 		onPreviewClick,
 		onPreviewKeydown,
@@ -107,8 +110,21 @@
 		const liveProps = normalizeBuilderPropsForRender(
 			createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 		) as Record<string, unknown>;
-		if (activeFieldEdit?.blockId === block.id && blockRenderSnapshots[block.id]) {
-			return resolveImages(blockRenderSnapshots[block.id], definition);
+
+		// While a text/richtext field is edited inline, freeze ONLY that field to
+		// its snapshot value so the live contenteditable isn't clobbered. Every
+		// other prop renders live, so edits made in the inspector (or to other
+		// fields) update the preview immediately instead of waiting for the edit
+		// to close.
+		const edit = activeFieldEdit;
+		const snapshot = edit?.blockId === block.id ? blockRenderSnapshots[block.id] : undefined;
+		if (edit && snapshot) {
+			try {
+				const frozen = updatePropsAtPath(liveProps, edit.path, getValueAtPath(snapshot, edit.path));
+				return resolveImages(frozen, definition);
+			} catch {
+				return resolveImages(snapshot, definition);
+			}
 		}
 
 		return resolveImages(liveProps, definition);
@@ -319,14 +335,19 @@
 								{/each}
 
 								{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+									{@const isSelectedItem =
+										activeCollectionItem?.blockId === block.id &&
+										activeCollectionItem?.collectionPath === overlay.collectionPath &&
+										activeCollectionItem?.index === overlay.index}
 									<div
 										class="collection-item-overlay pointer-events-none absolute z-20"
 										style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 									>
 										<div
 											class={hoveredCollectionItem ===
-											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-												? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+												getCollectionItemKey(block.id, overlay.collectionPath, overlay.index) ||
+											isSelectedItem
+												? `collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15] ${isSelectedItem ? 'outline-2' : ''}`
 												: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
 										></div>
 										<div
@@ -392,13 +413,8 @@
 						role={previewMode ? undefined : "button"}
 						tabindex={previewMode ? undefined : 0}
 						aria-label={previewMode ? undefined : `Seleziona brik ${definition.type}`}
-						onclick={previewMode ? undefined : () => onSelectBlock(block.id)}
-						onkeydown={previewMode ? undefined : (event: KeyboardEvent) => {
-							if (event.key === 'Enter' || event.key === ' ') {
-								event.preventDefault();
-								onSelectBlock(block.id);
-							}
-						}}
+						onclick={previewMode ? undefined : (event: MouseEvent) => onPreviewClick(block, event)}
+						onkeydown={previewMode ? undefined : (event: KeyboardEvent) => onPreviewKeydown(block, event)}
 						onmousemove={previewMode ? undefined : (event: MouseEvent) =>
 							updateHoverStates(
 								block.id,
@@ -452,14 +468,19 @@
 								{/each}
 
 								{#each previewOverlays[block.id] ?? [] as overlay (`${overlay.collectionPath}-${overlay.index}`)}
+									{@const isSelectedItem =
+										activeCollectionItem?.blockId === block.id &&
+										activeCollectionItem?.collectionPath === overlay.collectionPath &&
+										activeCollectionItem?.index === overlay.index}
 									<div
 										class="collection-item-overlay pointer-events-none absolute z-20"
 										style={`top:${Math.max(0, overlay.top + 36)}px; left:${overlay.left}px; width:${overlay.width}px; height:${overlay.height}px;`}
 									>
 										<div
 											class={hoveredCollectionItem ===
-											getCollectionItemKey(block.id, overlay.collectionPath, overlay.index)
-												? 'collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'
+												getCollectionItemKey(block.id, overlay.collectionPath, overlay.index) ||
+											isSelectedItem
+												? `collection-item-outline absolute inset-0 opacity-100 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15] ${isSelectedItem ? 'outline-2' : ''}`
 												: 'collection-item-outline absolute inset-0 opacity-0 outline outline-1 outline-[#FDE047] transition dark:outline-[#FACC15]'}
 										></div>
 										<div

@@ -46,11 +46,11 @@ const pageBriks = createBrixDefinitions(
 	{
 		'../lib/brixter/brix/Hero.brix.svelte': `
 			<section>
-				<h1 data-brixter-field="headline" data-brixter-default="Titolo">
-					{headline}
+				<h1 data-brixter-field="headline">
+					Titolo
 				</h1>
-				<a data-brixter-field="cta.label" data-brixter-default="Contattami">
-					{cta.label}
+				<a data-brixter-field="cta.label">
+					Contattami
 				</a>
 			</section>
 		`
