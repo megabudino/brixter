@@ -208,6 +208,36 @@ describe('serializeToMdsvex', () => {
 		);
 	});
 
+	it('leaves text/richtext empty under structural fallback but keeps scaffolding', () => {
+		// The editing canvas renders with { contentFallback: false } so cleared
+		// fields stay empty (CSS placeholder chrome) instead of showing fake copy,
+		// while collections/images keep their visual scaffolding.
+		const definition = getDefinition('Gallery', galleryBriks);
+		const merged = createBuilderFallbackProps(
+			definition,
+			{ pieces: [{ src: '', title: '' }] },
+			{ contentFallback: false }
+		) as { pieces: Array<Record<string, string>> };
+
+		expect(merged.pieces).toHaveLength(1);
+		// text stays empty (no canned getFallbackText copy)
+		expect(merged.pieces[0].title).toBe('');
+		// image keeps the structural placeholder so it stays visible/clickable
+		expect(merged.pieces[0].src).toContain('data:image/svg+xml');
+	});
+
+	it('does not bake canned placeholder text into new block props', () => {
+		// createBlock uses structural fallback: a text field without a default must
+		// start empty, not with getFallbackText copy.
+		const block = createBlock('Banner', imageBriks);
+		expect(block.props.image).toContain('data:image/svg+xml');
+
+		// Gallery item title has a default ("Nuova immagine") which is honored, but a
+		// fieldless text would be ''. Confirm Hero headline default is still honored.
+		const hero = createBlock('Hero', pageBriks);
+		expect(hero.props.headline).toBe('Titolo');
+	});
+
 	it('re-injects field placeholders into collection items at render time', () => {
 		// Round-trip: a saved item with an empty image (img: "") must still show
 		// the visual placeholder in the builder, not a broken image.

@@ -32,7 +32,7 @@ export function describeFieldElement(element: Element | null | undefined): Recor
 	return {
 		tag: element.tagName.toLowerCase(),
 		field: element.getAttribute('data-brixter-field'),
-		enhanced: element.dataset.builderFieldEnhanced ?? null,
+		enhanced: element.dataset.brixterFieldEnhanced ?? null,
 		placeholderActive: element.hasAttribute('data-brixter-placeholder-active'),
 		ghostLabel: element.dataset.builderPreviewGhostLabel ?? null,
 		text: element.textContent?.slice(0, 80) ?? '',

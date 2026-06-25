@@ -75,7 +75,7 @@
 		blockRenderSnapshotsCache = untrack(() => {
 			return {
 				[edit.blockId]: normalizeBuilderPropsForRender(
-					createBuilderFallbackProps(definition, block.props)
+					createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 				) as Record<string, unknown>
 			};
 		});
@@ -90,7 +90,7 @@
 		}
 
 		const liveProps = normalizeBuilderPropsForRender(
-			createBuilderFallbackProps(definition, block.props)
+			createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 		) as Record<string, unknown>;
 		if (activeFieldEdit?.blockId === block.id && blockRenderSnapshots[block.id]) {
 			return blockRenderSnapshots[block.id];
@@ -233,7 +233,7 @@
 				{@const BlockComponent = definition.component}
 				{@const renderProps = getRenderProps(block)}
 				{@const liveProps = normalizeBuilderPropsForRender(
-					createBuilderFallbackProps(definition, block.props)
+					createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 				) as Record<string, unknown>}
 				{@const hasPreviewBindings = definition.previewBindings.length > 0}
 				{#if hasPreviewBindings}
