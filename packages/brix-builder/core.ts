@@ -553,6 +553,52 @@ export function normalizeBuilderPropsForRender(value: unknown): unknown {
 	return value;
 }
 
+/**
+ * Render-time rewrite of image field values via a host-provided resolver. Walks
+ * the definition `fields` (mirroring createBuilderFallbackValue's kind handling)
+ * and replaces every `image`-kind non-empty string value with `resolve(value)`.
+ * Used by the builder preview to route draft-only media through a host proxy
+ * without mutating the persisted props. Returns shallow-copied structures; the
+ * input is never mutated.
+ */
+export function resolveImagePropsForRender(
+	props: Record<string, unknown>,
+	fields: BuilderFields,
+	resolve: (src: string) => string
+): Record<string, unknown> {
+	const result: Record<string, unknown> = { ...props };
+	for (const [key, field] of Object.entries(fields)) {
+		if (!(key in result)) {
+			continue;
+		}
+		result[key] = resolveImageFieldValue(field, result[key], resolve);
+	}
+	return result;
+}
+
+function resolveImageFieldValue(
+	field: BuilderField,
+	value: unknown,
+	resolve: (src: string) => string
+): unknown {
+	const kind = inferBuilderFieldKind(field);
+
+	if (kind === 'image') {
+		return typeof value === 'string' && value !== '' ? resolve(value) : value;
+	}
+
+	if (kind === 'object' && field.fields && isRecord(value)) {
+		return resolveImagePropsForRender(value, field.fields, resolve);
+	}
+
+	if (kind === 'array' && field.item && Array.isArray(value)) {
+		const item = field.item;
+		return value.map((entry) => resolveImageFieldValue(item, entry, resolve));
+	}
+
+	return value;
+}
+
 export function createBuilderDocument(definitions: BuilderDefinition[]): BuilderDocument {
 	const markdownBlock = definitions.find((definition) => definition.mode === 'markdown');
 	const firstComponentBlock = definitions.find((definition) => definition.mode === 'component');

@@ -80,6 +80,7 @@
 		activeBlockId = $bindable<string | null>(null),
 		onpickImage,
 		onpickIcon,
+		resolveImageSrc,
 		previewMode = $bindable(false),
 		viewportSize = $bindable<'desktop' | 'tablet' | 'mobile'>('desktop')
 	}: {
@@ -94,6 +95,7 @@
 		activeBlockId?: string | null;
 		onpickImage?: (callback: (imageUrl: string) => void) => void;
 		onpickIcon?: (callback: (iconSvg: string) => void) => void;
+		resolveImageSrc?: (src: string) => string;
 		previewMode?: boolean;
 		viewportSize?: 'desktop' | 'tablet' | 'mobile';
 	} = $props();
@@ -297,13 +299,6 @@
 	}
 
 	function queueFileEdit(blockId: string, path: string): void {
-		console.log(
-			'queueFileEdit called in BuilderApp:',
-			blockId,
-			path,
-			'onpickImage is:',
-			!!onpickImage
-		);
 		if (!controller) return;
 
 		const block = controller.document.blocks.find((b) => b.id === blockId);
@@ -331,9 +326,7 @@
 
 		queueFileEditInState(controller, blockId, path);
 		if (onpickImage) {
-			console.log('calling onpickImage from BuilderApp...');
 			onpickImage((imageUrl) => {
-				console.log('onpickImage callback received image URL:', imageUrl);
 				if (!controller) return;
 				const updatedBlock = applyFileToPendingEdit(controller, imageUrl);
 				closeFieldEdit();
@@ -342,7 +335,6 @@
 				}
 			});
 		} else {
-			console.log('onpickImage is not defined in BuilderApp, opening native file picker...');
 			openFilePicker();
 		}
 	}
@@ -847,6 +839,7 @@
 		onOpenReorderModal: openReorderModal,
 		onOpenInserter: openInserter,
 		onDeselectBlock: deselectBlock,
+		resolveImageSrc,
 		previewMode,
 		viewportSize
 	});

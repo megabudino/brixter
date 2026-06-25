@@ -12,11 +12,13 @@ import {
 	parseBrixYamlDocument,
 	removeCollectionItem,
 	reorderCollectionItem,
+	resolveImagePropsForRender,
 	serializeToBrixYaml,
 	serializeToMdsvex,
 	STANDARD_SEO_FIELDS,
 	updatePropsAtPath
 } from './core';
+import type { BuilderFields } from './core';
 import { createBrixDefinitions } from './svelte/adapter';
 
 const pageBriks = createBrixDefinitions(
@@ -399,5 +401,60 @@ describe('standard SEO fields', () => {
 			og: { title: 'Home', image: '/og.png' },
 			jsonLd: { '@context': 'https://schema.org', '@type': 'WebSite' }
 		});
+	});
+});
+
+describe('resolveImagePropsForRender', () => {
+	const fields: BuilderFields = {
+		title: { default: 'Hi' },
+		hero: { kind: 'image' },
+		cta: {
+			fields: {
+				label: { default: 'Click' },
+				icon: { kind: 'image' }
+			}
+		},
+		gallery: {
+			item: {
+				fields: {
+					img: { kind: 'image' },
+					caption: { default: '' }
+				}
+			}
+		}
+	};
+
+	const resolve = (src: string) => `/proxy?path=${src}`;
+
+	it('rewrites top-level, nested-object, and array-item image values', () => {
+		const result = resolveImagePropsForRender(
+			{
+				title: 'Hi',
+				hero: '/hero.png',
+				cta: { label: 'Click', icon: '/icon.png' },
+				gallery: [
+					{ img: '/a.png', caption: 'A' },
+					{ img: '/b.png', caption: 'B' }
+				]
+			},
+			fields,
+			resolve
+		);
+
+		expect(result.title).toBe('Hi');
+		expect(result.hero).toBe('/proxy?path=/hero.png');
+		expect(result.cta).toEqual({ label: 'Click', icon: '/proxy?path=/icon.png' });
+		expect(result.gallery).toEqual([
+			{ img: '/proxy?path=/a.png', caption: 'A' },
+			{ img: '/proxy?path=/b.png', caption: 'B' }
+		]);
+	});
+
+	it('leaves empty image values untouched and does not mutate the input', () => {
+		const input = { hero: '', cta: { label: 'Click', icon: '/icon.png' } };
+		const result = resolveImagePropsForRender(input, fields, resolve);
+
+		expect(result.hero).toBe('');
+		expect(input.cta.icon).toBe('/icon.png');
 	});
 });

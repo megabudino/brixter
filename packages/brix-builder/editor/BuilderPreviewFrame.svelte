@@ -28,6 +28,7 @@
 		onOpenInserter,
 		onDeselectBlock,
 		onKeydown,
+		resolveImageSrc,
 		previewMode = false,
 		viewportSize = 'desktop'
 	}: BuilderAppPreviewProps & {
@@ -63,6 +64,7 @@
 		rendererProps.onOpenReorderModal = onOpenReorderModal;
 		rendererProps.onOpenInserter = onOpenInserter;
 		rendererProps.onDeselectBlock = onDeselectBlock;
+		rendererProps.resolveImageSrc = resolveImageSrc;
 		rendererProps.previewMode = previewMode;
 		rendererProps.viewportSize = viewportSize;
 	}

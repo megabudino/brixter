@@ -301,6 +301,23 @@
 		return src;
 	}
 
+	/**
+	 * Render-time rewrite for image `src` in the builder preview. The persisted
+	 * value is a portable root-absolute media path (e.g. `/image.png`) that the
+	 * deployed site serves from its static build. In GitHub mode a freshly uploaded
+	 * image only lives on the draft branch, so resolve it through the draft-aware
+	 * proxy `/admin/api/repo-image` (re-adding the media root) so it shows in the
+	 * preview before publish. Local mode already serves it from disk → identity.
+	 */
+	function resolvePreviewImageSrc(src: string): string {
+		if (data.isLocal || !src) return src;
+		if (/^(https?:)?\/\//.test(src) || src.startsWith('data:')) return src;
+		if (src.startsWith('/admin/api/repo-image')) return src;
+		if (!src.startsWith('/')) return src;
+		const repoPath = `${mediaPrefix}${src.slice(1)}`;
+		return `/admin/api/repo-image?branch=${encodeURIComponent(data.branch)}&path=${encodeURIComponent(repoPath)}`;
+	}
+
 	function handleBack() {
 		window.location.href = backHref;
 	}
@@ -617,6 +634,7 @@
 						builderIconPickCallback = callback;
 						iconPickerOpen = true;
 					}}
+					resolveImageSrc={resolvePreviewImageSrc}
 				/>
 			{:else}
 				<div class="mx-auto max-w-2xl px-6 py-16">
