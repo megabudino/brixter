@@ -20,12 +20,12 @@ const positional = args.filter((arg) => !arg.startsWith('--'));
 const [target, bump] = positional;
 
 if (!target || !bump) {
-	console.error('Usage: node release.mjs <brixter|brix-builder|all> <patch|minor|major> [--yes] [--no-git]');
+	console.error('Usage: node release.mjs <brixter|all> <patch|minor|major> [--yes] [--no-git]');
 	process.exit(1);
 }
 
-if (!['brixter', 'brix-builder', 'all'].includes(target)) {
-	console.error(`Unknown target: ${target}`);
+if (!['brixter', 'all'].includes(target)) {
+	console.error(`Unknown target: ${target}. Use "brixter" to release only brixter, or "all" to release both brixter and brix-builder.`);
 	process.exit(1);
 }
 
@@ -116,7 +116,7 @@ async function confirm(prompt) {
 const bumped = [];
 const stagedFiles = new Set();
 
-if (target === 'brix-builder' || target === 'all') {
+if (target === 'all') {
 	bumped.push(await bumpPackage('brix-builder', bump));
 	stagedFiles.add(bumped.at(-1).path);
 
@@ -124,25 +124,20 @@ if (target === 'brix-builder' || target === 'all') {
 	if (syncedPath) stagedFiles.add(syncedPath);
 }
 
-if (target === 'brixter' || target === 'all') {
-	bumped.push(await bumpPackage('brixter', bump));
-	stagedFiles.add(bumped.at(-1).path);
-}
+bumped.push(await bumpPackage('brixter', bump));
+stagedFiles.add(bumped.at(-1).path);
 
 const files = [...stagedFiles];
 const brixterRelease = bumped.find((item) => item.name === 'brixter');
 const builderRelease = bumped.find((item) => item.name === '@brixter/brix-builder');
 
-const tagVersion = brixterRelease?.version ?? builderRelease.version;
-const tag = `v${tagVersion}`;
+const tag = `v${brixterRelease.version}`;
 
 let commitMessage;
 if (target === 'all') {
 	commitMessage = `release packages (brixter ${brixterRelease.version}, @brixter/brix-builder ${builderRelease.version})`;
-} else if (target === 'brixter') {
-	commitMessage = `release brixter ${brixterRelease.version}`;
 } else {
-	commitMessage = `release @brixter/brix-builder ${builderRelease.version}`;
+	commitMessage = `release brixter ${brixterRelease.version}`;
 }
 
 if (skipGit) {

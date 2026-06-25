@@ -13,22 +13,28 @@ SvelteKit CMS with a visual builder, `.brix.yaml` pages, and a dashboard for rou
 
 See each package README for install and usage.
 
-### Publishing
+### Releasing
 
-From the repo root (after `npm login`):
+Releases are driven by git tags on the `brixter` version. From the repo root:
 
 ```sh
-npm run publish:packages
+# Bump only brixter (tag uses the brixter version)
+npm run release:brixter:patch
+
+# Bump both brixter and brix-builder together (tag uses the brixter version)
+npm run release:all:patch
 ```
 
-This publishes `@brixter/brix-builder` first, then unscoped `brixter`. Dry-run tarballs:
+Each script bumps the relevant `package.json` versions, commits, tags `v<brixter-version>`, and pushes. The `Publish to npm` GitHub Actions workflow then publishes each package to npm individually, skipping any package whose version is already published.
+
+Replace `patch` with `minor` or `major` as needed.
+
+Dry-run tarballs (no publish):
 
 ```sh
 npm run pack:brix-builder
 npm run pack:brixter
 ```
-
-Link the unscoped `brixter` package to the [brixter npm org](https://www.npmjs.com/org/brixter) team after the first publish.
 
 ## License
 
