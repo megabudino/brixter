@@ -28,6 +28,7 @@
 		onOpenInserter,
 		onDeselectBlock,
 		onKeydown,
+		resolveImageSrc,
 		previewMode = false,
 		viewportSize = 'desktop'
 	}: BuilderAppPreviewProps & {
@@ -63,6 +64,7 @@
 		rendererProps.onOpenReorderModal = onOpenReorderModal;
 		rendererProps.onOpenInserter = onOpenInserter;
 		rendererProps.onDeselectBlock = onDeselectBlock;
+		rendererProps.resolveImageSrc = resolveImageSrc;
 		rendererProps.previewMode = previewMode;
 		rendererProps.viewportSize = viewportSize;
 	}
@@ -300,7 +302,8 @@ body {
 
 [data-brixter-field]:empty::before,
 [data-brixter-field] > p:only-child:empty::before,
-[data-brixter-field] > p:only-child:has(> br:only-child)::before {
+[data-brixter-field] > p:only-child:has(> br:only-child)::before,
+[data-brixter-field][data-brixter-placeholder-active]:not([data-brixter-field-enhanced='true']):not(img)::before {
 	content: attr(data-brixter-placeholder);
 	color: #9ca3af;
 	opacity: 1;

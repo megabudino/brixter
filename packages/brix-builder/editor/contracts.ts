@@ -62,6 +62,12 @@ export interface BuilderAppPreviewProps {
 	onOpenReorderModal: (blockId: string, collectionPath: string) => void;
 	onOpenInserter: (index: number) => void;
 	onDeselectBlock: () => void;
+	/**
+	 * Optional host-provided rewrite for image field `src` values, applied only at
+	 * render time in the preview (persisted props are untouched). Used to route
+	 * draft-only media through a host proxy. Defaults to identity when omitted.
+	 */
+	resolveImageSrc?: (src: string) => string;
 	previewMode?: boolean;
 	viewportSize?: 'desktop' | 'tablet' | 'mobile';
 }

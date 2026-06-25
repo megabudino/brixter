@@ -225,39 +225,64 @@ export function createBuilderDefaultsFromFields(fields: BuilderFields): Record<s
 	);
 }
 
+export interface BuilderFallbackOptions {
+	/**
+	 * When `false`, content fields (text / richtext) are left empty instead of
+	 * being filled with canned placeholder copy. Structural fallbacks (arrays,
+	 * objects, images, icons) are kept so collections stay visible/editable. Used
+	 * by the editing canvas so cleared fields stay empty and rely on the CSS
+	 * placeholder chrome instead of showing fake content.
+	 */
+	contentFallback?: boolean;
+}
+
 export function createBuilderFallbackProps(
 	definition: Pick<BuilderDefinition, 'fields' | 'defaults'>,
-	props: Record<string, unknown> = definition.defaults
+	props: Record<string, unknown> = definition.defaults,
+	options: BuilderFallbackOptions = {}
 ): Record<string, unknown> {
 	return mergeFallbackValues(
-		createBuilderFallbackPropsFromFields(definition.fields),
+		createBuilderFallbackPropsFromFields(definition.fields, options),
 		props
 	) as Record<string, unknown>;
 }
 
-function createBuilderFallbackPropsFromFields(fields: BuilderFields): Record<string, unknown> {
+function createBuilderFallbackPropsFromFields(
+	fields: BuilderFields,
+	options: BuilderFallbackOptions
+): Record<string, unknown> {
 	return Object.fromEntries(
-		Object.entries(fields).map(([key, field]) => [key, createBuilderFallbackValue(field, key)])
+		Object.entries(fields).map(([key, field]) => [
+			key,
+			createBuilderFallbackValue(field, key, options)
+		])
 	);
 }
 
-function createBuilderFallbackValue(field: BuilderField, key: string): unknown {
+function createBuilderFallbackValue(
+	field: BuilderField,
+	key: string,
+	options: BuilderFallbackOptions
+): unknown {
 	const kind = inferBuilderFieldKind(field);
+	const contentFallback = options.contentFallback ?? true;
 
 	if (kind === 'richtext-inline') {
-		return createRichTextValue('inline', getFallbackText(key));
+		return createRichTextValue('inline', contentFallback ? getFallbackText(key) : '');
 	}
 
 	if (kind === 'richtext-block') {
-		return createRichTextValue('block', `<p>${getFallbackText(key)}</p>`);
+		return createRichTextValue('block', contentFallback ? `<p>${getFallbackText(key)}</p>` : '');
 	}
 
 	if (kind === 'object') {
-		return field.fields ? createBuilderFallbackPropsFromFields(field.fields) : {};
+		return field.fields ? createBuilderFallbackPropsFromFields(field.fields, options) : {};
 	}
 
 	if (kind === 'array') {
-		const item = field.item ? createBuilderFallbackValue(field.item, field.itemLabel ?? key) : {};
+		const item = field.item
+			? createBuilderFallbackValue(field.item, field.itemLabel ?? key, options)
+			: {};
 		// Deterministic ids: this fallback array is recomputed on every render for
 		// collections without persisted data, so per-render random ids would make
 		// the keyed {#each} remount its items continuously.
@@ -280,6 +305,10 @@ function createBuilderFallbackValue(field: BuilderField, key: string): unknown {
 
 	if (kind === 'icon') {
 		return createIconFallback();
+	}
+
+	if (!contentFallback) {
+		return '';
 	}
 
 	if (isHrefKey(key)) {
@@ -524,6 +553,52 @@ export function normalizeBuilderPropsForRender(value: unknown): unknown {
 	return value;
 }
 
+/**
+ * Render-time rewrite of image field values via a host-provided resolver. Walks
+ * the definition `fields` (mirroring createBuilderFallbackValue's kind handling)
+ * and replaces every `image`-kind non-empty string value with `resolve(value)`.
+ * Used by the builder preview to route draft-only media through a host proxy
+ * without mutating the persisted props. Returns shallow-copied structures; the
+ * input is never mutated.
+ */
+export function resolveImagePropsForRender(
+	props: Record<string, unknown>,
+	fields: BuilderFields,
+	resolve: (src: string) => string
+): Record<string, unknown> {
+	const result: Record<string, unknown> = { ...props };
+	for (const [key, field] of Object.entries(fields)) {
+		if (!(key in result)) {
+			continue;
+		}
+		result[key] = resolveImageFieldValue(field, result[key], resolve);
+	}
+	return result;
+}
+
+function resolveImageFieldValue(
+	field: BuilderField,
+	value: unknown,
+	resolve: (src: string) => string
+): unknown {
+	const kind = inferBuilderFieldKind(field);
+
+	if (kind === 'image') {
+		return typeof value === 'string' && value !== '' ? resolve(value) : value;
+	}
+
+	if (kind === 'object' && field.fields && isRecord(value)) {
+		return resolveImagePropsForRender(value, field.fields, resolve);
+	}
+
+	if (kind === 'array' && field.item && Array.isArray(value)) {
+		const item = field.item;
+		return value.map((entry) => resolveImageFieldValue(item, entry, resolve));
+	}
+
+	return value;
+}
+
 export function createBuilderDocument(definitions: BuilderDefinition[]): BuilderDocument {
 	const markdownBlock = definitions.find((definition) => definition.mode === 'markdown');
 	const firstComponentBlock = definitions.find((definition) => definition.mode === 'component');
@@ -551,7 +626,7 @@ export function createBlock(type: string, definitions: BuilderDefinition[]): Bui
 	return {
 		id: createId(),
 		type: definition.type,
-		props: cloneValue(createBuilderFallbackProps(definition))
+		props: cloneValue(createBuilderFallbackProps(definition, definition.defaults, { contentFallback: false }))
 	};
 }
 

@@ -188,7 +188,7 @@ export function attachPreviewEditableFields(
 			const rawValue = getValueAtPath(currentParams.previewProps, path);
 			const isEmpty = rawValue === undefined || rawValue === '' || (isRichTextValue(rawValue) && !rawValue.html.trim());
 			const isEditing =
-				path === focusPath || element.dataset.builderFieldEnhanced === 'true';
+				path === focusPath || element.dataset.brixterFieldEnhanced === 'true';
 
 			if (isEditing) {
 				element.removeAttribute('data-brixter-placeholder-active');
@@ -206,11 +206,7 @@ export function attachPreviewEditableFields(
 				element.removeAttribute('data-brixter-icon-empty');
 			}
 
-			if (
-				isInteractiveFieldHost(element) &&
-				isEmpty &&
-				resolveFieldKind(element) === 'text'
-			) {
+			if (isEmpty && needsWidthPreservation(element)) {
 				syncInteractiveHostMinWidth(
 					element,
 					plainDefaultString || element.getAttribute('data-brixter-placeholder') || ''
@@ -267,7 +263,7 @@ export function attachPreviewEditableFields(
 
 	function setupPendingField(element: HTMLElement, path: string): void {
 		const kind = resolveFieldKind(element);
-		element.dataset.builderFieldEnhanced = 'pending';
+		element.dataset.brixterFieldEnhanced = 'pending';
 		element.style.cursor = (kind === 'image' || kind === 'icon') ? 'pointer' : 'text';
 
 		const handleClick = (event: Event) => {
@@ -291,7 +287,7 @@ export function attachPreviewEditableFields(
 			cleanup: () => {
 				element.removeEventListener('mousedown', handleClick, true);
 				element.style.removeProperty('cursor');
-				delete element.dataset.builderFieldEnhanced;
+				delete element.dataset.brixterFieldEnhanced;
 			}
 		});
 	}
@@ -391,7 +387,7 @@ export function attachPreviewEditableFields(
 		const multiline = kind === 'text' && !useHostInlineTextEditor && inferMultiline(element);
 
 		element.removeAttribute('data-brixter-placeholder-active');
-		element.dataset.builderFieldEnhanced = 'true';
+		element.dataset.brixterFieldEnhanced = 'true';
 		element.style.cursor = (kind === 'image' || kind === 'icon') ? 'pointer' : 'text';
 
 		const placeholder = element.getAttribute('data-brixter-placeholder') || '';
@@ -418,7 +414,7 @@ export function attachPreviewEditableFields(
 			}
 		}
 
-		if (useHostInlineTextEditor) {
+		if (useHostInlineTextEditor || needsWidthPreservation(element)) {
 			element.style.minWidth = `${Math.max(hostWidth, placeholderWidth)}px`;
 			element.dataset.builderPreviewMinWidth = 'true';
 		}
@@ -702,12 +698,11 @@ export function attachPreviewEditableFields(
 		if (state.instance) {
 			if (state.kind !== 'image' && state.kind !== 'icon' && state.kind !== 'pending') {
 				const value = getValueAtPath(currentParams.previewProps, state.path);
-				const defaultValue = element.getAttribute('data-brixter-placeholder') || '';
-				restoreElementContent(state.element, value, state.kind, defaultValue);
+				restoreElementContent(state.element, value, state.kind);
 			}
 		}
 
-		delete state.element.dataset.builderFieldEnhanced;
+		delete state.element.dataset.brixterFieldEnhanced;
 		mounts.delete(element);
 
 		if (options.restorePending === false || !currentParams.active) {
@@ -855,13 +850,67 @@ function measurePlaceholderWidth(element: HTMLElement, placeholder: string): num
 	probe.style.whiteSpace = 'nowrap';
 	probe.style.pointerEvents = 'none';
 	const computed = view.getComputedStyle(element);
-	probe.style.font = computed.font;
+	// The `font` shorthand resolves to an empty string in Chrome's computed style,
+	// which would silently fall back to the default body font and under-measure the
+	// placeholder. Copy the individual font longhands instead so the probe matches
+	// the host typography exactly.
+	probe.style.fontFamily = computed.fontFamily;
+	probe.style.fontSize = computed.fontSize;
+	probe.style.fontWeight = computed.fontWeight;
+	probe.style.fontStyle = computed.fontStyle;
+	probe.style.fontStretch = computed.fontStretch;
+	probe.style.fontVariant = computed.fontVariant;
+	probe.style.lineHeight = computed.lineHeight;
 	probe.style.letterSpacing = computed.letterSpacing;
+	probe.style.wordSpacing = computed.wordSpacing;
 	probe.style.textTransform = computed.textTransform;
 	doc.body.appendChild(probe);
-	const width = probe.offsetWidth;
+	// getBoundingClientRect keeps subpixel precision; offsetWidth floors it and can
+	// leave the editor a pixel short, wrapping the placeholder.
+	const width = Math.ceil(probe.getBoundingClientRect().width);
 	probe.remove();
 	return width;
+}
+
+/**
+ * A text/richtext field whose layout width comes from its content collapses to
+ * ~0 while editing an empty value (the inline editor's placeholder is absolutely
+ * positioned and contributes no width). That happens for inline-displayed hosts
+ * and for flex/grid items (e.g. a richtext `<p>` inside a flex CTA row). For those
+ * we pin a `min-width` to the placeholder width so the editor stays usable instead
+ * of wrapping one character at a time. Plain block fields are full-width already
+ * and don't need it.
+ */
+function needsWidthPreservation(element: HTMLElement): boolean {
+	const kind = resolveFieldKind(element);
+	if (kind !== 'text' && kind !== 'richtext') {
+		return false;
+	}
+
+	const view = element.ownerDocument.defaultView;
+	if (!view) {
+		return false;
+	}
+
+	const display = view.getComputedStyle(element).display;
+	if (display === 'inline' || display === 'inline-block' || display === 'inline-flex') {
+		return true;
+	}
+
+	const parent = element.parentElement;
+	if (parent) {
+		const parentDisplay = view.getComputedStyle(parent).display;
+		if (
+			parentDisplay === 'flex' ||
+			parentDisplay === 'inline-flex' ||
+			parentDisplay === 'grid' ||
+			parentDisplay === 'inline-grid'
+		) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 function syncInteractiveHostMinWidth(element: HTMLElement, placeholder: string): void {
@@ -906,23 +955,21 @@ function resolveInteractiveFieldTextColor(element: HTMLElement): string {
 function restoreElementContent(
 	element: HTMLElement,
 	value: unknown,
-	kind: Exclude<FieldKind, 'pending'>,
-	defaultValue = ''
+	kind: Exclude<FieldKind, 'pending'>
 ): void {
+	// An empty value restores empty content so the greyed placeholder is shown by
+	// the CSS chrome (`::before`) alone. Writing the placeholder text as real
+	// content here would duplicate it (chrome + content) and make a cleared field
+	// look like it still holds a value.
 	if (kind === 'richtext') {
 		const html = isRichTextValue(value) ? value.html : asPlainText(value);
-		element.innerHTML = html.trim() ? html : (defaultValue ? `<p>${defaultValue}</p>` : '');
+		element.innerHTML = html.trim() ? html : '';
 		return;
 	}
 
 	if (kind === 'text') {
 		const text = asPlainText(value);
-		if (!text.trim() && isInteractiveFieldHost(element)) {
-			element.textContent = '';
-			return;
-		}
-
-		element.textContent = text.trim() ? text : defaultValue;
+		element.textContent = text.trim() ? text : '';
 		return;
 	}
 

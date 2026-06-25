@@ -1,7 +1,12 @@
 import { parse } from 'svelte/compiler';
 import MagicString from 'magic-string';
 import { createBuilderFieldsFromMarkup } from './markup-schema.js';
-import { BUILDER_ITEM_ID_KEY, type BuilderFields } from '../core.js';
+import {
+	BUILDER_ITEM_ID_KEY,
+	inferBuilderFieldKind,
+	type BuilderField,
+	type BuilderFields
+} from '../core.js';
 
 export interface BrixterPreprocessorOptions {
 	disable?: boolean;
@@ -32,7 +37,7 @@ export function brixter(options: BrixterPreprocessorOptions = {}) {
 			const ast = parse(content, { filename, modern: true });
 
 			injectSchemaExport(s, ast, fields);
-			injectProps(s, ast, propNames);
+			injectProps(s, ast, fields);
 			transformAnnotatedElements(s, ast, fields);
 
 			return {
@@ -79,8 +84,16 @@ function injectSchemaExport(
 function injectProps(
 	s: MagicString,
 	ast: ReturnType<typeof parse>,
-	propNames: string[]
+	fields: BuilderFields
 ): void {
+	// Each inferred prop gets an empty-safe default keyed on its kind so an
+	// absent/empty value never reaches the runtime as `undefined` — which would
+	// crash hand-written `{#each items}` / `cta.label` accesses in published
+	// output. Empty means "render nothing", not the editor's placeholder content.
+	const declarations = Object.entries(fields).map(
+		([name, field]) => `${name} = ${emptyDefaultLiteral(field)}`
+	);
+
 	const instanceScript = ast.instance as { content?: { start: number; end: number } } | undefined;
 
 	if (instanceScript?.content) {
@@ -88,16 +101,20 @@ function injectProps(
 		const propsMatch = contentSlice.match(/(?:let|const)\s*\{\s*([^}]*)\s*\}\s*=\s*\$props\(\)/);
 
 		if (propsMatch) {
-			// Merge inferred names into the existing $props() destructuring
-			const existingNames = propsMatch[1]
+			// Merge inferred names into the existing $props() destructuring without
+			// overriding defaults the author already declared (e.g. `columns = 3`).
+			const existingDecls = propsMatch[1]
 				.split(',')
 				.map((n) => n.trim())
 				.filter(Boolean);
-			const newNames = propNames.filter((n) => !existingNames.includes(n));
-			if (newNames.length === 0) return;
+			const existingNames = new Set(existingDecls.map(bareDestructureName));
+			const newDecls = declarations.filter(
+				(decl) => !existingNames.has(bareDestructureName(decl))
+			);
+			if (newDecls.length === 0) return;
 
-			const allNames = [...existingNames, ...newNames];
-			const newDecl = `let { ${allNames.join(', ')} } = $props()`;
+			const allDecls = [...existingDecls, ...newDecls];
+			const newDecl = `let { ${allDecls.join(', ')} } = $props()`;
 
 			s.overwrite(
 				instanceScript.content.start + (propsMatch.index ?? 0),
@@ -108,12 +125,12 @@ function injectProps(
 		}
 
 		// No existing $props() — append as before
-		const decl = `let { ${propNames.join(', ')} } = $props();`;
+		const decl = `let { ${declarations.join(', ')} } = $props();`;
 		s.appendLeft(instanceScript.content.start + 1, `${decl}\n`);
 		return;
 	}
 
-	const decl = `let { ${propNames.join(', ')} } = $props();`;
+	const decl = `let { ${declarations.join(', ')} } = $props();`;
 
 	const moduleScript = ast.module as { end?: number } | undefined;
 	if (moduleScript?.end !== undefined) {
@@ -122,6 +139,38 @@ function injectProps(
 	}
 
 	s.prepend(`<script>${decl}</script>\n`);
+}
+
+/** Extracts the bound name from a destructuring entry (`a = 1`, `a: b`, `a`). */
+function bareDestructureName(decl: string): string {
+	return decl.split('=')[0].split(':')[0].trim();
+}
+
+/**
+ * Empty-safe default literal for a field, recursive for objects so deeply nested
+ * accesses (e.g. `cta.href`) never throw on a missing parent.
+ */
+function emptyDefaultLiteral(field: BuilderField): string {
+	const kind = inferBuilderFieldKind(field);
+
+	if (kind === 'array') return '[]';
+
+	if (kind === 'object') {
+		if (!field.fields) return '{}';
+		const entries = Object.entries(field.fields).map(
+			([key, nested]) => `${objectKey(key)}: ${emptyDefaultLiteral(nested)}`
+		);
+		return `{ ${entries.join(', ')} }`;
+	}
+
+	if (kind === 'boolean') return 'false';
+	if (kind === 'number') return '0';
+
+	return "''";
+}
+
+function objectKey(key: string): string {
+	return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +302,25 @@ function transformAnnotatedElements(
 					if (children?.length) {
 						const first = children[0];
 						const last = children[children.length - 1];
+
+						// Capture the author's original static text as the field
+						// placeholder (rendered greyed by the editor chrome via
+						// `data-brixter-default`). Skip when the markup already holds an
+						// expression (e.g. hand-written `{item.title}`) or an explicit
+						// `data-brixter-default` attribute.
+						const hasExpression = children.some((child) => child.type !== 'Text');
+						const hasDefaultAttr = attrs.some((a) => a.name === 'data-brixter-default');
+						if (node.name && !hasExpression && !hasDefaultAttr) {
+							const original = s.original.slice(first.start, last.end);
+							const placeholder = original.replace(/<[^>]*>/g, '').trim();
+							if (placeholder) {
+								s.appendLeft(
+									node.start + node.name.length + 1,
+									` data-brixter-default="${escapeAttribute(placeholder)}"`
+								);
+							}
+						}
+
 						s.overwrite(first.start, last.end, expr);
 					}
 				}
@@ -308,6 +376,13 @@ function resolvePath(path: string, itemVars: Map<string, string>): string {
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
+
+function escapeAttribute(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+		.replace(/\s+/g, ' ');
+}
 
 function singularize(word: string): string {
 	if (word.endsWith('ies')) return word.slice(0, -3) + 'y';

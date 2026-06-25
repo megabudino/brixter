@@ -12,11 +12,13 @@ import {
 	parseBrixYamlDocument,
 	removeCollectionItem,
 	reorderCollectionItem,
+	resolveImagePropsForRender,
 	serializeToBrixYaml,
 	serializeToMdsvex,
 	STANDARD_SEO_FIELDS,
 	updatePropsAtPath
 } from './core';
+import type { BuilderFields } from './core';
 import { createBrixDefinitions } from './svelte/adapter';
 
 const pageBriks = createBrixDefinitions(
@@ -208,6 +210,36 @@ describe('serializeToMdsvex', () => {
 		);
 	});
 
+	it('leaves text/richtext empty under structural fallback but keeps scaffolding', () => {
+		// The editing canvas renders with { contentFallback: false } so cleared
+		// fields stay empty (CSS placeholder chrome) instead of showing fake copy,
+		// while collections/images keep their visual scaffolding.
+		const definition = getDefinition('Gallery', galleryBriks);
+		const merged = createBuilderFallbackProps(
+			definition,
+			{ pieces: [{ src: '', title: '' }] },
+			{ contentFallback: false }
+		) as { pieces: Array<Record<string, string>> };
+
+		expect(merged.pieces).toHaveLength(1);
+		// text stays empty (no canned getFallbackText copy)
+		expect(merged.pieces[0].title).toBe('');
+		// image keeps the structural placeholder so it stays visible/clickable
+		expect(merged.pieces[0].src).toContain('data:image/svg+xml');
+	});
+
+	it('does not bake canned placeholder text into new block props', () => {
+		// createBlock uses structural fallback: a text field without a default must
+		// start empty, not with getFallbackText copy.
+		const block = createBlock('Banner', imageBriks);
+		expect(block.props.image).toContain('data:image/svg+xml');
+
+		// Gallery item title has a default ("Nuova immagine") which is honored, but a
+		// fieldless text would be ''. Confirm Hero headline default is still honored.
+		const hero = createBlock('Hero', pageBriks);
+		expect(hero.props.headline).toBe('Titolo');
+	});
+
 	it('re-injects field placeholders into collection items at render time', () => {
 		// Round-trip: a saved item with an empty image (img: "") must still show
 		// the visual placeholder in the builder, not a broken image.
@@ -369,5 +401,60 @@ describe('standard SEO fields', () => {
 			og: { title: 'Home', image: '/og.png' },
 			jsonLd: { '@context': 'https://schema.org', '@type': 'WebSite' }
 		});
+	});
+});
+
+describe('resolveImagePropsForRender', () => {
+	const fields: BuilderFields = {
+		title: { default: 'Hi' },
+		hero: { kind: 'image' },
+		cta: {
+			fields: {
+				label: { default: 'Click' },
+				icon: { kind: 'image' }
+			}
+		},
+		gallery: {
+			item: {
+				fields: {
+					img: { kind: 'image' },
+					caption: { default: '' }
+				}
+			}
+		}
+	};
+
+	const resolve = (src: string) => `/proxy?path=${src}`;
+
+	it('rewrites top-level, nested-object, and array-item image values', () => {
+		const result = resolveImagePropsForRender(
+			{
+				title: 'Hi',
+				hero: '/hero.png',
+				cta: { label: 'Click', icon: '/icon.png' },
+				gallery: [
+					{ img: '/a.png', caption: 'A' },
+					{ img: '/b.png', caption: 'B' }
+				]
+			},
+			fields,
+			resolve
+		);
+
+		expect(result.title).toBe('Hi');
+		expect(result.hero).toBe('/proxy?path=/hero.png');
+		expect(result.cta).toEqual({ label: 'Click', icon: '/proxy?path=/icon.png' });
+		expect(result.gallery).toEqual([
+			{ img: '/proxy?path=/a.png', caption: 'A' },
+			{ img: '/proxy?path=/b.png', caption: 'B' }
+		]);
+	});
+
+	it('leaves empty image values untouched and does not mutate the input', () => {
+		const input = { hero: '', cta: { label: 'Click', icon: '/icon.png' } };
+		const result = resolveImagePropsForRender(input, fields, resolve);
+
+		expect(result.hero).toBe('');
+		expect(input.cta.icon).toBe('/icon.png');
 	});
 });

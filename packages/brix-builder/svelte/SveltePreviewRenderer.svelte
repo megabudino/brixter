@@ -4,6 +4,7 @@
 	import {
 		createBuilderFallbackProps,
 		normalizeBuilderPropsForRender,
+		resolveImagePropsForRender,
 		getFieldByPath,
 		inferBuilderFieldKind
 	} from '../core.js';
@@ -31,6 +32,7 @@
 		onMoveItem,
 		onOpenReorderModal,
 		onOpenInserter,
+		resolveImageSrc,
 		previewMode = false
 	}: BuilderAppPreviewProps & { definitions: BrikDefinition[] } = $props();
 
@@ -75,7 +77,7 @@
 		blockRenderSnapshotsCache = untrack(() => {
 			return {
 				[edit.blockId]: normalizeBuilderPropsForRender(
-					createBuilderFallbackProps(definition, block.props)
+					createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 				) as Record<string, unknown>
 			};
 		});
@@ -83,20 +85,33 @@
 		return blockRenderSnapshotsCache;
 	});
 
+	function resolveImages(
+		props: Record<string, unknown>,
+		definition: BrikDefinition
+	): Record<string, unknown> {
+		if (!resolveImageSrc) {
+			return props;
+		}
+		return resolveImagePropsForRender(props, definition.fields, resolveImageSrc);
+	}
+
 	function getRenderProps(block: (typeof blocks)[number]): Record<string, unknown> {
 		const definition = getBuilderDefinition(block.type, definitions);
 		if (previewMode) {
-			return normalizeBuilderPropsForRender(block.props) as Record<string, unknown>;
+			return resolveImages(
+				normalizeBuilderPropsForRender(block.props) as Record<string, unknown>,
+				definition
+			);
 		}
 
 		const liveProps = normalizeBuilderPropsForRender(
-			createBuilderFallbackProps(definition, block.props)
+			createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 		) as Record<string, unknown>;
 		if (activeFieldEdit?.blockId === block.id && blockRenderSnapshots[block.id]) {
-			return blockRenderSnapshots[block.id];
+			return resolveImages(blockRenderSnapshots[block.id], definition);
 		}
 
-		return liveProps;
+		return resolveImages(liveProps, definition);
 	}
 
 	function getCollectionItemKey(blockId: string, collectionPath: string, index: number): string {
@@ -233,7 +248,7 @@
 				{@const BlockComponent = definition.component}
 				{@const renderProps = getRenderProps(block)}
 				{@const liveProps = normalizeBuilderPropsForRender(
-					createBuilderFallbackProps(definition, block.props)
+					createBuilderFallbackProps(definition, block.props, { contentFallback: false })
 				) as Record<string, unknown>}
 				{@const hasPreviewBindings = definition.previewBindings.length > 0}
 				{#if hasPreviewBindings}
