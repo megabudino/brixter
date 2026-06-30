@@ -1,18 +1,11 @@
-<script module lang="ts">
-	export const brikDescription = 'Image gallery grid with captions for testing collection rendering.';
-
-	export const brikFields = {
-		images: {
-			label: 'Gallery images',
-			itemLabel: 'Image',
-			summaryField: 'title',
-			item: {
-				fields: {}
-			}
-		}
-	};
-</script>
-
+---
+description: Image gallery grid with captions for testing collection rendering.
+fields:
+  images:
+    label: Gallery images
+    itemLabel: Image
+    summaryField: title
+---
 <section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-5xl">
 		<div class="text-center">

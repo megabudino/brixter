@@ -1,75 +1,63 @@
-<script module lang="ts">
-	export const brikDescription =
-		'Pricing plans. Click any card in the preview to edit that exact plan in the inspector.';
-
-	export const brikFields = {
-		plans: {
-			label: 'Plans',
-			itemLabel: 'Plan',
-			summaryField: 'name',
-			item: {
-				fields: {
-					// Inspector-only fields: these have no inline (click-to-edit) preview
-					// representation, so the only way to edit them is to select the card
-					// and use the focused per-item editor in the inspector.
-					ctaHref: { kind: 'url', label: 'Button link' },
-					featured: { kind: 'boolean', label: 'Highlight as featured' },
-					accent: {
-						kind: 'select',
-						label: 'Accent color',
-						options: [
-							{ value: 'yellow', label: 'Yellow' },
-							{ value: 'blue', label: 'Blue' },
-							{ value: 'green', label: 'Green' }
-						]
-					}
-				}
-			}
-		}
-	};
-
-	export const brikDefaults = {
-		eyebrow: 'Pricing',
-		headline: 'Simple pricing that scales with you.',
-		description: 'Click any plan card to edit just that plan in the inspector sidebar.',
-		plans: [
-			{
-				badge: '',
-				name: 'Starter',
-				price: '$0',
-				period: '/mo',
-				description: 'For trying things out on a single project.',
-				ctaLabel: 'Get started',
-				ctaHref: '#',
-				accent: 'yellow',
-				featured: false
-			},
-			{
-				badge: 'Most popular',
-				name: 'Pro',
-				price: '$29',
-				period: '/mo',
-				description: 'For growing teams that ship every week.',
-				ctaLabel: 'Start free trial',
-				ctaHref: '#',
-				accent: 'blue',
-				featured: true
-			},
-			{
-				badge: '',
-				name: 'Scale',
-				price: '$99',
-				period: '/mo',
-				description: 'For high-volume sites that need more headroom.',
-				ctaLabel: 'Contact sales',
-				ctaHref: '#',
-				accent: 'green',
-				featured: false
-			}
-		]
-	};
-</script>
-
+---
+description: Pricing plans. Click any card in the preview to edit that exact plan in the inspector.
+fields:
+  plans:
+    label: Plans
+    itemLabel: Plan
+    summaryField: name
+    item:
+      fields:
+        # Inspector-only fields: no inline (click-to-edit) preview representation,
+        # so they are edited by selecting the card and using the per-item editor.
+        ctaHref:
+          kind: url
+          label: Button link
+        featured:
+          kind: boolean
+          label: Highlight as featured
+        accent:
+          kind: select
+          label: Accent color
+          options:
+            - value: yellow
+              label: Yellow
+            - value: blue
+              label: Blue
+            - value: green
+              label: Green
+defaults:
+  eyebrow: Pricing
+  headline: Simple pricing that scales with you.
+  description: Click any plan card to edit just that plan in the inspector sidebar.
+  plans:
+    - badge: ""
+      name: Starter
+      price: "$0"
+      period: "/mo"
+      description: For trying things out on a single project.
+      ctaLabel: Get started
+      ctaHref: "#"
+      accent: yellow
+      featured: false
+    - badge: Most popular
+      name: Pro
+      price: "$29"
+      period: "/mo"
+      description: For growing teams that ship every week.
+      ctaLabel: Start free trial
+      ctaHref: "#"
+      accent: blue
+      featured: true
+    - badge: ""
+      name: Scale
+      price: "$99"
+      period: "/mo"
+      description: For high-volume sites that need more headroom.
+      ctaLabel: Contact sales
+      ctaHref: "#"
+      accent: green
+      featured: false
+---
 <section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-5xl">
 		<div class="text-center">

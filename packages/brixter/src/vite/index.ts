@@ -191,7 +191,7 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 			const root = path.resolve(userConfig.root ?? process.cwd());
 
 			// Resolve the brix directory to a filesystem path so we can check
-			// whether .brix.svelte variants exist alongside .svelte files.
+			// whether a `.brix` markup file exists for a referenced component.
 			const brixDir = options.brixDir ?? '$lib/brixter/brix';
 			if (brixDir.startsWith('$lib/')) {
 				const libPath = path.join(root, 'src', 'lib', brixDir.slice('$lib/'.length));

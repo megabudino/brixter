@@ -1,7 +1,6 @@
-<script module lang="ts">
-	export const brikDescription = 'Short bridge statement between problem and offer.';
-</script>
-
+---
+description: Short bridge statement between problem and offer.
+---
 <section class="bg-gray-50 px-6 py-16 dark:bg-gray-900">
 	<div class="mx-auto max-w-2xl border-y border-gray-300 py-12 text-center dark:border-gray-700">
 		<h2

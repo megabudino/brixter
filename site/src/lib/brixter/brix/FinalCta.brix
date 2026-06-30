@@ -1,17 +1,11 @@
-<script module lang="ts">
-	export const brikDescription = 'Final CTA for the landing page.';
-
-	export const brikFields = {
-		cta: {
-			fields: {
-				href: {
-					default: '/admin'
-				}
-			}
-		}
-	};
-</script>
-
+---
+description: Final CTA for the landing page.
+fields:
+  cta:
+    fields:
+      href:
+        default: /admin
+---
 <section class="bg-gray-50 px-6 py-20 dark:bg-gray-900">
 	<div
 		class="mx-auto max-w-5xl border border-gray-300 bg-white px-6 py-12 text-center md:px-12 dark:border-gray-700 dark:bg-gray-900"

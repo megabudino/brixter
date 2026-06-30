@@ -96,7 +96,7 @@ function createLayoutDefinition(
 }
 
 function createDefinition(path: string, module: BrikModule, source: string): BrikDefinition {
-	const type = path.split('/').pop()?.replace('.brix.svelte', '') ?? path;
+	const type = path.split('/').pop()?.replace(/\.(brix\.)?svelte$/, '') ?? path;
 	const markupFields = source ? createBrikSchemaFromMarkup(source) : {};
 	const fields = mergeBuilderFields(markupFields, cloneValue(module.brikFields ?? {}));
 	const defaults =
@@ -114,7 +114,7 @@ function createDefinition(path: string, module: BrikModule, source: string): Bri
 
 	return {
 		type,
-		path: `$lib/brixter/brix/${type}.brix.svelte`,
+		path: `$lib/brixter/brix/${type}.svelte`,
 		description: module.brikDescription ?? `Brik ${humanizeType(type)}.`,
 		mode: module.brikMode ?? 'component',
 		component: module.default,

@@ -1,31 +1,20 @@
-<script module lang="ts">
-	export const brikDescription = 'Core offer presentation with key points and CTA.';
-
-	export const brikFields = {
-		features: {
-			label: 'Offer points',
-			itemLabel: 'Point',
-			summaryField: 'title',
-			item: {
-				fields: {
-					icon: {
-						kind: 'icon',
-						default:
-							'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>'
-					}
-				}
-			}
-		},
-		cta: {
-			fields: {
-				href: {
-					default: '/admin'
-				}
-			}
-		}
-	};
-</script>
-
+---
+description: Core offer presentation with key points and CTA.
+fields:
+  features:
+    label: Offer points
+    itemLabel: Point
+    summaryField: title
+    item:
+      fields:
+        icon:
+          kind: icon
+          default: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>'
+  cta:
+    fields:
+      href:
+        default: /admin
+---
 <section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-start">
 		<div>

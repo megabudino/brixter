@@ -137,9 +137,8 @@ export function pickExtension(
 	componentName: string
 ): string {
 	if (!brixFsDir) return '.svelte';
-	// Plain `.brix` markup takes precedence — it is interpreted at runtime rather
-	// than compiled as a Svelte component.
+	// Plain `.brix` markup is interpreted at runtime; otherwise fall back to a
+	// hand-written `.svelte` component brix.
 	if (existsSync(path.join(brixFsDir, `${componentName}.brix`))) return '.brix';
-	if (existsSync(path.join(brixFsDir, `${componentName}.brix.svelte`))) return '.brix.svelte';
 	return '.svelte';
 }

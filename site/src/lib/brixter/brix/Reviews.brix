@@ -1,18 +1,11 @@
-<script module lang="ts">
-	export const brikDescription = 'Reviews and social proof section.';
-
-	export const brikFields = {
-		reviews: {
-			label: 'Reviews',
-			itemLabel: 'Review',
-			summaryField: 'author',
-			item: {
-				fields: {}
-			}
-		}
-	};
-</script>
-
+---
+description: Reviews and social proof section.
+fields:
+  reviews:
+    label: Reviews
+    itemLabel: Review
+    summaryField: author
+---
 <section class="bg-gray-50 px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-5xl">
 		<div class="mx-auto max-w-2xl text-center">

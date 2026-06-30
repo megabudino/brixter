@@ -1,17 +1,11 @@
-<script module lang="ts">
-	export const brikDescription = 'Primary hero with promise, subtitle, and CTA.';
-
-	export const brikFields = {
-		cta: {
-			fields: {
-				href: {
-					default: '/admin'
-				}
-			}
-		}
-	};
-</script>
-
+---
+description: Primary hero with promise, subtitle, and CTA.
+fields:
+  cta:
+    fields:
+      href:
+        default: /admin
+---
 <section class="relative overflow-hidden bg-gray-50 px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-2xl text-center">
 		<p

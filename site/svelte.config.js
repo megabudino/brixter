@@ -2,15 +2,6 @@ import adapter from '@sveltejs/adapter-auto';
 import { relative, sep } from 'node:path';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-// Dev (`BRIXTER_SOURCE=1`, run under the tsx loader) imports the preprocessor
-// straight from source so edits to `preprocess.ts` apply without rebuilding the
-// package. Build/check/prepare use the compiled `dist` (no TS loader needed).
-const { brixter } = await import(
-	process.env.BRIXTER_SOURCE
-		? '../packages/brix-builder/svelte/preprocess.ts'
-		: '../packages/brix-builder/dist/svelte/preprocess.js'
-);
-
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	compilerOptions: {
@@ -23,8 +14,8 @@ const config = {
 			return isExternalLibrary ? undefined : true;
 		}
 	},
-	extensions: ['.svelte', '.brix.svelte', '.brix.yaml', '.brix.yml'],
-	preprocess: [brixter(), vitePreprocess()],
+	extensions: ['.svelte', '.brix.yaml', '.brix.yml'],
+	preprocess: [vitePreprocess()],
 	kit: {
 		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
@@ -32,8 +23,8 @@ const config = {
 		adapter: adapter(),
 		// Monorepo dev: same import paths as a published app (`brixter`, `@brixter/brix-builder`).
 		alias: {
+			'@brixter/brix-builder/render': '../packages/brix-builder/markup/index.ts',
 			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
-			'@brixter/brix-builder/preprocess': '../packages/brix-builder/svelte/preprocess.ts',
 			'brixter/server': '../packages/brixter/src/server/index.ts',
 			'brixter/editor': '../packages/brixter/src/editor/index.ts',
 			'brixter/ui': '../packages/brixter/src/ui/index.ts',

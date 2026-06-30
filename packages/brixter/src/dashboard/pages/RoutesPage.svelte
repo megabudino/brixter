@@ -36,26 +36,16 @@
 	let { data, form }: { data: any; form: any } = $props();
 
 	const brixDefinitions = [
+		// Hand-written Svelte component brix (escape hatch for advanced cases).
 		...createBrixDefinitions(
-			{
-				...import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
-				...import.meta.glob('$lib/brixter/brix/*.brix.svelte', { eager: true })
-			},
-			{
-				...import.meta.glob('$lib/brixter/brix/*.svelte', {
-					query: '?raw',
-					import: 'default',
-					eager: true
-				}),
-				...import.meta.glob('$lib/brixter/brix/*.brix.svelte', {
-					query: '?raw',
-					import: 'default',
-					eager: true
-				})
-			} as Record<string, string>
+			import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
+			import.meta.glob('$lib/brixter/brix/*.svelte', {
+				query: '?raw',
+				import: 'default',
+				eager: true
+			}) as Record<string, string>
 		),
-		// Plain `.brix` markup files are loaded as raw text and interpreted at
-		// runtime — no Svelte compilation, so they can change without a rebuild.
+		// Plain `.brix` markup files, interpreted at runtime — no Svelte compilation.
 		...createMarkupBrixDefinitions(
 			import.meta.glob('$lib/brixter/brix/*.brix', {
 				query: '?raw',

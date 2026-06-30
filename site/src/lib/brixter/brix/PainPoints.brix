@@ -1,18 +1,11 @@
-<script module lang="ts">
-	export const brikDescription = 'Section with three reasons or frictions that lead to the solution.';
-
-	export const brikFields = {
-		points: {
-			label: 'Points',
-			itemLabel: 'Point',
-			summaryField: 'title',
-			item: {
-				fields: {}
-			}
-		}
-	};
-</script>
-
+---
+description: Section with three reasons or frictions that lead to the solution.
+fields:
+  points:
+    label: Points
+    itemLabel: Point
+    summaryField: title
+---
 <section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-5xl">
 		<div class="mx-auto max-w-2xl text-center">

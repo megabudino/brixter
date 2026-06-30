@@ -7,7 +7,6 @@ export {
 	type LayoutDefinition
 } from './svelte/adapter.js';
 export { createBrikSchemaFromMarkup } from './svelte/markup-schema.js';
-export { brixter, type BrixterPreprocessorOptions } from './svelte/preprocess.js';
 export {
 	createMarkupBrixDefinition,
 	createMarkupBrixDefinitions,

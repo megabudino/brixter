@@ -113,10 +113,10 @@ describe('serializeToMdsvex', () => {
 		const output = serializeToMdsvex(document, pageBriks);
 
 		expect(output).toContain('title: Pagina Brixter');
-		expect(output).toContain("import Hero from '$lib/brixter/brix/Hero.brix.svelte';");
+		expect(output).toContain("import Hero from '$lib/brixter/brix/Hero.svelte';");
 		expect(output).toContain('<Hero {...blockProps2} />');
 		expect(output).toContain('## Nuovo brik');
-		expect(output).not.toContain("import Markdown from '$lib/brixter/brix/Markdown.brix.svelte';");
+		expect(output).not.toContain("import Markdown from '$lib/brixter/brix/Markdown.svelte';");
 	});
 
 	it('creates generic briks from inferred defaults', () => {
