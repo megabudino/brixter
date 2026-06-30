@@ -40,6 +40,10 @@
 		"./preprocess": {
 			"types": "./dist/svelte/preprocess.d.ts",
 			"default": "./dist/svelte/preprocess.js"
+		},
+		"./render": {
+			"types": "./dist/markup/index.d.ts",
+			"default": "./dist/markup/index.js"
 		}
 	},
 	"peerDependencies": {

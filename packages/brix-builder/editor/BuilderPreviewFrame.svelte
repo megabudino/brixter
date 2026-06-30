@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { mount, unmount } from 'svelte';
-	import type { BrikDefinition } from '../svelte/adapter.js';
 	import SveltePreviewRenderer from '../svelte/SveltePreviewRenderer.svelte';
 	import type { BuilderAppPreviewProps } from './contracts.js';
 	import { syncPreviewHeadAssets, syncPreviewTheme } from './preview-frame-support.js';
@@ -33,11 +32,10 @@
 		previewMode = false,
 		viewportSize = 'desktop'
 	}: BuilderAppPreviewProps & {
-		definitions: BrikDefinition[];
 		onKeydown?: (event: KeyboardEvent) => void;
 	} = $props();
 
-	const rendererProps = $state({} as BuilderAppPreviewProps & { definitions: BrikDefinition[] });
+	const rendererProps = $state({} as BuilderAppPreviewProps);
 
 	$effect(() => {
 		syncRendererProps();

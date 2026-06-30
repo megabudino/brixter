@@ -50,7 +50,8 @@ export function compileBrixYaml(
 
 	const imports: string[] = [];
 	const blocks: string[] = [];
-	const usedComponents = new Map<string, string>();
+	const usedComponents = new Map<string, { importName: string; ext: string }>();
+	let needsMarkupRenderer = false;
 
 	components.forEach((component, index) => {
 		if (!component || typeof component !== 'object') return;
@@ -60,19 +61,34 @@ export function compileBrixYaml(
 		const componentName = toComponentName(spec.type);
 		if (!componentName) return;
 
-		let importName = usedComponents.get(componentName);
-		if (!importName) {
-			importName = `Brix${usedComponents.size}`;
-			usedComponents.set(componentName, importName);
+		let entry = usedComponents.get(componentName);
+		if (!entry) {
+			const importName = `Brix${usedComponents.size}`;
 			const ext = pickExtension(brixFsDir, brixDir, componentName);
-			imports.push(`import ${importName} from '${brixDir}/${componentName}${ext}';`);
+			entry = { importName, ext };
+			usedComponents.set(componentName, entry);
+			if (ext === '.brix') {
+				// Plain markup: import the raw source and interpret it at render time.
+				needsMarkupRenderer = true;
+				imports.push(`import ${importName}Src from '${brixDir}/${componentName}.brix?raw';`);
+			} else {
+				imports.push(`import ${importName} from '${brixDir}/${componentName}${ext}';`);
+			}
 		}
 
 		const propsName = `component${index}Props`;
 		const props = spec.props && typeof spec.props === 'object' ? spec.props : {};
 		blocks.push(`const ${propsName} = ${literal(props)};`);
-		blocks.push(`<${importName} {...${propsName}} />`);
+		blocks.push(
+			entry.ext === '.brix'
+				? `{@html renderBrixSource(${entry.importName}Src, ${propsName})}`
+				: `<${entry.importName} {...${propsName}} />`
+		);
 	});
+
+	const markupRendererImport = needsMarkupRenderer
+		? `import { renderBrixSource } from '@brixter/brix-builder/render';`
+		: '';
 
 	let layoutImport = '';
 	let openingLayout = '';
@@ -100,7 +116,7 @@ export const metadata = ${literal(metadata)};
 </script>
 
 <script>
-${[seoImport, layoutImport, ...imports, destructured, componentScripts].filter(Boolean).join('\n')}
+${[seoImport, layoutImport, markupRendererImport, ...imports, destructured, componentScripts].filter(Boolean).join('\n')}
 </script>
 
 ${seoHead}
@@ -121,6 +137,9 @@ export function pickExtension(
 	componentName: string
 ): string {
 	if (!brixFsDir) return '.svelte';
-	const candidate = path.join(brixFsDir, `${componentName}.brix.svelte`);
-	return existsSync(candidate) ? '.brix.svelte' : '.svelte';
+	// Plain `.brix` markup takes precedence — it is interpreted at runtime rather
+	// than compiled as a Svelte component.
+	if (existsSync(path.join(brixFsDir, `${componentName}.brix`))) return '.brix';
+	if (existsSync(path.join(brixFsDir, `${componentName}.brix.svelte`))) return '.brix.svelte';
+	return '.svelte';
 }

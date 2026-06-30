@@ -9,6 +9,17 @@ export {
 export { createBrikSchemaFromMarkup } from './svelte/markup-schema.js';
 export { brixter, type BrixterPreprocessorOptions } from './svelte/preprocess.js';
 export {
+	createMarkupBrixDefinition,
+	createMarkupBrixDefinitions,
+	parseBrixFile,
+	type MarkupBrikDefinition
+} from './markup/loader.js';
+export { parseTemplate, type TemplateNode } from './markup/parser.js';
+export {
+	render as renderBrixMarkup,
+	renderToString as renderBrixMarkupToString
+} from './markup/render.js';
+export {
 	parseBrixYamlDocument as importBrixFromYaml,
 	serializeToBrixYaml as exportBrixToYaml,
 	serializeToMdsvex as exportBrixToMdsvex,

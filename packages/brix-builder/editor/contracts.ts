@@ -1,9 +1,15 @@
 import type { Component } from 'svelte';
 import type { BuilderBlock, BuilderDefinition, BuilderRichTextValue } from '../core.js';
 import type { PreviewCollectionOverlay, PreviewOverlay } from '../preview-dom.js';
+import type { TemplateNode } from '../markup/parser.js';
 
+/**
+ * A renderable brik definition. Either Svelte-compiled (`component`) or plain
+ * markup interpreted at runtime (`template`). Exactly one is present.
+ */
 export interface BuilderRenderDefinition extends BuilderDefinition {
-	component: Component<Record<string, unknown>>;
+	component?: Component<Record<string, unknown>>;
+	template?: TemplateNode[];
 }
 
 export interface PreviewFieldEdit {

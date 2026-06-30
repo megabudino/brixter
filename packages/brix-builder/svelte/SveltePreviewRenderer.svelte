@@ -11,10 +11,10 @@
 		inferBuilderFieldKind
 	} from '../core.js';
 	import PreviewBlockInserter from '../editor/PreviewBlockInserter.svelte';
+	import BrixMarkupRenderer from './BrixMarkupRenderer.svelte';
 	import { attachPreviewInteractionGuard } from '../preview/block-preview-interactions.js';
-	import type { BuilderAppPreviewProps } from '../editor/contracts.js';
+	import type { BuilderAppPreviewProps, BuilderRenderDefinition } from '../editor/contracts.js';
 	import type { PreviewOverlay, PreviewCollectionOverlay } from '../preview-dom.js';
-	import type { BrikDefinition } from './adapter.js';
 
 	let {
 		definitions,
@@ -37,7 +37,7 @@
 		onOpenInserter,
 		resolveImageSrc,
 		previewMode = false
-	}: BuilderAppPreviewProps & { definitions: BrikDefinition[] } = $props();
+	}: BuilderAppPreviewProps = $props();
 
 	let hoveredCollectionItem = $state<string | null>(null);
 	let hoveredCollection = $state<string | null>(null);
@@ -90,7 +90,7 @@
 
 	function resolveImages(
 		props: Record<string, unknown>,
-		definition: BrikDefinition
+		definition: BuilderRenderDefinition
 	): Record<string, unknown> {
 		if (!resolveImageSrc) {
 			return props;
@@ -235,6 +235,15 @@
 	});
 </script>
 
+{#snippet blockBody(definition: BuilderRenderDefinition, renderProps: Record<string, unknown>)}
+	{#if definition.template}
+		<BrixMarkupRenderer template={definition.template} props={renderProps} />
+	{:else if definition.component}
+		{@const BlockComponent = definition.component}
+		<BlockComponent {...renderProps} />
+	{/if}
+{/snippet}
+
 <div bind:this={rootElement} onclick={(event) => {
 	if (!(event.target as Element).closest('[data-brixter-preview-block]')) {
 		onDeselectBlock();
@@ -261,7 +270,6 @@
 		{#each blocks as block, blockIndex (block.id)}
 			{@const definition = getBuilderDefinition(block.type, definitions)}
 			{#if !propsErrors[block.id]}
-				{@const BlockComponent = definition.component}
 				{@const renderProps = getRenderProps(block)}
 				{@const liveProps = normalizeBuilderPropsForRender(
 					createBuilderFallbackProps(definition, block.props, { contentFallback: false })
@@ -302,7 +310,7 @@
 							/>
 						{/if}
 						<div data-brixter-preview-content>
-							<BlockComponent {...renderProps} />
+							{@render blockBody(definition, renderProps)}
 						</div>
 						{#if activeBlockId === block.id && !previewMode}
 							<div
@@ -435,7 +443,7 @@
 							/>
 						{/if}
 						<div data-brixter-preview-content>
-							<BlockComponent {...renderProps} />
+							{@render blockBody(definition, renderProps)}
 						</div>
 						{#if activeBlockId === block.id && !previewMode}
 							<div

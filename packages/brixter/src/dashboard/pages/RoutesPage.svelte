@@ -25,6 +25,7 @@
 	import {
 		BrixEditor,
 		createBrixDefinitions,
+		createMarkupBrixDefinitions,
 		createLayoutDefinitions,
 		SHORTCUTS
 	} from '@brixter/brix-builder';
@@ -34,24 +35,35 @@
 
 	let { data, form }: { data: any; form: any } = $props();
 
-	const brixDefinitions = createBrixDefinitions(
-		{
-			...import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
-			...import.meta.glob('$lib/brixter/brix/*.brix.svelte', { eager: true })
-		},
-		{
-			...import.meta.glob('$lib/brixter/brix/*.svelte', {
+	const brixDefinitions = [
+		...createBrixDefinitions(
+			{
+				...import.meta.glob('$lib/brixter/brix/*.svelte', { eager: true }),
+				...import.meta.glob('$lib/brixter/brix/*.brix.svelte', { eager: true })
+			},
+			{
+				...import.meta.glob('$lib/brixter/brix/*.svelte', {
+					query: '?raw',
+					import: 'default',
+					eager: true
+				}),
+				...import.meta.glob('$lib/brixter/brix/*.brix.svelte', {
+					query: '?raw',
+					import: 'default',
+					eager: true
+				})
+			} as Record<string, string>
+		),
+		// Plain `.brix` markup files are loaded as raw text and interpreted at
+		// runtime — no Svelte compilation, so they can change without a rebuild.
+		...createMarkupBrixDefinitions(
+			import.meta.glob('$lib/brixter/brix/*.brix', {
 				query: '?raw',
 				import: 'default',
 				eager: true
-			}),
-			...import.meta.glob('$lib/brixter/brix/*.brix.svelte', {
-				query: '?raw',
-				import: 'default',
-				eager: true
-			})
-		} as Record<string, string>
-	);
+			}) as Record<string, string>
+		)
+	];
 
 	const layoutDefinitions = createLayoutDefinitions(
 		import.meta.glob('$lib/brixter/layouts/*.svelte', { eager: true }),

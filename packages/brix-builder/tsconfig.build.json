@@ -21,6 +21,7 @@
   },
   "include": [
     "./index.ts",
+    "./markup/**/*.ts",
     "./svelte/**/*.ts",
     "./editor/**/*.ts",
     "./preview/**/*.ts",

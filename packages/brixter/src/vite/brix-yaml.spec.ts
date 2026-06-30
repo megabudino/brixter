@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { compileBrixYaml } from './brix-yaml.ts';
 
@@ -26,6 +29,25 @@ describe('compileBrixYaml', () => {
 
 		expect(output).not.toContain('BrixSeo');
 		expect(output).not.toContain('<svelte:head>');
+	});
+
+	it('renders plain .brix markup components through the runtime interpreter', () => {
+		const dir = mkdtempSync(path.join(tmpdir(), 'brix-'));
+		writeFileSync(path.join(dir, 'Showcase.brix'), '<section data-brixter-field="x">x</section>');
+
+		const output = compileBrixYaml(
+			`title: Home\ncomponents:\n  - type: Showcase\n    props:\n      x: Hi`,
+			{ seo: false },
+			dir
+		);
+
+		expect(output).toContain(
+			"import { renderBrixSource } from '@brixter/brix-builder/render';"
+		);
+		expect(output).toContain("import Brix0Src from '$lib/brixter/brix/Showcase.brix?raw';");
+		expect(output).toContain('{@html renderBrixSource(Brix0Src, component0Props)}');
+		// No Svelte component import/instantiation for markup brix.
+		expect(output).not.toContain('<Brix0 ');
 	});
 
 	it('wraps content in the layout while still injecting SEO', () => {

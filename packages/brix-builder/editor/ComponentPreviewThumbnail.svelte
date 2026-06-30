@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { mount, unmount } from 'svelte';
 	import { createBuilderFallbackProps, normalizeBuilderPropsForRender } from '../core.js';
+	import { render as renderMarkup } from '../markup/render.js';
 	import type { BuilderRenderDefinition } from './contracts.js';
 	import { syncPreviewHeadAssets, syncPreviewTheme } from './preview-frame-support.js';
 
@@ -60,13 +61,15 @@
 				return;
 			}
 
-			renderer = mount(definition.component, {
-				target,
-				props: normalizeBuilderPropsForRender(createBuilderFallbackProps(definition)) as Record<
-					string,
-					unknown
-				>
-			}) as Record<string, unknown>;
+			const props = normalizeBuilderPropsForRender(
+				createBuilderFallbackProps(definition)
+			) as Record<string, unknown>;
+
+			if (definition.template) {
+				target.innerHTML = renderMarkup(definition.template, props);
+			} else if (definition.component) {
+				renderer = mount(definition.component, { target, props }) as Record<string, unknown>;
+			}
 		}
 
 		return {
