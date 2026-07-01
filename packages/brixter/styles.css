@@ -1,7 +1,3 @@
-@source "./src/studio/ui";
-@source "./src/studio/editor";
-@source "./src/studio/dashboard";
-@source "../@brixter/brix-builder/dist";
 @source "../brix-builder/editor";
 @source "../brix-builder/svelte";
 @variant dark (&:where(.dark, .dark *));

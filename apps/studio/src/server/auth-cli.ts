@@ -5,8 +5,8 @@
  * SvelteKit's request lifecycle.
  *
  * Run via:
- *   bunx @better-auth/cli generate --config src/studio/server/auth-cli.ts
- *   bunx @better-auth/cli migrate  --config src/studio/server/auth-cli.ts
+ *   bunx @better-auth/cli generate --config src/server/auth-cli.ts
+ *   bunx @better-auth/cli migrate  --config src/server/auth-cli.ts
  */
 import { betterAuth } from 'better-auth';
 import { createAuthOptions } from './auth-migrate.ts';
