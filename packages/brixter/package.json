@@ -26,7 +26,6 @@
 	"files": [
 		"LICENSE",
 		"README.md",
-		"bin",
 		"dist",
 		"src",
 		"styles.css"
@@ -44,49 +43,10 @@
 			"svelte": "./src/runtime/index.ts",
 			"default": "./src/runtime/index.ts"
 		},
-		"./server": {
-			"types": "./dist/studio/server/index.d.ts",
-			"default": "./dist/studio/server/index.js"
-		},
-		"./server/migrate": {
-			"types": "./dist/studio/server/migrate.d.ts",
-			"default": "./dist/studio/server/migrate.js"
-		},
-		"./server/auth-migrate": {
-			"types": "./dist/studio/server/auth-migrate.d.ts",
-			"default": "./dist/studio/server/auth-migrate.js"
-		},
-		"./editor": {
-			"types": "./src/studio/editor/index.ts",
-			"svelte": "./src/studio/editor/index.ts",
-			"default": "./src/studio/editor/index.ts"
-		},
-		"./ui": {
-			"types": "./src/studio/ui/index.ts",
-			"svelte": "./src/studio/ui/index.ts",
-			"default": "./src/studio/ui/index.ts"
-		},
 		"./seo": {
 			"types": "./src/runtime/seo/BrixSeo.svelte",
 			"svelte": "./src/runtime/seo/BrixSeo.svelte",
 			"default": "./src/runtime/seo/BrixSeo.svelte"
-		},
-		"./sveltekit": {
-			"types": "./src/studio/sveltekit/index.d.ts",
-			"svelte": "./src/studio/sveltekit/component.ts",
-			"default": "./src/studio/sveltekit/component.ts"
-		},
-		"./sveltekit/reroute": {
-			"types": "./src/studio/sveltekit/reroute.ts",
-			"default": "./src/studio/sveltekit/reroute.ts"
-		},
-		"./sveltekit/server": {
-			"types": "./src/studio/sveltekit/server.ts",
-			"default": "./src/studio/sveltekit/server.ts"
-		},
-		"./sveltekit/api": {
-			"types": "./src/studio/sveltekit/api.ts",
-			"default": "./src/studio/sveltekit/api.ts"
 		},
 		"./vite": {
 			"types": "./dist/runtime/vite/index.d.ts",
