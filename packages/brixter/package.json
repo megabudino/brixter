@@ -22,7 +22,7 @@
 	],
 	"type": "module",
 	"packageManager": "bun@1.2.15",
-	"svelte": "./src/runtime/index.ts",
+	"svelte": "./src/index.ts",
 	"files": [
 		"LICENSE",
 		"README.md",
@@ -39,18 +39,18 @@
 	},
 	"exports": {
 		".": {
-			"types": "./src/runtime/index.ts",
-			"svelte": "./src/runtime/index.ts",
-			"default": "./src/runtime/index.ts"
+			"types": "./src/index.ts",
+			"svelte": "./src/index.ts",
+			"default": "./src/index.ts"
 		},
 		"./seo": {
-			"types": "./src/runtime/seo/BrixSeo.svelte",
-			"svelte": "./src/runtime/seo/BrixSeo.svelte",
-			"default": "./src/runtime/seo/BrixSeo.svelte"
+			"types": "./src/seo/BrixSeo.svelte",
+			"svelte": "./src/seo/BrixSeo.svelte",
+			"default": "./src/seo/BrixSeo.svelte"
 		},
 		"./vite": {
-			"types": "./dist/runtime/vite/index.d.ts",
-			"default": "./dist/runtime/vite/index.js"
+			"types": "./dist/vite/index.d.ts",
+			"default": "./dist/vite/index.js"
 		},
 		"./styles.css": "./styles.css"
 	},
