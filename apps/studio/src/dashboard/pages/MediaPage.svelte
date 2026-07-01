@@ -14,7 +14,7 @@
 		Trash2,
 		FileCode
 	} from 'lucide-svelte';
-	import { Spinner } from 'brixter/ui';
+	import { Spinner } from '../../ui';
 	import { fly } from 'svelte/transition';
 
 	let { data, form }: { data: any; form: any } = $props();

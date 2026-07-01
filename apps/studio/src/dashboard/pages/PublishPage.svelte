@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { ArrowLeft, FileDiff } from 'lucide-svelte';
-	import { Spinner } from 'brixter/ui';
+	import { Spinner } from '../../ui';
 
 	let { data, form }: { data: any; form: any } = $props();
 

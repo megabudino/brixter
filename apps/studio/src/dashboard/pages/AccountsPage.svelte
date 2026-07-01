@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Input, Spinner } from 'brixter/ui';
+	import { Button, Input, Spinner } from '../../ui';
 
 	interface Account {
 		id: string;

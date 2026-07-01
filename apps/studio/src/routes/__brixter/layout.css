@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@import 'brixter/styles.css';
+@source '../../dashboard';
+@source '../../editor';
+@source '../../ui';
+@plugin '@tailwindcss/typography';

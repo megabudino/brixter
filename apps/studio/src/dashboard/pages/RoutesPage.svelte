@@ -21,7 +21,7 @@
 		Pencil,
 		Trash2
 	} from 'lucide-svelte';
-	import { Spinner } from 'brixter/ui';
+	import { Spinner } from '../../ui';
 	import {
 		BrixEditor,
 		createBrixDefinitions,
@@ -29,7 +29,7 @@
 		createLayoutDefinitions,
 		SHORTCUTS
 	} from '@brixter/brix-builder';
-	import { MediaPicker, IconPicker } from 'brixter/editor';
+	import { MediaPicker, IconPicker } from '../../editor';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 

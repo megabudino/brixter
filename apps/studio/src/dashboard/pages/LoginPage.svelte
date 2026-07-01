@@ -1,27 +1,25 @@
 <script lang="ts">
-import { enhance } from '$app/forms';
-import { Button, Input, Spinner } from 'brixter/ui';
+	import { enhance } from '$app/forms';
+	import { Button, Input, Spinner } from '../../ui';
 
-let { form }: { form: any } = $props();
+	let { form, notice = '' }: { form: any; notice?: string } = $props();
 
-let submitting = $state(false);
-let submitError = $state('');
+	let submitting = $state(false);
+	let submitError = $state('');
 
-const displayError = $derived(form?.message ?? submitError);
+	const displayError = $derived(form?.message ?? submitError ?? notice);
 </script>
 
 <div class="flex min-h-screen items-center justify-center">
 	<div class="w-full max-w-md space-y-8">
 		<div class="text-center">
-			<h1 class="bx-text-heading bx-font-display text-3xl font-bold tracking-tight">
-				Welcome to brixter
-			</h1>
-			<p class="bx-text-secondary mt-2">Create your account to get started.</p>
+			<h1 class="bx-text-heading bx-font-display text-3xl font-bold tracking-tight">Sign in</h1>
+			<p class="bx-text-secondary mt-2">Sign in to your brixter account.</p>
 		</div>
 
 		<form
 			method="post"
-			action="?/setup"
+			action="?/login"
 			use:enhance={() => {
 				submitting = true;
 				submitError = '';
@@ -35,13 +33,13 @@ const displayError = $derived(form?.message ?? submitError);
 						if (result.type === 'error') {
 							submitError =
 								result.error?.message?.trim() ||
-								'Account creation failed unexpectedly. Please try again.';
+								'Sign in failed unexpectedly. Please try again.';
 						}
 					} catch (error) {
 						submitError =
 							error instanceof Error && error.message.trim()
 								? error.message
-								: 'Account creation failed unexpectedly. Please try again.';
+								: 'Sign in failed unexpectedly. Please try again.';
 					} finally {
 						submitting = false;
 					}
@@ -50,16 +48,8 @@ const displayError = $derived(form?.message ?? submitError);
 			class="space-y-6"
 		>
 			<fieldset disabled={submitting} class="space-y-6 disabled:opacity-60">
-				<Input label="Name" type="text" name="name" required value={form?.name ?? ''} />
 				<Input label="Email" type="email" name="email" required value={form?.email ?? ''} />
-				<Input label="Password" type="password" name="password" required minlength={8} />
-				<Input
-					label="Confirm Password"
-					type="password"
-					name="confirmPassword"
-					required
-					minlength={8}
-				/>
+				<Input label="Password" type="password" name="password" required />
 
 				{#if displayError}
 					<p class="bx-text-error text-sm" role="alert" aria-live="polite">{displayError}</p>
@@ -67,9 +57,9 @@ const displayError = $derived(form?.message ?? submitError);
 
 				<Button type="submit" class="w-full" disabled={submitting}>
 					{#if submitting}
-						<span class="flex items-center justify-center gap-2"><Spinner /> Creating account...</span>
+						<span class="flex items-center justify-center gap-2"><Spinner /> Signing in...</span>
 					{:else}
-						Create account
+						Sign in
 					{/if}
 				</Button>
 			</fieldset>

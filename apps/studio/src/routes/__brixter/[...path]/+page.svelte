@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Brixter from 'brixter/sveltekit';
+	import Brixter from '../../../sveltekit/component';
 
 	let { data, form } = $props();
 </script>

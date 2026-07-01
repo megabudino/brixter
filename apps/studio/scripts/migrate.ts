@@ -4,6 +4,6 @@
  *
  * Run with `bun scripts/migrate.ts` (bun loads .env automatically).
  */
-import { migrate } from '../src/studio/server/migrate.ts';
+import { migrate } from '../src/server/migrate.ts';
 
 await migrate();
