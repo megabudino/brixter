@@ -21,16 +21,10 @@ const config = {
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
-		// Monorepo dev: same import paths as a published app (`brixter`, `@brixter/brix-builder`).
+		// Monorepo dev: resolve the render runtime from source. `brixter` itself
+		// (the vite plugin + `brixter/seo`) resolves through its package exports.
 		alias: {
 			'@brixter/core': '../packages/core/index.ts',
-			'@brixter/brix-builder/render': '../packages/core/index.ts',
-			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
-			'brixter/server': '../packages/brixter/src/studio/server/index.ts',
-			'brixter/editor': '../packages/brixter/src/studio/editor/index.ts',
-			'brixter/ui': '../packages/brixter/src/studio/ui/index.ts',
-			'brixter/sveltekit/server': '../packages/brixter/src/studio/sveltekit/server.ts',
-			'brixter/sveltekit/api': '../packages/brixter/src/studio/sveltekit/api.ts',
 			'brixter/styles.css': '../packages/brixter/styles.css'
 		}
 	}

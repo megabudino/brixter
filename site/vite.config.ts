@@ -6,10 +6,8 @@ import { brixter } from 'brixter/vite';
 export default defineConfig({
 	plugins: [tailwindcss(), brixter({ adminPath: '/admin' }), sveltekit()],
 	ssr: {
-		// lucide-svelte ships extensionless relative imports in its dist
-		// (`export * from './icons/index'`) which Node's strict ESM resolver
-		// rejects. Forcing Vite to bundle it for SSR routes through Vite's
-		// extension-aware resolver, sidestepping the package bug.
-		noExternal: ['brixter', 'lucide-svelte']
+		// Bundle `brixter` so its Svelte source (e.g. `brixter/seo`, injected into
+		// compiled .brix.yaml pages) compiles through Vite for SSR routes.
+		noExternal: ['brixter']
 	}
 });
