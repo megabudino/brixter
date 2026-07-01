@@ -1,11 +1,15 @@
 /**
- * Standalone brix markup renderer.
+ * Standalone brix markup renderer — compatibility entry.
  *
- * This entry is intentionally free of any editor/Svelte dependencies — it pulls
- * in only the parser and interpreter — so published pages can render brix at
- * build/SSR time without bundling the authoring UI. The editor imports the same
- * functions via the package root.
+ * The renderer moved to `@brixter/core`; this shim preserves the package's
+ * editor-free `@brixter/brix-builder/render` export by re-exporting from there.
  */
 
-export { render, renderToString, renderBrixSource, stripFrontmatter } from './render.js';
-export { parseTemplate, type TemplateNode } from './parser.js';
+export {
+	render,
+	renderToString,
+	renderBrixSource,
+	stripFrontmatter,
+	parseTemplate,
+	type TemplateNode
+} from '@brixter/core';

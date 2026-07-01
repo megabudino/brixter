@@ -16,19 +16,12 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "types": ["svelte"]
+    "skipLibCheck": true
   },
   "include": [
     "./index.ts",
-    "./markup/**/*.ts",
-    "./svelte/**/*.ts",
-    "./editor/**/*.ts",
-    "./preview/**/*.ts",
     "./core.ts",
-    "./editor-controller.ts",
-    "./preview-dom.ts",
-    "./svelte.d.ts"
+    "./markup/**/*.ts"
   ],
   "exclude": [
     "./dist",

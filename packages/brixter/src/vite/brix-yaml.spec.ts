@@ -42,7 +42,7 @@ describe('compileBrixYaml', () => {
 		);
 
 		expect(output).toContain(
-			"import { renderBrixSource } from '@brixter/brix-builder/render';"
+			"import { renderBrixSource } from '@brixter/core';"
 		);
 		expect(output).toContain("import Brix0Src from '$lib/brixter/brix/Showcase.brix?raw';");
 		expect(output).toContain('{@html renderBrixSource(Brix0Src, component0Props)}');

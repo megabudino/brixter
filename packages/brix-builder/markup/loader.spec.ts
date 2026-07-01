@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { inferBuilderFieldKind } from '../core';
+import { inferBuilderFieldKind, render } from '@brixter/core';
 import { createMarkupBrixDefinition, parseBrixFile } from './loader';
-import { render } from './render';
 
 // Mirrors site/src/lib/brixter/brix/CoreOffer.brix.svelte as a plain `.brix` file:
 // `<script module>` exports become YAML frontmatter, the markup body is unchanged.

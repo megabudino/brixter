@@ -23,13 +23,14 @@ import {
 	createBuilderCollectionsFromFields,
 	createBuilderDefaultsFromFields,
 	createBuilderPreviewBindingsFromFields,
+	parseTemplate,
 	toComponentName,
 	type BuilderDefinition,
 	type BuilderFields,
-	type BuilderMode
-} from '../core.js';
+	type BuilderMode,
+	type TemplateNode
+} from '@brixter/core';
 import { createBuilderFieldsFromMarkup, mergeBuilderFields } from '../svelte/markup-schema.js';
-import { parseTemplate, type TemplateNode } from './parser.js';
 
 const { parse: parseYaml } = yaml;
 

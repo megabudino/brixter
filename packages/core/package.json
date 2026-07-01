@@ -1,27 +1,26 @@
 {
-	"name": "@brixter/brix-builder",
-	"version": "0.2.1",
-	"description": "Visual page builder for Brixter (Svelte 5)",
+	"name": "@brixter/core",
+	"version": "0.1.0",
+	"description": "Agnostic brix render engine + format (parser, interpreter, YAML import/export)",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/megabudino/brixter.git",
-		"directory": "packages/brix-builder"
+		"directory": "packages/core"
 	},
 	"bugs": {
 		"url": "https://github.com/megabudino/brixter/issues"
 	},
-	"homepage": "https://github.com/megabudino/brixter/tree/main/packages/brix-builder#readme",
+	"homepage": "https://github.com/megabudino/brixter/tree/main/packages/core#readme",
 	"keywords": [
 		"brixter",
 		"cms",
-		"page-builder",
-		"svelte"
+		"render",
+		"markup"
 	],
 	"type": "module",
 	"types": "./dist/index.d.ts",
-	"svelte": "./dist/index.js",
 	"scripts": {
 		"build": "node ./scripts/build.mjs",
 		"prepublishOnly": "npm run build"
@@ -34,7 +33,6 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"svelte": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
 		"./render": {
@@ -42,21 +40,11 @@
 			"default": "./dist/markup/index.js"
 		}
 	},
-	"peerDependencies": {
-		"svelte": "^5.0.0"
-	},
-	"sideEffects": [
-		"**/*.svelte"
-	],
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
-		"@brixter/core": "^0.1.0",
-		"@tiptap/core": "^3.22.4",
-		"@tiptap/starter-kit": "^3.22.4",
-		"magic-string": "^0.30.0",
 		"yaml": "^1.10.3"
 	}
 }

@@ -87,7 +87,7 @@ export function compileBrixYaml(
 	});
 
 	const markupRendererImport = needsMarkupRenderer
-		? `import { renderBrixSource } from '@brixter/brix-builder/render';`
+		? `import { renderBrixSource } from '@brixter/core';`
 		: '';
 
 	let layoutImport = '';

@@ -23,7 +23,8 @@ const config = {
 		adapter: adapter(),
 		// Monorepo dev: same import paths as a published app (`brixter`, `@brixter/brix-builder`).
 		alias: {
-			'@brixter/brix-builder/render': '../packages/brix-builder/markup/index.ts',
+			'@brixter/core': '../packages/core/index.ts',
+			'@brixter/brix-builder/render': '../packages/core/index.ts',
 			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
 			'brixter/server': '../packages/brixter/src/server/index.ts',
 			'brixter/editor': '../packages/brixter/src/editor/index.ts',

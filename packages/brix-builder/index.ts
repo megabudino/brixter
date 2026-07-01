@@ -13,18 +13,18 @@ export {
 	parseBrixFile,
 	type MarkupBrikDefinition
 } from './markup/loader.js';
-export { parseTemplate, type TemplateNode } from './markup/parser.js';
+export { parseTemplate, type TemplateNode } from '@brixter/core';
 export {
 	render as renderBrixMarkup,
 	renderToString as renderBrixMarkupToString
-} from './markup/render.js';
+} from '@brixter/core';
 export {
 	parseBrixYamlDocument as importBrixFromYaml,
 	serializeToBrixYaml as exportBrixToYaml,
 	serializeToMdsvex as exportBrixToMdsvex,
 	STANDARD_SEO_FIELDS,
 	toComponentName
-} from './core.js';
+} from '@brixter/core';
 
 export type {
 	BuilderBlock as Brik,
@@ -37,4 +37,4 @@ export type {
 	BuilderRichTextValue as BrikRichTextValue,
 	BrixYamlComponent,
 	BrixYamlDocument
-} from './core.js';
+} from '@brixter/core';
