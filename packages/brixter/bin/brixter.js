@@ -1732,8 +1732,8 @@ function loadEnvForProject(cwd) {
 }
 
 async function resolveMigrateModule() {
-	const dist = path.resolve(import.meta.dirname, '../dist/server/migrate.js');
-	const source = path.resolve(import.meta.dirname, '../src/lib/server/migrate.ts');
+	const dist = path.resolve(import.meta.dirname, '../dist/studio/server/migrate.js');
+	const source = path.resolve(import.meta.dirname, '../src/studio/server/migrate.ts');
 	const target = existsSync(dist) ? dist : source;
 	return pathToFileURL(target).href;
 }

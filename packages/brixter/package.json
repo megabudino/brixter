@@ -22,7 +22,7 @@
 	],
 	"type": "module",
 	"packageManager": "bun@1.2.15",
-	"svelte": "./src/index.ts",
+	"svelte": "./src/runtime/index.ts",
 	"files": [
 		"LICENSE",
 		"README.md",
@@ -40,57 +40,57 @@
 	},
 	"exports": {
 		".": {
-			"types": "./src/index.ts",
-			"svelte": "./src/index.ts",
-			"default": "./src/index.ts"
+			"types": "./src/runtime/index.ts",
+			"svelte": "./src/runtime/index.ts",
+			"default": "./src/runtime/index.ts"
 		},
 		"./server": {
-			"types": "./dist/server/index.d.ts",
-			"default": "./dist/server/index.js"
+			"types": "./dist/studio/server/index.d.ts",
+			"default": "./dist/studio/server/index.js"
 		},
 		"./server/migrate": {
-			"types": "./dist/server/migrate.d.ts",
-			"default": "./dist/server/migrate.js"
+			"types": "./dist/studio/server/migrate.d.ts",
+			"default": "./dist/studio/server/migrate.js"
 		},
 		"./server/auth-migrate": {
-			"types": "./dist/server/auth-migrate.d.ts",
-			"default": "./dist/server/auth-migrate.js"
+			"types": "./dist/studio/server/auth-migrate.d.ts",
+			"default": "./dist/studio/server/auth-migrate.js"
 		},
 		"./editor": {
-			"types": "./src/editor/index.ts",
-			"svelte": "./src/editor/index.ts",
-			"default": "./src/editor/index.ts"
+			"types": "./src/studio/editor/index.ts",
+			"svelte": "./src/studio/editor/index.ts",
+			"default": "./src/studio/editor/index.ts"
 		},
 		"./ui": {
-			"types": "./src/ui/index.ts",
-			"svelte": "./src/ui/index.ts",
-			"default": "./src/ui/index.ts"
+			"types": "./src/studio/ui/index.ts",
+			"svelte": "./src/studio/ui/index.ts",
+			"default": "./src/studio/ui/index.ts"
 		},
 		"./seo": {
-			"types": "./src/seo/BrixSeo.svelte",
-			"svelte": "./src/seo/BrixSeo.svelte",
-			"default": "./src/seo/BrixSeo.svelte"
+			"types": "./src/runtime/seo/BrixSeo.svelte",
+			"svelte": "./src/runtime/seo/BrixSeo.svelte",
+			"default": "./src/runtime/seo/BrixSeo.svelte"
 		},
 		"./sveltekit": {
-			"types": "./src/sveltekit/index.d.ts",
-			"svelte": "./src/sveltekit/component.ts",
-			"default": "./src/sveltekit/component.ts"
+			"types": "./src/studio/sveltekit/index.d.ts",
+			"svelte": "./src/studio/sveltekit/component.ts",
+			"default": "./src/studio/sveltekit/component.ts"
 		},
 		"./sveltekit/reroute": {
-			"types": "./src/sveltekit/reroute.ts",
-			"default": "./src/sveltekit/reroute.ts"
+			"types": "./src/studio/sveltekit/reroute.ts",
+			"default": "./src/studio/sveltekit/reroute.ts"
 		},
 		"./sveltekit/server": {
-			"types": "./src/sveltekit/server.ts",
-			"default": "./src/sveltekit/server.ts"
+			"types": "./src/studio/sveltekit/server.ts",
+			"default": "./src/studio/sveltekit/server.ts"
 		},
 		"./sveltekit/api": {
-			"types": "./src/sveltekit/api.ts",
-			"default": "./src/sveltekit/api.ts"
+			"types": "./src/studio/sveltekit/api.ts",
+			"default": "./src/studio/sveltekit/api.ts"
 		},
 		"./vite": {
-			"types": "./dist/vite/index.d.ts",
-			"default": "./dist/vite/index.js"
+			"types": "./dist/runtime/vite/index.d.ts",
+			"default": "./dist/runtime/vite/index.js"
 		},
 		"./styles.css": "./styles.css"
 	},
@@ -102,7 +102,7 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
-		"auth:schema": "bunx @better-auth/cli@1.5.0-beta.13 generate --config src/server/auth-cli.ts --output src/server/db/auth.schema.ts --yes",
+		"auth:schema": "bunx @better-auth/cli@1.5.0-beta.13 generate --config src/studio/server/auth-cli.ts --output src/studio/server/db/auth.schema.ts --yes",
 		"db:migrate": "bun scripts/migrate.ts"
 	},
 	"bin": {

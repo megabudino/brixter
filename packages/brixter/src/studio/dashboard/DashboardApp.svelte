@@ -8,13 +8,13 @@
 	import RoutesPage from './pages/RoutesPage.svelte';
 	import PublishPage from './pages/PublishPage.svelte';
 	import MediaPage from './pages/MediaPage.svelte';
-	import ThemeController from '../ThemeController.svelte';
+	import ThemeController from '../../runtime/ThemeController.svelte';
 	import {
 		themePreference,
 		themePreferenceLabels,
 		themePreferences,
 		type ThemePreference
-	} from '../theme';
+	} from '../../runtime/theme';
 
 	let { data, form } = $props();
 

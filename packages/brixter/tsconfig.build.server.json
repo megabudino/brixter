@@ -3,8 +3,8 @@
 		"target": "ES2022",
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"rootDir": "./src/server",
-		"outDir": "./dist/server",
+		"rootDir": "./src/studio/server",
+		"outDir": "./dist/studio/server",
 		"rewriteRelativeImportExtensions": true,
 		"declaration": true,
 		"declarationMap": true,
@@ -18,5 +18,5 @@
 		"resolveJsonModule": true,
 		"skipLibCheck": true
 	},
-	"include": ["./src/server/**/*.ts"]
+	"include": ["./src/studio/server/**/*.ts"]
 }

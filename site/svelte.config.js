@@ -26,11 +26,11 @@ const config = {
 			'@brixter/core': '../packages/core/index.ts',
 			'@brixter/brix-builder/render': '../packages/core/index.ts',
 			'@brixter/brix-builder': '../packages/brix-builder/index.ts',
-			'brixter/server': '../packages/brixter/src/server/index.ts',
-			'brixter/editor': '../packages/brixter/src/editor/index.ts',
-			'brixter/ui': '../packages/brixter/src/ui/index.ts',
-			'brixter/sveltekit/server': '../packages/brixter/src/sveltekit/server.ts',
-			'brixter/sveltekit/api': '../packages/brixter/src/sveltekit/api.ts',
+			'brixter/server': '../packages/brixter/src/studio/server/index.ts',
+			'brixter/editor': '../packages/brixter/src/studio/editor/index.ts',
+			'brixter/ui': '../packages/brixter/src/studio/ui/index.ts',
+			'brixter/sveltekit/server': '../packages/brixter/src/studio/sveltekit/server.ts',
+			'brixter/sveltekit/api': '../packages/brixter/src/studio/sveltekit/api.ts',
 			'brixter/styles.css': '../packages/brixter/styles.css'
 		}
 	}
