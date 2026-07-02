@@ -21,8 +21,6 @@ const config = {
 		// Monorepo dev: resolve the sibling packages from source, same seam the site uses.
 		alias: {
 			'@brixter/core': '../../packages/core/index.ts',
-			'@brixter/brix-builder/render': '../../packages/core/index.ts',
-			'@brixter/brix-builder': '../../packages/brix-builder/index.ts',
 			'brixter/styles.css': '../../packages/brixter/styles.css'
 		}
 	}

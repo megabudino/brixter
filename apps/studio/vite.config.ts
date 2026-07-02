@@ -12,8 +12,8 @@ export default defineConfig({
 		// lucide-svelte ships extensionless relative imports in its dist
 		// (`export * from './icons/index'`) which Node's strict ESM resolver
 		// rejects. Forcing Vite to bundle it for SSR routes through Vite's
-		// extension-aware resolver, sidestepping the package bug. `brixter` and
-		// `@brixter/brix-builder` are bundled so their Svelte sources compile.
-		noExternal: ['brixter', '@brixter/brix-builder', 'lucide-svelte']
+		// extension-aware resolver, sidestepping the package bug. `brixter` is
+		// bundled so its Svelte sources compile.
+		noExternal: ['brixter', 'lucide-svelte']
 	}
 });

@@ -12,15 +12,17 @@
       },
       "dependencies": {
         "@better-auth/core": "1.6.11",
-        "@brixter/brix-builder": "workspace:*",
         "@brixter/core": "workspace:*",
         "@octokit/auth-app": "^8.2.0",
         "@octokit/core": "^7.0.6",
+        "@tiptap/core": "^3.22.4",
+        "@tiptap/starter-kit": "^3.22.4",
         "better-auth": "1.6.11",
         "better-sqlite3": "^12.6.2",
         "brixter": "workspace:*",
         "lucide-static": "^0.477.0",
         "lucide-svelte": "^1.0.1",
+        "yaml": "^1.10.3",
       },
       "devDependencies": {
         "@playwright/test": "^1.58.2",

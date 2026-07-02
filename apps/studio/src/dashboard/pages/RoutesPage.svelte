@@ -28,7 +28,7 @@
 		createMarkupBrixDefinitions,
 		createLayoutDefinitions,
 		SHORTCUTS
-	} from '@brixter/brix-builder';
+	} from '../../brix-builder';
 	import { MediaPicker, IconPicker } from '../../editor';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
