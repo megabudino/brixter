@@ -1,0 +1,47 @@
+---
+description: Primary hero with promise, subtitle, and CTA.
+fields:
+  cta:
+    fields:
+      href:
+        default: /admin
+---
+<section class="relative overflow-hidden bg-gray-50 px-6 py-20 dark:bg-gray-900">
+	<div class="mx-auto max-w-2xl text-center">
+		<p
+			class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
+			data-brixter-field="eyebrow"
+		>
+			Eyebrow
+		</p>
+
+		<h1
+			class="font-display text-heading text-4xl leading-tight md:text-5xl"
+			data-brixter-field="headline"
+			data-brixter-kind="richtext-inline"
+		>
+			Headline goes here.
+		</h1>
+
+		<p
+			class="text-secondary mt-5 max-w-2xl text-lg leading-7"
+			data-brixter-field="subtitle"
+			data-brixter-kind="richtext-inline"
+		>
+			Supporting subtitle.
+		</p>
+
+		<div class="mt-8 flex items-center justify-center gap-4">
+			<a href="#" class="btn-site-primary" data-brixter-field="cta.label" data-brixter-bind="href:cta.href">Get started</a>
+			<p class="text-muted text-sm" data-brixter-field="cta.note" data-brixter-kind="richtext-inline">No credit card required.</p>
+		</div>
+
+		<img
+			src=""
+			alt=""
+			class="mt-12 w-full max-w-3xl"
+			data-brixter-field="screenshot"
+			data-brixter-kind="image"
+		/>
+	</div>
+</section>

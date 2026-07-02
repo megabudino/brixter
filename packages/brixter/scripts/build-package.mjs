@@ -8,7 +8,7 @@ const distDir = join(packageRoot, 'dist');
 
 await rm(distDir, { recursive: true, force: true });
 
-for (const project of ['tsconfig.build.json', 'tsconfig.build.server.json']) {
+for (const project of ['tsconfig.build.json']) {
 	const tscResult = spawnSync('bunx', ['tsc', '-p', project], {
 		cwd: packageRoot,
 		stdio: 'inherit'

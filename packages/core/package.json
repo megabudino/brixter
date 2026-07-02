@@ -1,0 +1,50 @@
+{
+	"name": "@brixter/core",
+	"version": "0.1.0",
+	"description": "Agnostic brix render engine + format (parser, interpreter, YAML import/export)",
+	"license": "MIT",
+	"author": "megabudino (https://github.com/megabudino)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/megabudino/brixter.git",
+		"directory": "packages/core"
+	},
+	"bugs": {
+		"url": "https://github.com/megabudino/brixter/issues"
+	},
+	"homepage": "https://github.com/megabudino/brixter/tree/main/packages/core#readme",
+	"keywords": [
+		"brixter",
+		"cms",
+		"render",
+		"markup"
+	],
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "node ./scripts/build.mjs",
+		"prepublishOnly": "npm run build"
+	},
+	"files": [
+		"dist",
+		"LICENSE",
+		"README.md"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./render": {
+			"types": "./dist/markup/index.d.ts",
+			"default": "./dist/markup/index.js"
+		}
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"dependencies": {
+		"yaml": "^1.10.3"
+	}
+}

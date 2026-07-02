@@ -1,0 +1,40 @@
+---
+description: Final CTA for the landing page.
+fields:
+  cta:
+    fields:
+      href:
+        default: /admin
+---
+<section class="bg-gray-50 px-6 py-20 dark:bg-gray-900">
+	<div
+		class="mx-auto max-w-5xl border border-gray-300 bg-white px-6 py-12 text-center md:px-12 dark:border-gray-700 dark:bg-gray-900"
+	>
+		<h2
+			class="font-display text-heading mx-auto max-w-2xl text-3xl md:text-4xl"
+			data-brixter-field="headline"
+			data-brixter-kind="richtext-inline"
+		>
+			Ready to get started?
+		</h2>
+
+		<p
+			class="text-secondary mx-auto mt-5 max-w-xl text-base leading-7"
+			data-brixter-field="subtitle"
+			data-brixter-kind="richtext-inline"
+		>
+			Start building pages that are editable, versioned, and ready to grow.
+		</p>
+
+		<div class="mt-8">
+			<a href="#" class="btn-site-primary" data-brixter-field="cta.label" data-brixter-bind="href:cta.href">Start now</a>
+			<p
+				class="text-muted mt-4 text-sm"
+				data-brixter-field="cta.note"
+				data-brixter-kind="richtext-inline"
+			>
+				No credit card required.
+			</p>
+		</div>
+	</div>
+</section>

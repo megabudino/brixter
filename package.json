@@ -8,22 +8,19 @@
   },
   "workspaces": [
     "site",
+    "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "build:brix-builder": "npm run build --workspace=@brixter/brix-builder",
-    "pack:brix-builder": "npm run build:brix-builder && npm pack --workspace=@brixter/brix-builder",
+    "build:core": "npm run build --workspace=@brixter/core",
     "build:brixter": "npm run build:package --workspace=brixter",
-    "pack:brixter": "npm run build:brix-builder && npm run build:brixter && npm pack --workspace=brixter",
-    "publish:brix-builder": "npm run build:brix-builder && npm publish --workspace=@brixter/brix-builder --access public",
-    "publish:brixter": "npm run build:brix-builder && npm run build:brixter && npm publish --workspace=brixter",
-    "publish:packages": "npm run publish:brix-builder && npm run publish:brixter",
-    "sync:brix-builder-version": "node ./sync-brix-builder-version.mjs",
+    "pack:brixter": "npm run build:brixter && npm pack --workspace=brixter",
+    "publish:brixter": "npm run build:brixter && npm publish --workspace=brixter",
+    "release:core:patch": "node ./release.mjs core patch",
+    "release:core:minor": "node ./release.mjs core minor",
+    "release:core:major": "node ./release.mjs core major",
     "release:brixter:patch": "node ./release.mjs brixter patch",
     "release:brixter:minor": "node ./release.mjs brixter minor",
-    "release:brixter:major": "node ./release.mjs brixter major",
-    "release:all:patch": "node ./release.mjs all patch",
-    "release:all:minor": "node ./release.mjs all minor",
-    "release:all:major": "node ./release.mjs all major"
+    "release:brixter:major": "node ./release.mjs brixter major"
   }
 }
