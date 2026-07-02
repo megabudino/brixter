@@ -4,7 +4,7 @@
 	 *
 	 * The brixter Vite plugin injects `<BrixSeo {...metadata} />` for every
 	 * compiled `.brix.yaml` page, so the props mirror the `STANDARD_SEO_FIELDS`
-	 * schema declared in `@brixter/brix-builder`.
+	 * schema declared in `@brixter/core`.
 	 */
 	interface OpenGraph {
 		title?: string;

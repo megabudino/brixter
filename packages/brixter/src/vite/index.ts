@@ -227,7 +227,7 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 					// leave native SQLite loading to Node. Bundling `better-sqlite3`
 					// pulls in `bindings`, which relies on CommonJS globals like
 					// `__filename` and crashes in ESM server chunks.
-					noExternal: ['brixter', '@brixter/brix-builder', 'lucide-svelte'],
+					noExternal: ['brixter', 'lucide-svelte'],
 					external: ['better-sqlite3', 'bindings']
 				}
 			};

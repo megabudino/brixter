@@ -27,24 +27,6 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Check brix-builder version on npm
-        id: brix_builder_version
-        run: |
-          PACKAGE_NAME=$(node -p "require('./packages/brix-builder/package.json').name")
-          LOCAL_VERSION=$(node -p "require('./packages/brix-builder/package.json').version")
-          PUBLISHED_VERSION=$(npm view "$PACKAGE_NAME" version 2>/dev/null || true)
-
-          echo "local=$LOCAL_VERSION" >> "$GITHUB_OUTPUT"
-          echo "published=$PUBLISHED_VERSION" >> "$GITHUB_OUTPUT"
-
-          if [ "$LOCAL_VERSION" = "$PUBLISHED_VERSION" ]; then
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            echo "$PACKAGE_NAME@$LOCAL_VERSION is already published on npm"
-          else
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-            echo "$PACKAGE_NAME will publish $LOCAL_VERSION (npm has ${PUBLISHED_VERSION:-nothing yet})"
-          fi
-
       - name: Check brixter version on npm
         id: brixter_version
         run: |
@@ -62,12 +44,6 @@ jobs:
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
             echo "$PACKAGE_NAME will publish $LOCAL_VERSION (npm has ${PUBLISHED_VERSION:-nothing yet})"
           fi
-
-      - run: npm run build:brix-builder
-        if: steps.brix_builder_version.outputs.should_publish == 'true'
-
-      - run: npm publish --workspace=@brixter/brix-builder --provenance --access public
-        if: steps.brix_builder_version.outputs.should_publish == 'true'
 
       - run: npm run build:brixter
         if: steps.brixter_version.outputs.should_publish == 'true'

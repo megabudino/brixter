@@ -8,8 +8,7 @@ const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL('.', import.meta.url));
 
 const packagePaths = {
-	brixter: 'packages/brixter/package.json',
-	'brix-builder': 'packages/brix-builder/package.json'
+	brixter: 'packages/brixter/package.json'
 };
 
 const args = process.argv.slice(2);
@@ -20,12 +19,12 @@ const positional = args.filter((arg) => !arg.startsWith('--'));
 const [target, bump] = positional;
 
 if (!target || !bump) {
-	console.error('Usage: node release.mjs <brixter|all> <patch|minor|major> [--yes] [--no-git]');
+	console.error('Usage: node release.mjs brixter <patch|minor|major> [--yes] [--no-git]');
 	process.exit(1);
 }
 
-if (!['brixter', 'all'].includes(target)) {
-	console.error(`Unknown target: ${target}. Use "brixter" to release only brixter, or "all" to release both brixter and brix-builder.`);
+if (target !== 'brixter') {
+	console.error(`Unknown target: ${target}. Only "brixter" can be released.`);
 	process.exit(1);
 }
 
@@ -73,26 +72,6 @@ async function bumpPackage(key, bumpType) {
 	return { name: pkg.data.name, version, path: pkg.path };
 }
 
-async function syncBrixBuilderDependency() {
-	const builder = await readPackage('brix-builder');
-	const brixter = await readPackage('brixter');
-	const nextRange = `^${builder.data.version}`;
-
-	if (brixter.data.dependencies?.['@brixter/brix-builder'] === nextRange) {
-		console.log(`@brixter/brix-builder already set to ${nextRange}`);
-		return null;
-	}
-
-	brixter.data.dependencies = {
-		...brixter.data.dependencies,
-		'@brixter/brix-builder': nextRange
-	};
-	await writePackage(brixter);
-
-	console.log(`Updated brixter dependency to ${nextRange}`);
-	return brixter.path;
-}
-
 async function runGit(args) {
 	const { stdout, stderr } = await execFileAsync('git', args, { cwd: root });
 	if (stdout) process.stdout.write(stdout);
@@ -113,32 +92,11 @@ async function confirm(prompt) {
 	return normalized === 'y' || normalized === 'yes';
 }
 
-const bumped = [];
-const stagedFiles = new Set();
-
-if (target === 'all') {
-	bumped.push(await bumpPackage('brix-builder', bump));
-	stagedFiles.add(bumped.at(-1).path);
-
-	const syncedPath = await syncBrixBuilderDependency();
-	if (syncedPath) stagedFiles.add(syncedPath);
-}
-
-bumped.push(await bumpPackage('brixter', bump));
-stagedFiles.add(bumped.at(-1).path);
-
-const files = [...stagedFiles];
-const brixterRelease = bumped.find((item) => item.name === 'brixter');
-const builderRelease = bumped.find((item) => item.name === '@brixter/brix-builder');
+const brixterRelease = await bumpPackage('brixter', bump);
+const files = [brixterRelease.path];
 
 const tag = `v${brixterRelease.version}`;
-
-let commitMessage;
-if (target === 'all') {
-	commitMessage = `release packages (brixter ${brixterRelease.version}, @brixter/brix-builder ${builderRelease.version})`;
-} else {
-	commitMessage = `release brixter ${brixterRelease.version}`;
-}
+const commitMessage = `release brixter ${brixterRelease.version}`;
 
 if (skipGit) {
 	console.log('Skipped git steps (--no-git).');

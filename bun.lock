@@ -42,20 +42,6 @@
         "vite": "^7.3.1",
       },
     },
-    "packages/brix-builder": {
-      "name": "@brixter/brix-builder",
-      "version": "0.2.1",
-      "dependencies": {
-        "@brixter/core": "^0.1.0",
-        "@tiptap/core": "^3.22.4",
-        "@tiptap/starter-kit": "^3.22.4",
-        "magic-string": "^0.30.0",
-        "yaml": "^1.10.3",
-      },
-      "peerDependencies": {
-        "svelte": "^5.0.0",
-      },
-    },
     "packages/brixter": {
       "name": "brixter",
       "version": "0.2.3",
@@ -144,8 +130,6 @@
     "@better-fetch/fetch": ["@better-fetch/fetch@1.1.21", "", {}, "sha512-/ImESw0sskqlVR94jB+5+Pxjf+xBwDZF/N5+y2/q4EqD7IARUTSpPfIo8uf39SYpCxyOCtbyYpUrZ3F/k0zT4A=="],
 
     "@blazediff/core": ["@blazediff/core@1.9.1", "", {}, "sha512-ehg3jIkYKulZh+8om/O25vkvSsXXwC+skXmyA87FFx6A/45eqOkZsBltMw/TVteb0mloiGT8oGRTcjRAz66zaA=="],
-
-    "@brixter/brix-builder": ["@brixter/brix-builder@workspace:packages/brix-builder"],
 
     "@brixter/core": ["@brixter/core@workspace:packages/core"],
 
