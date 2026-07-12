@@ -1,6 +1,6 @@
 {
 	"name": "@brixter/core",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Agnostic brix render engine + format (parser, interpreter, YAML import/export)",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",

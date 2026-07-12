@@ -81,7 +81,7 @@
 		"vitest": "^4.1.0"
 	},
 	"dependencies": {
-		"@brixter/core": "^0.1.0",
+		"@brixter/core": "^0.2.0",
 		"yaml": "^1.10.3"
 	}
 }

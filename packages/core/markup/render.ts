@@ -11,6 +11,8 @@
  *   - `data-brixter-collection-item="items"` → repeat the element per array entry,
  *                                   resolving `items[].x` against each entry
  *   - `data-brixter-bind="attr:path; ..."`   → write resolved values onto attributes
+ *     (`attr: path` replaces the whole attribute; `style.<prop>: path` merges a
+ *     single CSS declaration into the existing `style` — see `bindings.ts`)
  *
  * Props are expected in render-shape (richtext already flattened to HTML strings
  * by `normalizeBuilderPropsForRender`). All `data-brixter-*` attributes are
@@ -26,6 +28,13 @@ import {
 	type TemplateAttribute,
 	type TemplateNode
 } from './parser.js';
+import {
+	mergeStyleDeclaration,
+	parseBindings,
+	parseStyleDeclarations,
+	sanitizeStyleValue,
+	serializeStyleDeclarations
+} from './bindings.js';
 
 const FIELD_ATTR = 'data-brixter-field';
 const KIND_ATTR = 'data-brixter-kind';
@@ -129,9 +138,7 @@ function renderSingleElement(el: ElementNode, ctx: RenderContext): string {
 	// data-brixter-bind wiring (independent of data-brixter-field).
 	const bind = getAttr(el, BIND_ATTR);
 	if (bind) {
-		for (const [htmlAttr, path] of parseBindings(bind)) {
-			setAttribute(attributes, htmlAttr, stringifyValue(resolveValue(path, ctx)));
-		}
+		applyBindings(attributes, bind, ctx);
 	}
 
 	const open = `<${el.name}${serializeAttributes(attributes)}`;
@@ -216,6 +223,11 @@ function isImg(el: ElementNode): boolean {
 	return el.name.toLowerCase() === 'img';
 }
 
+function getAttrValue(attributes: TemplateAttribute[], name: string): string | undefined {
+	const existing = attributes.find((attr) => attr.name === name);
+	return existing?.value ?? undefined;
+}
+
 function setAttribute(attributes: TemplateAttribute[], name: string, value: string): void {
 	const existing = attributes.find((attr) => attr.name === name);
 	if (existing) {
@@ -238,23 +250,44 @@ function serializeAttributes(attributes: TemplateAttribute[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// data-brixter-bind parsing (mirrors preprocess.ts)
+// data-brixter-bind wiring
+//
+// The grammar lives in `bindings.ts` so every layer that reads it (this
+// runtime interpreter, plus any build-time preprocessor / editor field
+// inference) stays in lock-step.
 // ---------------------------------------------------------------------------
 
-function parseBindings(value: string): Array<[string, string]> {
-	const bindings: Array<[string, string]> = [];
-	for (const part of value.split(';')) {
-		const trimmed = part.trim();
-		if (!trimmed) continue;
-		const colon = trimmed.indexOf(':');
-		if (colon === -1) continue;
-		const htmlAttr = trimmed.slice(0, colon).trim();
-		const fieldPath = trimmed.slice(colon + 1).trim();
-		if (htmlAttr && fieldPath) {
-			bindings.push([htmlAttr, fieldPath]);
+function applyBindings(attributes: TemplateAttribute[], bind: string, ctx: RenderContext): void {
+	// `style.<prop>` merges are deferred until after every plain `attr` write so
+	// that a whole-attribute `style: path` replace happens FIRST and the
+	// per-property merges compose onto its result (documented order).
+	const styleMerges: Array<{ prop: string; value: string }> = [];
+
+	for (const binding of parseBindings(bind)) {
+		if (binding.kind === 'attr') {
+			setAttribute(attributes, binding.attr, stringifyValue(resolveValue(binding.path, ctx)));
+			continue;
 		}
+		styleMerges.push({
+			prop: binding.prop,
+			value: stringifyValue(resolveValue(binding.path, ctx))
+		});
 	}
-	return bindings;
+
+	if (styleMerges.length === 0) return;
+
+	const declarations = parseStyleDeclarations(getAttrValue(attributes, 'style') ?? '');
+	for (const { prop, value } of styleMerges) {
+		// null/empty resolved value → do not emit the declaration and do not
+		// remove a static one already present: the markup default stands.
+		if (value === '') continue;
+		mergeStyleDeclaration(declarations, prop, sanitizeStyleValue(value));
+	}
+
+	const serialized = serializeStyleDeclarations(declarations);
+	if (serialized) {
+		setAttribute(attributes, 'style', serialized);
+	}
 }
 
 // ---------------------------------------------------------------------------
