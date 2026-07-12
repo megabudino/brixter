@@ -30,7 +30,62 @@ const html = renderBrixSource(source, props);
 ```
 
 Other renderer exports: `render`, `renderToString`, `stripFrontmatter`,
-`parseTemplate` (with the `TemplateNode` type).
+`parseTemplate` (with the `TemplateNode` type), and the bind helpers
+`parseBindings`, `parseStyleDeclarations`, `serializeStyleDeclarations`,
+`mergeStyleDeclaration`, `sanitizeStyleValue` (with the `Binding` /
+`StyleDeclaration` types).
+
+## `data-brixter-bind`
+
+`data-brixter-bind` wires resolved prop values onto an element's attributes. The
+grammar is a `;`-separated list of `target: path` pairs; the **first** `:` of
+each pair splits the target from the path, so the target side never contains a
+`:` (`style.object-position` is a single target).
+
+```html
+<a href="#" data-brixter-bind="href: cta.href; target: cta.target">Go</a>
+```
+
+Two kinds of target:
+
+| Target | Effect |
+|--------|--------|
+| `attr: path` | Replaces the **whole** attribute value. Works for any attribute, including the entire `style` / `class` attribute. |
+| `style.<prop>: path` | Merges a **single** CSS declaration into the existing `style` attribute, composing with the static markup instead of clobbering it. `<prop>` may be a CSS property (`object-position`, `background-image`) or a custom property (`--op`). |
+
+### `style.<prop>` semantics (SSR-native)
+
+```html
+<img
+  style="object-position: 47.5% 50%;"
+  data-brixter-field="imageSrc"
+  data-brixter-bind="alt: imageAlt; style.object-position: imagePosition" />
+```
+
+With `{ imageSrc: '/a.jpg', imageAlt: 'x', imagePosition: '50% 28%' }` this
+renders `… src="/a.jpg" alt="x" style="object-position: 50% 28%;"` — the static
+default for that one property is overridden, every other declaration is
+preserved.
+
+- The static `style` is parsed into ordered declarations; the bound property is
+  set/overridden and the rest kept in place, then re-serialized into one
+  `style="…"`.
+- A `null` / empty resolved value emits **no** declaration and does **not**
+  remove a static one already present — the markup default stands.
+- Multiple `style.*` targets on the same element accumulate.
+- If both `style: path` (whole replace) and `style.<prop>: path` are present, the
+  whole replace is applied **first**, then the per-property merges compose onto
+  its result.
+
+### Escaping / trust model
+
+`style.<prop>` values follow the same "content is semi-trusted" posture as
+richtext `{@html}` — the engine renders author-provided data — but a per-page
+value can never inject extra declarations or break out of the attribute:
+`sanitizeStyleValue` drops `;`, `{`, `}`, `<`, `>` and folds newlines/tabs to a
+space. Quotes and parentheses are **kept** so `url("…")` / `url('…')` survive;
+quotes are HTML-escaped to `&quot;` at attribute-serialization time and decoded
+back inside the value by the browser.
 
 ## Document format & helpers
 

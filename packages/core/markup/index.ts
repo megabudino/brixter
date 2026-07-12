@@ -9,3 +9,12 @@
 
 export { render, renderToString, renderBrixSource, stripFrontmatter } from './render.js';
 export { parseTemplate, type TemplateNode } from './parser.js';
+export {
+	parseBindings,
+	parseStyleDeclarations,
+	serializeStyleDeclarations,
+	mergeStyleDeclaration,
+	sanitizeStyleValue,
+	type Binding,
+	type StyleDeclaration
+} from './bindings.js';
