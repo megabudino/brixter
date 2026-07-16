@@ -13,7 +13,7 @@ components:
       cta:
         label: Prova contenteditable
         note: Visual editing, clean commits, SvelteKit-first.
-        href: /admin
+        href: '#'
       screenshot: ""
   - type: CoreOffer
     props:
@@ -22,7 +22,7 @@ components:
       description: A focused preview with realistic content so you can recognize this brik.
       cta:
         label: Get started
-        href: /admin
+        href: '#'
       features:
         - icon: |
             <!-- @license lucide-static v0.477.0 - ISC -->
@@ -117,7 +117,7 @@ components:
         let the dashboard handle editing, media, preview, and saving.
       cta:
         label: Try Brixter
-        href: /admin
+        href: '#'
       features:
         - icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -184,15 +184,15 @@ components:
       cta:
         label: Enter Brixter
         note: Homepage generated with reusable briks.
-        href: /admin
+        href: '#'
   - type: Footer
     props:
       brand: Brixter
       claim: Visual CMS for SvelteKit. Versioned, composable, direct.
       links:
         - label: Dashboard
-          href: /admin
+          href: '#'
         - label: Routes
-          href: /admin/routes
+          href: '#'
         - label: Settings
-          href: /admin/settings
+          href: '#'

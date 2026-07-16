@@ -1,9 +1,9 @@
 /**
  * Boundary guardrail: the OSS render runtime (the `brixter` package) must never
- * pull server code into its dependency graph. Since Brixter Studio moved to
- * `apps/studio`, the old runtime↔studio seam is now a boundary *between*
- * workspaces, so the surviving invariant is a dependency check: this package
- * must not declare any server dependency (Better Auth, SQLite, or Octokit).
+ * pull server code into its dependency graph. The visual editor (Brixter Editor)
+ * is a separate application, so the surviving invariant is a dependency check:
+ * this package must not declare any server dependency (Better Auth, SQLite, or
+ * Octokit).
  *
  * A failure here means a server import crept back into the runtime — the exact
  * regression the split exists to prevent.

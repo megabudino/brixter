@@ -7,7 +7,7 @@
     "brixter": "workspace:*"
   },
   "scripts": {
-    "dev": "BRIXTER_SOURCE=1 NODE_OPTIONS='--import tsx' vite dev",
+    "dev": "NODE_OPTIONS='--import tsx' vite dev",
     "build": "vite build",
     "preview": "vite preview",
     "prepare": "svelte-kit sync || echo ''",
