@@ -27,16 +27,14 @@ fields:
 
 			<h2
 				class="font-display text-heading text-3xl md:text-4xl"
-				data-brixter-field="headline"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="headline:richtext-inline"
 			>
 				Headline goes here.
 			</h2>
 
 			<p
 				class="text-secondary mt-5 text-base leading-7"
-				data-brixter-field="description"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="description:richtext-inline"
 			>
 				A supporting description that follows the headline.
 			</p>
@@ -52,8 +50,7 @@ fields:
 				<div class="flex items-start gap-3">
 					<span
 						class="mt-1 h-5 w-5 shrink-0 text-yellow-500 dark:text-yellow-400"
-						data-brixter-field="features[].icon"
-						data-brixter-kind="icon"
+						data-brixter-field="features[].icon:icon"
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
 					</span>
@@ -63,8 +60,7 @@ fields:
 						</h3>
 						<p
 							class="text-secondary mt-2 text-sm leading-6"
-							data-brixter-field="features[].text"
-							data-brixter-kind="richtext-inline"
+							data-brixter-field="features[].text:richtext-inline"
 						>
 							Feature description goes here.
 						</p>

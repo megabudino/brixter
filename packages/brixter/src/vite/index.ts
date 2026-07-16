@@ -24,6 +24,14 @@ export interface BrixterPluginOptions {
 	 */
 	layoutsDir?: string;
 	/**
+	 * Directory containing the progressive-enhancement controllers collected by
+	 * `initBrixControllers` (from `brixter/controllers`). Every `*.{ts,js}` file
+	 * here that exports an init function is auto-registered.
+	 *
+	 * @default '$lib/brixter/controllers'
+	 */
+	controllersDir?: string;
+	/**
 	 * Optional layout name used when a `.brix.yaml` file omits `layout`.
 	 */
 	defaultLayout?: string;
@@ -36,12 +44,47 @@ export interface BrixterPluginOptions {
 	seo?: boolean;
 }
 
+const CONTROLLERS_MODULE_ID = 'virtual:brixter-controllers';
+const RESOLVED_CONTROLLERS_MODULE_ID = '\0' + CONTROLLERS_MODULE_ID;
+
+/**
+ * Turn a controllers directory into a root-relative `import.meta.glob` pattern.
+ *
+ * The glob lives in a virtual module with no real directory, so a root-relative
+ * pattern (leading `/`, resolved against the Vite project root) is required.
+ * `$lib/…` maps to `/src/lib/…` — the same seam SvelteKit uses for `$lib`.
+ */
+function controllersGlobPattern(dir: string): string {
+	let base: string;
+	if (dir.startsWith('$lib/')) base = '/src/lib/' + dir.slice('$lib/'.length);
+	else if (dir.startsWith('/')) base = dir;
+	else base = '/' + dir;
+	return `${base.replace(/\/$/, '')}/*.{ts,js}`;
+}
+
 export function brixter(options: BrixterPluginOptions = {}): Plugin {
 	let brixFsDir: string | undefined;
+	const controllersPattern = controllersGlobPattern(
+		options.controllersDir ?? '$lib/brixter/controllers'
+	);
 
 	return {
 		name: 'brixter',
 		enforce: 'pre',
+		resolveId(id) {
+			if (id === CONTROLLERS_MODULE_ID) return RESOLVED_CONTROLLERS_MODULE_ID;
+			return null;
+		},
+		load(id) {
+			if (id !== RESOLVED_CONTROLLERS_MODULE_ID) return null;
+			// Eagerly collect the consumer's controller modules. Adding or removing
+			// a file under the controllers directory updates this automatically —
+			// no registry to maintain. `initBrixControllers` runs the exports.
+			return (
+				`const modules = import.meta.glob(${JSON.stringify(controllersPattern)}, { eager: true });\n` +
+				`export default modules;\n`
+			);
+		},
 		config(userConfig) {
 			const root = path.resolve(userConfig.root ?? process.cwd());
 
