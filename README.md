@@ -42,6 +42,8 @@ components:
 
 That file compiles to a component with SEO metadata already wired into `<head>`. Its URL is simply where it sits in your routes — no slugs, no mapping table.
 
+**Controllers** — because briks are pure markup (no `<script>`), any interactivity lives in vanilla JS/TS *controllers* under `$lib/brixter/controllers/`. Each file progressively enhances the rendered DOM by hooking onto `data-*` attributes, is auto-registered (adding a file registers it — no registry to edit), and runs client-side through `initBrixControllers`. See the [`brixter` package guide](./packages/brixter/README.md#controllers-progressive-enhancement).
+
 **The engine is portable.** The heart of Brixter — the page format, parser, interpreter, and (de)serializers — lives in a dependency-free core with no framework ties. SvelteKit is the first integration, not a permanent commitment; the framework-specific layer is deliberately thin.
 
 ## Packages

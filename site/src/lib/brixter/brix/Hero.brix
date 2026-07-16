@@ -7,7 +7,7 @@ fields:
         default: '#'
 ---
 <section class="relative overflow-hidden bg-gray-50 px-6 py-20 dark:bg-gray-900">
-	<div class="mx-auto max-w-2xl text-center">
+	<div class="mx-auto max-w-2xl text-center" data-reveal>
 		<p
 			class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
 			data-brixter-field="eyebrow"
