@@ -133,6 +133,49 @@ Automatic injection can be turned off with `brixter({ seo: false })`, and you ca
 <BrixSeo title="About us" description="…" />
 ```
 
+## Sitemap
+
+Add a `sitemap.xml` that auto-discovers every page under `src/routes` — `.brix.yaml`, `+page.svelte`, and mdsvex — with one file:
+
+```ts
+// src/routes/sitemap.xml/+server.ts
+export { GET, prerender } from 'brixter/sveltekit/sitemap';
+```
+
+In dev (SSR) `<loc>` uses the request origin automatically. Sitemaps need **absolute** URLs, so for a prerendered build provide your canonical origin via `siteUrl` — under prerendering SvelteKit's request origin is synthetic:
+
+```ts
+// src/routes/sitemap.xml/+server.ts
+import { createSitemap } from 'brixter/sveltekit/sitemap';
+export const { GET, prerender } = createSitemap({ siteUrl: 'https://example.com' });
+```
+
+To drive the origin from an env file, read it in your `+server.ts` and pass it through:
+
+```ts
+import { PUBLIC_SITE_URL } from '$env/static/public';
+import { createSitemap } from 'brixter/sveltekit/sitemap';
+export const { GET, prerender } = createSitemap({ siteUrl: PUBLIC_SITE_URL });
+```
+
+Per-page control lives in the page's metadata (no extra config):
+
+- `robots: noindex` (or `noindex,nofollow`) — excluded from the sitemap.
+- `sitemap: false` — excluded.
+- `sitemap: { changefreq, priority, lastmod, loc }` — override individual fields (`loc` sets an explicit URL).
+
+Route groups `(marketing)` are collapsed and dynamic `[slug]` routes are skipped from the automatic set — feed those from your data with `additionalPaths`:
+
+```ts
+export const { GET, prerender } = createSitemap({
+  siteUrl: 'https://example.com',
+  additionalPaths: async () =>
+    (await getPosts()).map((p) => ({ loc: `/blog/${p.slug}`, lastmod: p.updatedAt }))
+});
+```
+
+`createSitemap` also accepts `trailingSlash`, `defaults` (`changefreq`/`priority`), and `filter`/`transform` hooks. The URL model and XML serializer are framework-agnostic (`@brixter/core/sitemap`), so the discovery layer is the only SvelteKit-specific part.
+
 ## Theming
 
 Briks are styled with Tailwind utilities and a small theme contract. Import the base styles and declare the dark-mode variant your briks rely on:

@@ -21,7 +21,8 @@
   "include": [
     "./index.ts",
     "./core.ts",
-    "./markup/**/*.ts"
+    "./markup/**/*.ts",
+    "./sitemap/**/*.ts"
   ],
   "exclude": [
     "./dist",

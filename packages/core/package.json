@@ -38,6 +38,10 @@
 		"./render": {
 			"types": "./dist/markup/index.d.ts",
 			"default": "./dist/markup/index.js"
+		},
+		"./sitemap": {
+			"types": "./dist/sitemap/index.d.ts",
+			"default": "./dist/sitemap/index.js"
 		}
 	},
 	"publishConfig": {
