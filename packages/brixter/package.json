@@ -48,6 +48,11 @@
 			"svelte": "./src/seo/BrixSeo.svelte",
 			"default": "./src/seo/BrixSeo.svelte"
 		},
+		"./controllers": {
+			"types": "./src/controllers/index.ts",
+			"svelte": "./src/controllers/index.ts",
+			"default": "./src/controllers/index.ts"
+		},
 		"./vite": {
 			"types": "./dist/vite/index.d.ts",
 			"default": "./dist/vite/index.js"

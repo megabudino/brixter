@@ -9,6 +9,7 @@ fields:
 <section class="bg-gray-50 px-6 py-20 dark:bg-gray-900">
 	<div
 		class="mx-auto max-w-5xl border border-gray-300 bg-white px-6 py-12 text-center md:px-12 dark:border-gray-700 dark:bg-gray-900"
+		data-reveal
 	>
 		<h2
 			class="font-display text-heading mx-auto max-w-2xl text-3xl md:text-4xl"

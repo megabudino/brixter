@@ -2,3 +2,32 @@
 @import '../lib/brixter/theme.css';
 @source '../lib/brixter/brix';
 @plugin '@tailwindcss/typography';
+
+/*
+ * Reveal-on-scroll, driven by the `hero.ts` brix controller.
+ *
+ * Markup carries only `data-reveal` (start state). The controller adds
+ * `data-revealed="true"` when the element scrolls into view (>= 20% visible),
+ * and this transition animates the change. No JS touches styles directly.
+ */
+[data-reveal] {
+	opacity: 0;
+	transform: translateY(1.5rem);
+	transition:
+		opacity 0.7s ease,
+		transform 0.7s ease;
+}
+
+[data-reveal][data-revealed='true'] {
+	opacity: 1;
+	transform: none;
+}
+
+/* Respect users who ask for less motion: show content, skip the animation. */
+@media (prefers-reduced-motion: reduce) {
+	[data-reveal] {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+}
