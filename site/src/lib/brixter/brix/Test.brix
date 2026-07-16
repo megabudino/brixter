@@ -18,16 +18,14 @@ fields:
 
 			<h2
 				class="font-display text-heading text-3xl md:text-4xl"
-				data-brixter-field="headline"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="headline:richtext-inline"
 			>
 				A beautiful collection of images.
 			</h2>
 
 			<p
 				class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
-				data-brixter-field="description"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="description:richtext-inline"
 			>
 				Browse through this curated selection of visuals, each with its own title and caption.
 			</p>
@@ -54,8 +52,7 @@ fields:
 					</h3>
 					<p
 						class="text-secondary mt-1 text-sm leading-5"
-						data-brixter-field="images[].caption"
-						data-brixter-kind="richtext-inline"
+						data-brixter-field="images[].caption:richtext-inline"
 					>
 						A short caption describing this image.
 					</p>

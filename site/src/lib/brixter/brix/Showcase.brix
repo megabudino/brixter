@@ -25,16 +25,14 @@ fields:
 
 		<h2
 			class="font-display text-heading text-3xl md:text-4xl"
-			data-brixter-field="headline"
-			data-brixter-kind="richtext-inline"
+			data-brixter-field="headline:richtext-inline"
 		>
 			Built from a plain markup file.
 		</h2>
 
 		<p
 			class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
-			data-brixter-field="description"
-			data-brixter-kind="richtext-inline"
+			data-brixter-field="description:richtext-inline"
 		>
 			This brik has no Svelte component — it is interpreted at runtime.
 		</p>
@@ -46,16 +44,14 @@ fields:
 			>
 				<span
 					class="mb-3 inline-flex h-6 w-6 text-yellow-500 dark:text-yellow-400"
-					data-brixter-field="features[].icon"
-					data-brixter-kind="icon"
+					data-brixter-field="features[].icon:icon"
 				></span>
 				<h3 class="text-heading text-lg font-semibold" data-brixter-field="features[].title">
 					Feature title
 				</h3>
 				<p
 					class="text-secondary mt-2 text-sm leading-6"
-					data-brixter-field="features[].text"
-					data-brixter-kind="richtext-inline"
+					data-brixter-field="features[].text:richtext-inline"
 				>
 					Feature description goes here.
 				</p>

@@ -19,8 +19,7 @@ fields:
 
 				<h2
 					class="font-display text-heading text-3xl md:text-4xl"
-					data-brixter-field="headline"
-					data-brixter-kind="richtext-inline"
+					data-brixter-field="headline:richtext-inline"
 				>
 					Built for people who live between product, code, and content.
 				</h2>
@@ -28,8 +27,7 @@ fields:
 
 			<p
 				class="text-secondary text-base leading-7"
-				data-brixter-field="description"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="description:richtext-inline"
 			>
 				Brixter removes friction from marketing pages without turning your project into an opaque platform.
 			</p>
@@ -48,8 +46,7 @@ fields:
 				</p>
 				<p
 					class="text-secondary mt-4 text-sm leading-6"
-					data-brixter-field="members[].bio"
-					data-brixter-kind="richtext-inline"
+					data-brixter-field="members[].bio:richtext-inline"
 				>
 					Defines briks, maintains the design system, and reviews changes like regular code.
 				</p>

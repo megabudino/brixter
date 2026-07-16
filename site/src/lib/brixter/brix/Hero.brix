@@ -17,31 +17,28 @@ fields:
 
 		<h1
 			class="font-display text-heading text-4xl leading-tight md:text-5xl"
-			data-brixter-field="headline"
-			data-brixter-kind="richtext-inline"
+			data-brixter-field="headline:richtext-inline"
 		>
 			Headline goes here.
 		</h1>
 
 		<p
 			class="text-secondary mt-5 max-w-2xl text-lg leading-7"
-			data-brixter-field="subtitle"
-			data-brixter-kind="richtext-inline"
+			data-brixter-field="subtitle:richtext-inline"
 		>
 			Supporting subtitle.
 		</p>
 
 		<div class="mt-8 flex items-center justify-center gap-4">
 			<a href="#" class="btn-site-primary" data-brixter-field="cta.label" data-brixter-bind="href:cta.href">Get started</a>
-			<p class="text-muted text-sm" data-brixter-field="cta.note" data-brixter-kind="richtext-inline">No credit card required.</p>
+			<p class="text-muted text-sm" data-brixter-field="cta.note:richtext-inline">No credit card required.</p>
 		</div>
 
 		<img
 			src=""
 			alt=""
 			class="mt-12 w-full max-w-3xl"
-			data-brixter-field="screenshot"
-			data-brixter-kind="image"
+			data-brixter-field="screenshot:image"
 		/>
 	</div>
 </section>

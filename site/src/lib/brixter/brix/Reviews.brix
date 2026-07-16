@@ -18,8 +18,7 @@ fields:
 
 			<h2
 				class="font-display text-heading text-3xl md:text-4xl"
-				data-brixter-field="headline"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="headline:richtext-inline"
 			>
 				Built for teams that refuse to choose between speed and control.
 			</h2>
@@ -32,8 +31,7 @@ fields:
 			>
 				<blockquote
 					class="text-secondary text-sm leading-6"
-					data-brixter-field="reviews[].quote"
-					data-brixter-kind="richtext-inline"
+					data-brixter-field="reviews[].quote:richtext-inline"
 				>
 					I can finally update a landing page without opening an issue for every headline.
 				</blockquote>
