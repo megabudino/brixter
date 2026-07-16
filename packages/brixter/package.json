@@ -57,6 +57,11 @@
 			"types": "./dist/vite/index.d.ts",
 			"default": "./dist/vite/index.js"
 		},
+		"./sveltekit/sitemap": {
+			"types": "./src/sveltekit/sitemap.ts",
+			"svelte": "./src/sveltekit/sitemap.ts",
+			"default": "./src/sveltekit/sitemap.ts"
+		},
 		"./styles.css": "./styles.css"
 	},
 	"scripts": {

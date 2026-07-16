@@ -70,16 +70,14 @@ defaults:
 
 			<h2
 				class="font-display text-heading text-3xl md:text-4xl"
-				data-brixter-field="headline"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="headline:richtext-inline"
 			>
 				Simple pricing that scales with you.
 			</h2>
 
 			<p
 				class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
-				data-brixter-field="description"
-				data-brixter-kind="richtext-inline"
+				data-brixter-field="description:richtext-inline"
 			>
 				Click any plan card to edit just that plan in the inspector sidebar.
 			</p>
@@ -126,8 +124,7 @@ defaults:
 
 				<p
 					class="text-secondary mt-4 text-sm leading-6"
-					data-brixter-field="plans[].description"
-					data-brixter-kind="richtext-inline"
+					data-brixter-field="plans[].description:richtext-inline"
 					data-brixter-label="Description"
 				>
 					A short description of what this plan includes.
