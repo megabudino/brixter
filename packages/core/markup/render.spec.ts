@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseTemplate } from './parser';
-import { render, renderBrixSource, renderToString, stripFrontmatter } from './render';
+import {
+	parseFieldAttribute,
+	render,
+	renderBrixSource,
+	renderToString,
+	stripFrontmatter
+} from './render';
 
 describe('renderBrixSource — frontmatter handling', () => {
 	const file = `---\ndescription: x\nfields:\n  y: {}\n---\n<p data-brixter-field="title">t</p>`;
@@ -278,6 +284,94 @@ describe('renderToString — data-brixter-bind retro-compat', () => {
 			c: 'b'
 		});
 		expect(html).toBe('<div class="b" data-brixter-bind="class: c">x</div>');
+	});
+});
+
+describe('parseFieldAttribute', () => {
+	it('splits an inline `path:kind` suffix', () => {
+		expect(parseFieldAttribute('a.b:richtext-inline')).toEqual({
+			path: 'a.b',
+			kind: 'richtext-inline'
+		});
+	});
+
+	it('returns a bare path with no kind when there is no colon', () => {
+		expect(parseFieldAttribute('a.b')).toEqual({ path: 'a.b' });
+	});
+
+	it('preserves `[]` collection markers in the path', () => {
+		expect(parseFieldAttribute('items[].x:icon')).toEqual({ path: 'items[].x', kind: 'icon' });
+	});
+
+	it('splits on the LAST colon only', () => {
+		expect(parseFieldAttribute('a:b:c')).toEqual({ path: 'a:b', kind: 'c' });
+	});
+});
+
+describe('renderToString — compact field syntax', () => {
+	// Removing the annotation attributes lets us assert the *rendered output* of
+	// the compact `path:kind` form is byte-identical to the two-attribute form —
+	// the annotations themselves are preserved verbatim (and so differ by design).
+	const stripAnnotations = (html: string) =>
+		html
+			.replace(/ data-brixter-field="[^"]*"/g, '')
+			.replace(/ data-brixter-kind="[^"]*"/g, '');
+
+	it('compact `headline:richtext-inline` matches the two-attribute form byte-for-byte', () => {
+		const props = { headline: '<em>Hi</em>' };
+		const compact = renderToString('<h2 data-brixter-field="headline:richtext-inline"></h2>', props);
+		const separate = renderToString(
+			'<h2 data-brixter-field="headline" data-brixter-kind="richtext-inline"></h2>',
+			props
+		);
+		expect(compact).toBe('<h2 data-brixter-field="headline:richtext-inline"><em>Hi</em></h2>');
+		expect(stripAnnotations(compact)).toBe(stripAnnotations(separate));
+	});
+
+	it('compact richtext-inline on a collection path resolves the first entry', () => {
+		const props = { testimonials: [{ quote: '<em>Great</em>' }] };
+		const compact = renderToString(
+			'<p data-brixter-field="testimonials[].quote:richtext-inline"></p>',
+			props
+		);
+		const separate = renderToString(
+			'<p data-brixter-field="testimonials[].quote" data-brixter-kind="richtext-inline"></p>',
+			props
+		);
+		expect(compact).toBe(
+			'<p data-brixter-field="testimonials[].quote:richtext-inline"><em>Great</em></p>'
+		);
+		expect(stripAnnotations(compact)).toBe(stripAnnotations(separate));
+	});
+
+	it('compact `icon` kind injects raw HTML from a collection path', () => {
+		const props = { benefits: [{ icon: '<svg></svg>' }] };
+		const compact = renderToString('<span data-brixter-field="benefits[].icon:icon"></span>', props);
+		const separate = renderToString(
+			'<span data-brixter-field="benefits[].icon" data-brixter-kind="icon"></span>',
+			props
+		);
+		expect(compact).toBe('<span data-brixter-field="benefits[].icon:icon"><svg></svg></span>');
+		expect(stripAnnotations(compact)).toBe(stripAnnotations(separate));
+	});
+
+	it('img with no kind defaults to `image` and writes src', () => {
+		const props = { image: '/media/a.png' };
+		const compact = renderToString('<img data-brixter-field="image">', props);
+		const separate = renderToString('<img data-brixter-field="image" data-brixter-kind="image">', props);
+		expect(compact).toBe('<img data-brixter-field="image" src="/media/a.png">');
+		expect(stripAnnotations(compact)).toBe(stripAnnotations(separate));
+	});
+
+	it('non-img with no kind defaults to `text` (escaped)', () => {
+		const props = { cta: { label: 'Get <b>started</b>' } };
+		const compact = renderToString('<a data-brixter-field="cta.label">x</a>', props);
+		const separate = renderToString(
+			'<a data-brixter-field="cta.label" data-brixter-kind="text">x</a>',
+			props
+		);
+		expect(compact).toBe('<a data-brixter-field="cta.label">Get &lt;b&gt;started&lt;/b&gt;</a>');
+		expect(stripAnnotations(compact)).toBe(stripAnnotations(separate));
 	});
 });
 

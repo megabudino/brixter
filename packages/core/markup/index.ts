@@ -7,7 +7,13 @@
  * functions via the package root.
  */
 
-export { render, renderToString, renderBrixSource, stripFrontmatter } from './render.js';
+export {
+	render,
+	renderToString,
+	renderBrixSource,
+	stripFrontmatter,
+	parseFieldAttribute
+} from './render.js';
 export { parseTemplate, type TemplateNode } from './parser.js';
 export {
 	parseBindings,

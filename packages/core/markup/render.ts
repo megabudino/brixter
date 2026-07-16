@@ -43,6 +43,24 @@ const BIND_ATTR = 'data-brixter-bind';
 
 const RAW_HTML_KINDS = new Set(['richtext-inline', 'richtext-block', 'icon']);
 
+/**
+ * Split a `data-brixter-field` value into its path and optional inline kind.
+ *
+ * The compact syntax lets a field annotation carry its kind as a suffix on the
+ * path — `headline:richtext-inline` — instead of a separate `data-brixter-kind`
+ * attribute. Field paths are dotted identifiers with optional `[]` collection
+ * markers (see `parser.ts` / the `render.spec.ts` fixtures) and never contain a
+ * `:`, so the kind is whatever follows the LAST `:`. A value with no `:` is a
+ * bare path carrying no inline kind.
+ */
+export function parseFieldAttribute(raw: string): { path: string; kind?: string } {
+	const idx = raw.lastIndexOf(':');
+	if (idx === -1) {
+		return { path: raw };
+	}
+	return { path: raw.slice(0, idx), kind: raw.slice(idx + 1) };
+}
+
 type Props = Record<string, unknown>;
 
 interface RenderContext {
@@ -117,8 +135,13 @@ function renderElement(el: ElementNode, ctx: RenderContext): string {
 
 function renderSingleElement(el: ElementNode, ctx: RenderContext): string {
 	const attributes = el.attributes.map((attr) => ({ ...attr }));
-	const fieldPath = getAttr(el, FIELD_ATTR);
-	const kind = getAttr(el, KIND_ATTR) ?? (isImg(el) ? 'image' : 'text');
+	const fieldRaw = getAttr(el, FIELD_ATTR);
+	const field = fieldRaw === undefined ? undefined : parseFieldAttribute(fieldRaw);
+	const fieldPath = field?.path;
+	// Kind precedence: inline `path:kind` suffix > `data-brixter-kind` attribute >
+	// default (`image` for <img>, else `text`). The `data-brixter-kind` fallback
+	// keeps the pre-compact two-attribute form working unchanged.
+	const kind = field?.kind ?? getAttr(el, KIND_ATTR) ?? (isImg(el) ? 'image' : 'text');
 
 	let innerHtml: string | null = null;
 	let dropChildren = false;
