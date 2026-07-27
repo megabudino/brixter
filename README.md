@@ -67,6 +67,33 @@ Copilot instructions, `AGENTS.md` — from one source. See the
 
 You'll need an existing SvelteKit app. See the [`brixter` package guide](./packages/brixter/README.md) for installing the Vite plugin, registering the `.brix.yaml` extension, and authoring your first brik.
 
+## Editor syntax highlighting
+
+Briks are `.brix` files: a YAML frontmatter between `---` fences, then annotated HTML. [`tree-sitter-brix`](https://github.com/Brixter-Labs/tree-sitter-brix) is a deliberately minimal grammar that parses neither — it delimits the two regions and delegates them to the native YAML and HTML grammars via language injection. (Pages are `.brix.yaml`, already covered by any editor's YAML support.)
+
+**Zed.** [`zed-brix-extension`](https://github.com/Brixter-Labs/zed-brix-extension) wires the grammar up. It isn't on the Zed registry, so install it as a dev extension: clone the repo, then `cmd-shift-p` → `zed: install dev extension` → pick the folder. Zed fetches and compiles the grammar to WebAssembly itself — no need to clone `tree-sitter-brix`. Extensions are per-user, so this is a one-time setup across all projects. For Tailwind autocomplete inside the injected HTML region, add to `settings.json`:
+
+```json
+{
+  "languages": {
+    "Brix": { "language_servers": ["tailwindcss-language-server"] }
+  },
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": { "includeLanguages": { "Brix": "html" } }
+    }
+  }
+}
+```
+
+**Other editors.** VS Code doesn't use Tree-sitter for third-party extensions, so the grammar doesn't help there. The fallback covers most of the file:
+
+```json
+"files.associations": { "*.brix": "html" }
+```
+
+The body highlights correctly and Tailwind works; the frontmatter stays plain text, without errors. Neovim can consume the grammar through nvim-treesitter's `install_info`, as manual config.
+
 ## Contributing
 
 Issues and pull requests are welcome. The codebase is Bun-based (`bun install` at the root); packages are tested with Vitest.
