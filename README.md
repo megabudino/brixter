@@ -57,6 +57,12 @@ This is a monorepo. Two packages are published:
 
 The visual editor (**Brixter Editor**) is a separate application. It reads and writes the same files in your repo — it is not required to build or run a Brixter site, and it does not ship inside these packages.
 
+**Agent-ready.** The `brixter` package ships guides for coding agents covering how
+to author briks, pages and controllers. `npx brixter skills install` translates
+them into whatever agents your team runs — Claude Code skills, Cursor rules,
+Copilot instructions, `AGENTS.md` — from one source. See the
+[package guide](./packages/brixter/README.md#agent-skills).
+
 ## Getting started
 
 You'll need an existing SvelteKit app. See the [`brixter` package guide](./packages/brixter/README.md) for installing the Vite plugin, registering the `.brix.yaml` extension, and authoring your first brik.

@@ -23,10 +23,15 @@
 	"type": "module",
 	"packageManager": "bun@1.2.15",
 	"svelte": "./src/index.ts",
+	"bin": {
+		"brixter": "./bin/brixter.mjs"
+	},
 	"files": [
 		"LICENSE",
 		"README.md",
+		"bin",
 		"dist",
+		"skills",
 		"src",
 		"styles.css"
 	],

@@ -219,6 +219,48 @@ export const initHero: BrixController = (root = document) => {
 
 This is purely a selector choice — both styles use the exact same folder, signature, and lifecycle.
 
+## Agent skills
+
+Brixter ships the guides your coding agent needs to author briks, pages and
+controllers correctly — the annotation syntax is specific, and a wrong path
+fails silently rather than loudly. Install them into your project:
+
+```sh
+npx brixter skills install
+```
+
+There is no skill format shared across agents, so the command **translates** one
+canonical source into each agent's own convention:
+
+| Target     | Writes                                                         |
+| ---------- | -------------------------------------------------------------- |
+| `claude`   | `.claude/skills/<name>/SKILL.md`                               |
+| `cursor`   | `.cursor/rules/<name>.mdc` (auto-attached by glob)             |
+| `copilot`  | `.github/instructions/<name>.instructions.md` (`applyTo` glob) |
+| `windsurf` | `.windsurf/rules/<name>.md`                                    |
+| `agents`   | `.brixter/skills/` + a managed block in `AGENTS.md`            |
+
+By default it writes for the agents it detects in your project, plus `AGENTS.md`
+— which Codex, Amp, Zed, OpenCode and others read. Override with
+`--agent claude,cursor` or `--agent all`. **Commit the result**: the files are
+plain markdown, so they then cover every teammate regardless of the agent they run.
+
+Four skills are installed, each activating on the files it governs:
+
+| Skill                | Applies to                             |
+| -------------------- | -------------------------------------- |
+| `brixter-site`       | Setting up or extending a Brixter site |
+| `brixter-brik`       | `**/*.brix`                            |
+| `brixter-page`       | `**/*.brix.yaml`                       |
+| `brixter-controller` | `**/lib/brixter/controllers/**`        |
+
+Other commands: `npx brixter skills list` shows the skills and their globs;
+`npx brixter skills status` reports which files are installed, locally modified,
+or left over from an older version of the package (rerun `install` to refresh —
+files you edited are skipped unless you pass `--force`). Add `--global` to
+install into `~/.claude/skills`; other agents have no user-level rules directory,
+so they are project-scoped only.
+
 ## Layouts
 
 Set `layout: <Name>` on a page (or configure a `defaultLayout`) to wrap its content in a component from `$lib/brixter/layouts/<Name>.svelte`. The layout receives the page `metadata` both as a `metadata` prop and spread as individual props.
@@ -284,9 +326,9 @@ Route groups `(marketing)` are collapsed and dynamic `[slug]` routes are skipped
 
 ```ts
 export const { GET, prerender } = createSitemap({
-  siteUrl: 'https://example.com',
-  additionalPaths: async () =>
-    (await getPosts()).map((p) => ({ loc: `/blog/${p.slug}`, lastmod: p.updatedAt }))
+	siteUrl: 'https://example.com',
+	additionalPaths: async () =>
+		(await getPosts()).map((p) => ({ loc: `/blog/${p.slug}`, lastmod: p.updatedAt }))
 });
 ```
 
