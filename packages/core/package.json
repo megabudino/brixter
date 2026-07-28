@@ -42,6 +42,10 @@
 		"./sitemap": {
 			"types": "./dist/sitemap/index.d.ts",
 			"default": "./dist/sitemap/index.js"
+		},
+		"./redirects": {
+			"types": "./dist/redirects/index.d.ts",
+			"default": "./dist/redirects/index.js"
 		}
 	},
 	"publishConfig": {

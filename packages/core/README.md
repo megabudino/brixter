@@ -20,6 +20,8 @@ npm install @brixter/core
 |--------|----------|
 | `@brixter/core` | Everything: the document format (fields, definitions, builder helpers) plus the markup renderer. |
 | `@brixter/core/render` | Only the standalone renderer — parser + interpreter, no authoring helpers. Use this for build/SSR rendering to keep the bundle minimal. |
+| `@brixter/core/sitemap` | Route-path → URL translation, per-page sitemap directives, and the XML serializer. |
+| `@brixter/core/redirects` | The redirect compiler: alias reading, validation against a route manifest, chain flattening, and serializers for the hosting layers' native formats. |
 
 ## Rendering brix
 
@@ -86,6 +88,33 @@ value can never inject extra declarations or break out of the attribute:
 space. Quotes and parentheses are **kept** so `url("…")` / `url('…')` survive;
 quotes are HTML-escaped to `&quot;` at attribute-serialization time and decoded
 back inside the value by the browser.
+
+## Redirects
+
+`@brixter/core/redirects` compiles redirect declarations into one flat, ordered
+map. It takes a **list** of sources — a page's `aliases` is the first, and
+`pageAliasSource` builds it — plus the routes the app already serves:
+
+```ts
+import { compileRedirects, pageAliasSource } from '@brixter/core/redirects';
+
+const rules = compileRedirects({
+	sources: [pageAliasSource(pages)],
+	routes, // `{ id, pattern }`, e.g. SvelteKit's `builder.routes`
+	knownPaths // prerendered pages, static assets
+});
+```
+
+It throws `RedirectCompileError` on any inconsistency — an alias that shadows an
+existing route, is claimed twice, points nowhere, or loops — with every issue
+carrying the file that declares the rule. `analyzeRedirects` returns the same
+result without throwing, for callers that report rather than stop.
+
+Chains are flattened so each rule resolves in one hop, and the output is sorted
+deterministically. `formatRedirectsFile` / `mergeRedirectsFile` serialize to the
+`_redirects` format (Netlify, Cloudflare Pages); `toVercelRoutes` to Vercel's
+Build Output API. `routeIdToPattern` builds a route matcher for callers that
+have no framework manifest to hand.
 
 ## Document format & helpers
 

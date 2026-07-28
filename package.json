@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build:core": "npm run build --workspace=@brixter/core",
-    "build:brixter": "npm run build:package --workspace=brixter",
+    "build:brixter": "npm run build:core && npm run build:package --workspace=brixter",
     "pack:brixter": "npm run build:brixter && npm pack --workspace=brixter",
     "release:core:patch": "node ./release.mjs core patch",
     "release:core:minor": "node ./release.mjs core minor",

@@ -11,6 +11,8 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'@brixter/core/render': fromRoot('./packages/core/markup/index.ts'),
+			'@brixter/core/sitemap': fromRoot('./packages/core/sitemap/index.ts'),
+			'@brixter/core/redirects': fromRoot('./packages/core/redirects/index.ts'),
 			'@brixter/core': fromRoot('./packages/core/index.ts')
 		}
 	}

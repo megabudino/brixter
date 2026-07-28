@@ -1,6 +1,6 @@
 ---
 name: brixter-page
-description: Author or edit a `.brix.yaml` page — routing, the `components` list and its props, page metadata, SEO tags (title, description, canonical, robots, Open Graph, Twitter, JSON-LD), and per-page sitemap control. Use when adding a page to a Brixter site, changing the sections on one, or editing any `.brix.yaml` / `.brix.yml` file.
+description: Author or edit a `.brix.yaml` page — routing, the `components` list and its props, page metadata, SEO tags (title, description, canonical, robots, Open Graph, Twitter, JSON-LD), per-page sitemap control, and redirects from old URLs via `aliases`. Use when adding a page to a Brixter site, changing the sections on one, redirecting a URL that moved, or editing any `.brix.yaml` / `.brix.yml` file.
 ---
 
 # Authoring a page
@@ -141,6 +141,27 @@ sitemap:                 # or override individual fields
 Route groups like `(marketing)` are collapsed; dynamic `[slug]` routes are
 skipped from the automatic set and fed via `additionalPaths` in
 `createSitemap()`.
+
+## `aliases` — redirects
+
+When this page replaces an old URL, the page owns the redirect. List the old
+paths in `aliases`:
+
+```yaml
+aliases:
+  - /plans                 # 301, the default
+  - path: /black-friday    # long form, when the status matters
+    status: 302
+```
+
+Every alias on the site is compiled at build time into one map, emitted in the
+adapter's native format and served by the hosting layer with a real status code.
+Keep the declaration on the page that answers for the old URL — deleting the page
+deletes its redirects.
+
+The build **fails** if an alias shadows a path the site already serves, if two
+pages claim the same alias, or if the aliases form a cycle. A page on a dynamic
+`[slug]` route can't declare aliases: it has no single destination.
 
 ## Workflow
 

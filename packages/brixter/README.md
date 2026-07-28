@@ -334,6 +334,104 @@ export const { GET, prerender } = createSitemap({
 
 `createSitemap` also accepts `trailingSlash`, `defaults` (`changefreq`/`priority`), and `filter`/`transform` hooks. The URL model and XML serializer are framework-agnostic (`@brixter/core/sitemap`), so the discovery layer is the only SvelteKit-specific part.
 
+## Redirects
+
+When a page replaces an old URL, the page says so. Add the old paths to its
+`aliases`:
+
+```yaml
+# src/routes/pricing/+page.brix.yaml  →  /pricing
+title: Pricing
+aliases:
+  - /plans
+  - /old-pricing
+```
+
+Wrap your adapter and every alias on the site is compiled into one map, emitted
+in that adapter's native format:
+
+```js
+// svelte.config.js
+import adapter from '@sveltejs/adapter-vercel';
+import { withRedirects } from 'brixter/sveltekit/redirects';
+
+export default {
+	kit: { adapter: withRedirects(adapter()) }
+};
+```
+
+Redirects are then served by the hosting layer with **real status codes**, before
+any application code runs — `_redirects` for Netlify and Cloudflare Pages, routes
+in `.vercel/output/config.json` for Vercel. Brixter never emits a meta refresh:
+if it can't tell which deployment format an adapter produces, it fails the build
+and asks for `target` rather than falling back to one.
+
+`301` is the default. Use the long form when it isn't the right answer — a
+temporary move, or a `303` after a form:
+
+```yaml
+aliases:
+  - path: /black-friday
+    status: 302
+```
+
+Chains are flattened: if `/a` aliases to `/b` and `/b` later moves to `/c`, both
+ship pointing at `/c`, so the browser only ever makes one hop.
+
+### The build refuses an incoherent redirect
+
+Compilation happens inside `adapt`, where the content tree and SvelteKit's route
+manifest are both available — so a broken redirect stops the build instead of
+reaching production as a dead URL. Every message names the file holding the rule:
+
+```
+error during build:
+Error: [brixter] redirects: 1 redirect could not be compiled:
+  • src/routes/test/+page.brix.yaml: alias `/sitemap.xml` collides with an
+    existing path — it is already served by the site
+```
+
+Refused: an alias that shadows a route, page or static asset the site already
+serves; the same alias claimed by two pages; a destination no route, page or
+alias resolves to; and cycles. A dynamic route that *could* have matched the
+alias is not a collision — the alias is a statement that the URL moved, and on a
+site with a catch-all route the opposite rule would forbid redirects entirely.
+
+In `vite dev` there is no hosting layer, so the plugin answers aliases itself
+with the same status code the edge would send. Inconsistencies are warnings
+there, not failures — the build is where they stop the world.
+
+### Options
+
+```ts
+withRedirects(adapter(), {
+	target: undefined, // 'netlify' | 'vercel' | 'cloudflare'; detected from the adapter
+	outDir: undefined, // deployment output dir; defaults to the target's convention
+	sources: [], // extra rule sources, beyond page aliases
+	trailingSlash: 'never',
+	defaultStatus: 301,
+	emit: true // false to validate without writing
+});
+```
+
+Set `target` when the adapter can't name its own platform — `adapter-static`
+deployed to Netlify, say. The compiler takes a **list** of sources: page aliases
+are the first, and `sources` is where another goes — a central file for
+redirects whose destination isn't a page, an export from a legacy CMS. They are
+compiled together, under the same consistency rules:
+
+```js
+withRedirects(adapter(), {
+	sources: () => [{ name: 'redirects.yaml', rules: readLegacyRedirects() }]
+});
+```
+
+Each rule is `{ from, to, status?, file }` — `file` is what diagnostics point
+at. Pass the same `sources` to `brixter({ redirects: { sources } })` so the dev
+server sees them too. The compiler, path model and serializers are
+framework-agnostic (`@brixter/core/redirects`); only the route-manifest and
+adapter plumbing is SvelteKit-specific.
+
 ## Theming
 
 Briks are styled with Tailwind utilities and a small theme contract. Import the base styles and declare the dark-mode variant your briks rely on:
@@ -364,7 +462,8 @@ brixter({
 	layoutsDir: '$lib/brixter/layouts', // where layout components live
 	controllersDir: '$lib/brixter/controllers', // where progressive-enhancement controllers live
 	defaultLayout: undefined, // layout used when a page omits `layout`
-	seo: true // inject <BrixSeo> into every page
+	seo: true, // inject <BrixSeo> into every page
+	redirects: {} // serve page `aliases` in dev; `false` to disable
 });
 ```
 

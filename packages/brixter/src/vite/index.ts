@@ -9,6 +9,12 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 import { compileBrixYaml, isBrixYaml } from './brix-yaml.ts';
+import {
+	compileDevRedirects,
+	resolveDevRedirect,
+	type CompiledDevRedirects,
+	type DevRedirectsOptions
+} from './redirects.ts';
 
 export interface BrixterPluginOptions {
 	/**
@@ -42,6 +48,15 @@ export interface BrixterPluginOptions {
 	 * @default true
 	 */
 	seo?: boolean;
+	/**
+	 * Serve page `aliases` as real redirects in `vite dev`, matching what the
+	 * hosting layer will do in production. Pass the same `sources` you give
+	 * `withRedirects()` so both see the same rules.
+	 *
+	 * Compiling and *emitting* redirects for production is the adapter's job —
+	 * see `brixter/sveltekit/redirects`.
+	 */
+	redirects?: DevRedirectsOptions | false;
 }
 
 const CONTROLLERS_MODULE_ID = 'virtual:brixter-controllers';
@@ -112,6 +127,36 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 				code: compileBrixYaml(code, options, brixFsDir),
 				map: { mappings: '' }
 			};
+		},
+		configureServer(server) {
+			const redirectOptions = options.redirects === false ? null : (options.redirects ?? {});
+			if (!redirectOptions || redirectOptions.enabled === false) return;
+
+			const root = server.config.root;
+			// Compiled lazily and thrown away whenever a route file changes, so
+			// adding an alias takes effect without restarting the dev server.
+			let compiled: CompiledDevRedirects | null = null;
+			const invalidate = (file: string) => {
+				if (/[\\/]\+(page|server)\b/.test(file)) compiled = null;
+			};
+			server.watcher.on('add', invalidate);
+			server.watcher.on('unlink', invalidate);
+			server.watcher.on('change', invalidate);
+
+			server.middlewares.use((req, res, next) => {
+				if (!req.url) return next();
+				if (!compiled) {
+					compiled = compileDevRedirects(root, redirectOptions);
+					for (const warning of compiled.warnings) {
+						server.config.logger.warn(`[brixter] redirects: ${warning}`);
+					}
+				}
+				const hit = resolveDevRedirect(compiled, req.url, redirectOptions.trailingSlash);
+				if (!hit) return next();
+				res.statusCode = hit.status;
+				res.setHeader('location', hit.location);
+				res.end();
+			});
 		}
 	};
 }

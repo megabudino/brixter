@@ -1,6 +1,6 @@
 ---
 name: brixter-site
-description: Build or extend a Brixter-compatible marketing site in SvelteKit — install and configure the Vite plugin, lay out the `$lib/brixter` directories, decide what becomes a brik vs a page prop, and wire theming, SEO and the sitemap. Use this whenever the project contains `.brix` / `.brix.yaml` files or the `brixter` dependency, or when asked to add a landing page, section, or marketing page to such a project.
+description: Build or extend a Brixter-compatible marketing site in SvelteKit — install and configure the Vite plugin, lay out the `$lib/brixter` directories, decide what becomes a brik vs a page prop, and wire theming, SEO, the sitemap and redirects. Use this whenever the project contains `.brix` / `.brix.yaml` files or the `brixter` dependency, or when asked to add a landing page, section, or marketing page to such a project.
 ---
 
 # Building a Brixter site
@@ -15,7 +15,7 @@ what you are about to write:
 
 | Task                                                                    | Skill                |
 | ----------------------------------------------------------------------- | -------------------- |
-| Author or edit a page (`+page.brix.yaml`), metadata, SEO, sitemap       | `brixter-page`       |
+| Author or edit a page (`+page.brix.yaml`), metadata, SEO, sitemap, redirects | `brixter-page`  |
 | Author or edit a section (`.brix` markup, editable fields, collections) | `brixter-brik`       |
 | Add interactivity to a brik                                             | `brixter-controller` |
 
@@ -39,7 +39,7 @@ src/
 
 ## Setup checklist
 
-Verify these four before writing any brik or page. If one is missing, add it.
+Verify these before writing any brik or page. If one is missing, add it.
 
 **1. `package.json`** — `brixter` is a dependency (`npm install brixter`).
 `@brixter/core` comes with it.
@@ -75,11 +75,27 @@ brixter({
 	layoutsDir: '$lib/brixter/layouts',
 	controllersDir: '$lib/brixter/controllers',
 	defaultLayout: undefined,
-	seo: true // inject <BrixSeo> into every compiled page
+	seo: true, // inject <BrixSeo> into every compiled page
+	redirects: {} // serve page `aliases` in dev; `false` to disable
 });
 ```
 
-**4. Global stylesheet** — the base styles and the dark variant briks rely on:
+**4. Redirects (only if pages declare `aliases`)** — wrap the adapter so they
+are compiled and emitted in its native format:
+
+```js
+// svelte.config.js
+import adapter from '@sveltejs/adapter-vercel';
+import { withRedirects } from 'brixter/sveltekit/redirects';
+
+const config = { kit: { adapter: withRedirects(adapter()) } };
+```
+
+Netlify, Vercel and Cloudflare Pages are detected from the adapter; pass
+`target` for anything else. Without this the `aliases` still work in dev but
+nothing is emitted for production.
+
+**5. Global stylesheet** — the base styles and the dark variant briks rely on:
 
 ```css
 @import 'brixter/styles.css';

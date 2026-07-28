@@ -62,6 +62,10 @@
 			"types": "./dist/vite/index.d.ts",
 			"default": "./dist/vite/index.js"
 		},
+		"./sveltekit/redirects": {
+			"types": "./dist/sveltekit/redirects/index.d.ts",
+			"default": "./dist/sveltekit/redirects/index.js"
+		},
 		"./sveltekit/sitemap": {
 			"types": "./src/sveltekit/sitemap.ts",
 			"svelte": "./src/sveltekit/sitemap.ts",

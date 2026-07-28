@@ -22,7 +22,8 @@
     "./index.ts",
     "./core.ts",
     "./markup/**/*.ts",
-    "./sitemap/**/*.ts"
+    "./sitemap/**/*.ts",
+    "./redirects/**/*.ts"
   ],
   "exclude": [
     "./dist",

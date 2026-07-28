@@ -3,8 +3,8 @@
 		"target": "ES2022",
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"rootDir": "./src/vite",
-		"outDir": "./dist/vite",
+		"rootDir": "./src",
+		"outDir": "./dist",
 		"rewriteRelativeImportExtensions": true,
 		"declaration": true,
 		"declarationMap": true,
@@ -18,5 +18,9 @@
 		"resolveJsonModule": true,
 		"skipLibCheck": true
 	},
-	"include": ["./src/vite/**/*.ts"]
+	// Everything that runs in Node during a build — the Vite plugin, and the
+	// adapter wrapper loaded from `svelte.config.js` — has to ship as compiled
+	// JS. The rest of the package is consumed through the app's own bundler and
+	// ships as source.
+	"include": ["./src/vite/**/*.ts", "./src/sveltekit/redirects/**/*.ts"]
 }

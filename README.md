@@ -19,7 +19,7 @@ Brixter refuses the trade-off. The content **is** the codebase:
 - **Versioned by default.** Every page is a file. Edits are diffs. Changes go through the same review, branching, and rollback you already use for code.
 - **No runtime dependency.** Pages compile to plain components at build time. There's no database call, no CMS fetch, nothing to be slow or go down between your site and its content.
 - **Editable without lock-in.** Content is authored as human-readable YAML and annotated markup — writable by hand, or through a visual editor, with the file on disk always the single source of truth.
-- **Built for marketing.** SEO (`<title>`, meta description, canonical, Open Graph, Twitter cards, JSON-LD), theming, and fast static output are first-class, not afterthoughts.
+- **Built for marketing.** SEO (`<title>`, meta description, canonical, Open Graph, Twitter cards, JSON-LD), theming, and fast static output are first-class, not afterthoughts. When a page replaces an old URL it says so, in an `aliases` field; the build compiles every alias on the site into real redirects served by your hosting layer, and refuses to ship one that collides, points nowhere or loops.
 
 ## Core concepts
 
