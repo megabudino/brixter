@@ -302,7 +302,7 @@ async function agentsMdBlock({ root, skills, version, dryRun }) {
 		'',
 		'## Brixter',
 		'',
-		'This project builds its pages with [Brixter](https://github.com/megabudino/brixter):',
+		'This project builds its pages with [Brixter](https://github.com/Brixter-Labs/brixter):',
 		'content lives in the repo as `.brix.yaml` pages and `.brix` sections, compiled at',
 		'build time. Before creating or editing one of the files below, **read the linked',
 		'guide first** — the annotation syntax is specific and failures are silent.',

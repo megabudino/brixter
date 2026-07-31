@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/megabudino/brixter.git"
+    "url": "git+https://github.com/Brixter-Labs/brixter.git"
   },
   "workspaces": [
     "site",

@@ -1,6 +1,6 @@
 # @brixter/core
 
-The agnostic brix engine that powers [Brixter](https://github.com/megabudino/brixter).
+The agnostic brix engine that powers [Brixter](https://github.com/Brixter-Labs/brixter).
 
 A pure parser + runtime interpreter for `.brix` markup, plus the brix document
 format (YAML import/export, field/definition types and helpers). It depends only

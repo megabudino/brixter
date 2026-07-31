@@ -6,13 +6,13 @@
 	"author": "megabudino (https://github.com/megabudino)",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/megabudino/brixter.git",
+		"url": "git+https://github.com/Brixter-Labs/brixter.git",
 		"directory": "packages/brixter"
 	},
 	"bugs": {
-		"url": "https://github.com/megabudino/brixter/issues"
+		"url": "https://github.com/Brixter-Labs/brixter/issues"
 	},
-	"homepage": "https://github.com/megabudino/brixter/tree/main/packages/brixter#readme",
+	"homepage": "https://github.com/Brixter-Labs/brixter/tree/main/packages/brixter#readme",
 	"keywords": [
 		"brixter",
 		"cms",
@@ -24,7 +24,7 @@
 	"packageManager": "bun@1.2.15",
 	"svelte": "./src/index.ts",
 	"bin": {
-		"brixter": "./bin/brixter.mjs"
+		"brixter": "bin/brixter.mjs"
 	},
 	"files": [
 		"LICENSE",
