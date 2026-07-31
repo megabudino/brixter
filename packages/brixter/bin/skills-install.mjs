@@ -132,7 +132,7 @@ const TARGETS = {
 // Commands
 // ---------------------------------------------------------------------------
 
-export async function installSkills({ cwd, agents, global: isGlobal, force, dryRun }) {
+export async function installSkills({ cwd, agents, global: isGlobal, force, dryRun, quiet }) {
 	const root = path.resolve(cwd);
 	const version = await packageVersion();
 	const skills = await loadSkills();
@@ -189,7 +189,10 @@ export async function installSkills({ cwd, agents, global: isGlobal, force, dryR
 		});
 	}
 
-	report({ names, written, skipped, dryRun, isGlobal, version });
+	if (quiet) reportQuiet({ written, skipped, version });
+	else report({ names, written, skipped, dryRun, isGlobal, version });
+
+	return { written, skipped, version };
 }
 
 export async function listSkills() {
@@ -359,6 +362,24 @@ function splitList(value) {
 		.split(',')
 		.map((entry) => entry.trim())
 		.filter(Boolean);
+}
+
+/**
+ * The postinstall voice: a couple of lines in someone else's `npm install`
+ * output. Silence when nothing changed, and name the skipped files, since those
+ * are the ones still carrying stale guidance.
+ */
+function reportQuiet({ written, skipped, version }) {
+	if (written.length === 0 && skipped.length === 0) return;
+
+	process.stdout.write(`brixter: refreshed ${written.length} agent skill file(s) → v${version}\n`);
+	if (skipped.length > 0) {
+		process.stdout.write(
+			`brixter: kept ${skipped.length} locally modified file(s) — ` +
+				`run \`npx brixter skills install --force\` to overwrite:\n`
+		);
+		for (const file of skipped) process.stdout.write(`  ${file.key}\n`);
+	}
 }
 
 function report({ names, written, skipped, dryRun, isGlobal, version }) {

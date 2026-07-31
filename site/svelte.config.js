@@ -29,8 +29,7 @@ const config = {
 			// '@brixter/core/sitemap' to '../packages/core/index.ts/sitemap'.
 			'@brixter/core/sitemap': '../packages/core/sitemap/index.ts',
 			'@brixter/core/redirects': '../packages/core/redirects/index.ts',
-			'@brixter/core': '../packages/core/index.ts',
-			'brixter/styles.css': '../packages/brixter/styles.css'
+			'@brixter/core': '../packages/core/index.ts'
 		}
 	}
 };

@@ -15,7 +15,9 @@
 	let preference = $state<ThemePreference>(
 		browser ? readStoredThemePreference() : DEFAULT_THEME_PREFERENCE
 	);
-	let systemDark = $state(browser ? window.matchMedia('(prefers-color-scheme: dark)').matches : false);
+	let systemDark = $state(
+		browser ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
+	);
 	const dark = $derived(resolveThemePreference(preference, systemDark));
 
 	onMount(() => {

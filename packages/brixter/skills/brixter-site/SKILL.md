@@ -13,11 +13,11 @@ build time.
 Three companion skills cover the file types in depth. Read the one that matches
 what you are about to write:
 
-| Task                                                                    | Skill                |
-| ----------------------------------------------------------------------- | -------------------- |
-| Author or edit a page (`+page.brix.yaml`), metadata, SEO, sitemap, redirects | `brixter-page`  |
-| Author or edit a section (`.brix` markup, editable fields, collections) | `brixter-brik`       |
-| Add interactivity to a brik                                             | `brixter-controller` |
+| Task                                                                         | Skill                |
+| ---------------------------------------------------------------------------- | -------------------- |
+| Author or edit a page (`+page.brix.yaml`), metadata, SEO, sitemap, redirects | `brixter-page`       |
+| Author or edit a section (`.brix` markup, editable fields, collections)      | `brixter-brik`       |
+| Add interactivity to a brik                                                  | `brixter-controller` |
 
 ## The mental model
 
@@ -95,10 +95,11 @@ Netlify, Vercel and Cloudflare Pages are detected from the adapter; pass
 `target` for anything else. Without this the `aliases` still work in dev but
 nothing is emitted for production.
 
-**5. Global stylesheet** — the base styles and the dark variant briks rely on:
+**5. Global stylesheet** — Brixter ships no stylesheet; the theme contract is
+the app's own. Declare the dark variant briks rely on:
 
 ```css
-@import 'brixter/styles.css';
+@import 'tailwindcss';
 @variant dark (&:where(.dark, .dark *));
 ```
 
@@ -126,10 +127,12 @@ into markup.
 
 - **Naming.** Briks are `PascalCase.brix` and named for what the section _is_
   (`Pricing`, `Reviews`, `FinalCta`), not where it sits (`Section2`).
-- **Styling.** Briks are styled with Tailwind utilities plus the theme contract
-  from `brixter/styles.css` (`text-heading`, `text-secondary`, `text-muted`,
-  `font-display`, `btn-site-primary`). Prefer those tokens over ad-hoc colours so
-  light/dark stays consistent; always pair a light class with its `dark:` variant.
+- **Styling.** Briks are styled with Tailwind utilities plus the app's own theme
+  contract — the semantic utilities defined in its global stylesheet (things like
+  `text-heading`, `text-secondary`, `text-muted`, `font-display`). Read that
+  stylesheet first and reuse what is already there; prefer those tokens over
+  ad-hoc colours so light/dark stays consistent, and always pair a light class
+  with its `dark:` variant.
 - **One responsibility per brik.** A hero is a hero. If a section starts growing
   optional halves that pages toggle on and off, split it.
 - **Content lives in the page.** A brik that renders the same words on every page
@@ -137,18 +140,25 @@ into markup.
 
 ## Theming
 
-For a light/dark toggle use the primitives from the package root:
+For a light/dark toggle use the primitives from the package root.
+`<ThemeController>` toggles `.dark` on the element passed as `root` — pass one
+explicitly, or nothing happens:
 
 ```svelte
 <script>
 	import { ThemeController } from 'brixter';
+
+	let root = $state(null);
 </script>
 
-<ThemeController />
+<div bind:this={root}>
+	<ThemeController {root} />
+	<!-- ... -->
+</div>
 ```
 
 `themePreference` is a store (`'system' | 'light' | 'dark'`) persisted to
-`localStorage`; `<ThemeController>` applies the `.dark` class to the document.
+`localStorage`.
 
 ## Layouts
 

@@ -149,8 +149,8 @@ paths in `aliases`:
 
 ```yaml
 aliases:
-  - /plans                 # 301, the default
-  - path: /black-friday    # long form, when the status matters
+  - /plans # 301, the default
+  - path: /black-friday # long form, when the status matters
     status: 302
 ```
 

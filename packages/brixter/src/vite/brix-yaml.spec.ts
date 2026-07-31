@@ -41,9 +41,7 @@ describe('compileBrixYaml', () => {
 			dir
 		);
 
-		expect(output).toContain(
-			"import { renderBrixSource } from '@brixter/core';"
-		);
+		expect(output).toContain("import { renderBrixSource } from '@brixter/core';");
 		expect(output).toContain("import Brix0Src from '$lib/brixter/brix/Showcase.brix?raw';");
 		expect(output).toContain('{@html renderBrixSource(Brix0Src, component0Props)}');
 		// No Svelte component import/instantiation for markup brix.

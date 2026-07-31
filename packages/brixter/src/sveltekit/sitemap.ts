@@ -85,7 +85,10 @@ function discoverPages(): DiscoveredPage[] {
 	return pages;
 }
 
-function resolveOrigin(options: SitemapOptions, requestOrigin: string): { origin: string; explicit: boolean } {
+function resolveOrigin(
+	options: SitemapOptions,
+	requestOrigin: string
+): { origin: string; explicit: boolean } {
 	if (options.siteUrl) return { origin: options.siteUrl.replace(/\/+$/, ''), explicit: true };
 	return { origin: requestOrigin.replace(/\/+$/, ''), explicit: false };
 }

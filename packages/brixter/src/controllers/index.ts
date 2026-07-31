@@ -1,3 +1,7 @@
+// virtual.d.ts only declares the ambient `virtual:brixter/controllers` module.
+// Importing it would make this file its consumer rather than pulling the
+// declaration into the build, so the directive is the correct form here.
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./virtual.d.ts" />
 /**
  * Public entry for the `brixter/controllers` export.

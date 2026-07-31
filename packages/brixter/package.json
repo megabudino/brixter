@@ -32,8 +32,7 @@
 		"bin",
 		"dist",
 		"skills",
-		"src",
-		"styles.css"
+		"src"
 	],
 	"peerDependencies": {
 		"@sveltejs/kit": "^2.0.0",
@@ -70,11 +69,11 @@
 			"types": "./src/sveltekit/sitemap.ts",
 			"svelte": "./src/sveltekit/sitemap.ts",
 			"default": "./src/sveltekit/sitemap.ts"
-		},
-		"./styles.css": "./styles.css"
+		}
 	},
 	"scripts": {
 		"build:package": "node ./scripts/build-package.mjs",
+		"postinstall": "node ./bin/skills-postinstall.mjs",
 		"prepublishOnly": "npm run build:package",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",

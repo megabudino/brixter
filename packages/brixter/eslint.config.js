@@ -6,7 +6,6 @@ import svelte from 'eslint-plugin-svelte';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
 
 const rootGitignorePath = path.resolve(import.meta.dirname, '../../.gitignore');
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
@@ -29,13 +28,16 @@ export default defineConfig(
 		}
 	},
 	{
+		// No `svelteConfig` here: this package is a library, not a SvelteKit app,
+		// and has no svelte.config.js to point at. The two .svelte files it ships
+		// are plain runes components with no preprocessor, so the parser needs
+		// nothing beyond TypeScript.
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
 				projectService: true,
 				extraFileExtensions: ['.svelte'],
-				parser: ts.parser,
-				svelteConfig
+				parser: ts.parser
 			}
 		}
 	}

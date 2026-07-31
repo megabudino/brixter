@@ -102,9 +102,7 @@ export function compileBrixYaml(
 
 	const seoEnabled = options.seo !== false;
 	const seoImport = seoEnabled ? `import BrixSeo from 'brixter/seo';` : '';
-	const seoHead = seoEnabled
-		? '<svelte:head><BrixSeo {...metadata} /></svelte:head>'
-		: '';
+	const seoHead = seoEnabled ? '<svelte:head><BrixSeo {...metadata} /></svelte:head>' : '';
 
 	const componentScripts = blocks.filter((block) => block.startsWith('const ')).join('\n');
 	const componentMarkup = blocks.filter((block) => !block.startsWith('const ')).join('\n');

@@ -46,6 +46,16 @@
 	);
 
 	/**
+	 * `JSON.stringify` leaves `<` untouched, so any string in a page's `jsonLd`
+	 * frontmatter containing a literal closing script tag would end this block
+	 * early and let whatever follows it execute. Escaping `<` as the `\u003c` JSON
+	 * escape — which parses back to the same value — makes it unrepresentable.
+	 */
+	function serializeJsonLd(block: unknown): string {
+		return JSON.stringify(block).replace(/</g, '\\u003c');
+	}
+
+	/**
 	 * Social crawlers (og:image, twitter:image, og:url) fetch the page out of
 	 * context and don't resolve relative paths, so they need absolute URLs.
 	 * Root-relative values (e.g. `/images/og.png` from the media picker) are
@@ -82,6 +92,13 @@
 	{#if twitterImage}<meta name="twitter:image" content={twitterImage} />{/if}
 
 	{#each jsonLdBlocks as block, index (index)}
-		{@html `<script type="application/ld+json">${JSON.stringify(block)}<\/script>`}
+		<!--
+			A script element cannot be written as markup inside svelte:head, so
+			{@html} is the only way to emit one. The payload is escaped by
+			serializeJsonLd, and the escaped closing tag below keeps a literal one
+			out of the compiled module in case that module is inlined into a script.
+		-->
+		<!-- eslint-disable-next-line svelte/no-at-html-tags, no-useless-escape -->
+		{@html `<script type="application/ld+json">${serializeJsonLd(block)}<\/script>`}
 	{/each}
 </svelte:head>

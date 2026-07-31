@@ -12,7 +12,6 @@ The SvelteKit integration for [Brixter](../../README.md). It compiles declarativ
 | `brixter/seo`         | `<BrixSeo>`, the component that renders SEO metadata into `<head>`.                             |
 | `brixter/controllers` | `initBrixControllers` + the `BrixController` type — progressive enhancement for `.brix` markup. |
 | `brixter`             | Theming primitives: `<ThemeController>` and the `themePreference` store helpers.                |
-| `brixter/styles.css`  | Base stylesheet shared by briks.                                                                |
 
 ## Install
 
@@ -261,6 +260,26 @@ files you edited are skipped unless you pass `--force`). Add `--global` to
 install into `~/.claude/skills`; other agents have no user-level rules directory,
 so they are project-scoped only.
 
+### Staying up to date
+
+Once installed, the skills refresh themselves when you upgrade the package:
+
+```sh
+npm update brixter   # installed skills are rewritten to match the new version
+```
+
+A postinstall hook does this, under deliberate limits. It **only refreshes an
+existing install** — adding `brixter` as a dependency never writes agent files
+into a project that has not run `skills install`. It never overwrites a file you
+edited (those are listed, and need `--force`). And it never fails your install:
+if anything goes wrong it prints a note and exits cleanly. Set
+`BRIXTER_SKIP_POSTINSTALL=1` to disable it.
+
+Treat this as a convenience rather than a guarantee — pnpm and Bun block
+dependency lifecycle scripts unless the package is trusted, and
+`--ignore-scripts` skips them everywhere. `npx brixter skills status` is the
+reliable check, and `npx brixter skills install` always works.
+
 ## Layouts
 
 Set `layout: <Name>` on a page (or configure a `defaultLayout`) to wrap its content in a component from `$lib/brixter/layouts/<Name>.svelte`. The layout receives the page `metadata` both as a `metadata` prop and spread as individual props.
@@ -393,7 +412,7 @@ Error: [brixter] redirects: 1 redirect could not be compiled:
 
 Refused: an alias that shadows a route, page or static asset the site already
 serves; the same alias claimed by two pages; a destination no route, page or
-alias resolves to; and cycles. A dynamic route that *could* have matched the
+alias resolves to; and cycles. A dynamic route that _could_ have matched the
 alias is not a collision — the alias is a statement that the URL moved, and on a
 site with a catch-all route the opposite rule would forbid redirects entirely.
 
@@ -434,25 +453,30 @@ adapter plumbing is SvelteKit-specific.
 
 ## Theming
 
-Briks are styled with Tailwind utilities and a small theme contract. Import the base styles and declare the dark-mode variant your briks rely on:
+Brixter ships no stylesheet. Briks are styled with plain Tailwind utilities, and the theme contract — your colour tokens, type scale and any shared component classes — lives in your own app's global stylesheet. Declare the dark-mode variant there:
 
 ```css
 /* your app's global stylesheet */
-@import 'brixter/styles.css';
+@import 'tailwindcss';
 @variant dark (&:where(.dark, .dark *));
 ```
 
-For a light/dark toggle, use the theming primitives from the package root:
+For a light/dark toggle, use the theming primitives from the package root. `<ThemeController>` toggles the `.dark` class on the element you pass as `root` — pass it explicitly, or nothing happens:
 
 ```svelte
 <script>
 	import { ThemeController, themePreference } from 'brixter';
+
+	let root = $state(null);
 </script>
 
-<ThemeController />
+<div bind:this={root} class="app">
+	<ThemeController {root} />
+	<!-- ... -->
+</div>
 ```
 
-`themePreference` is a store (`'system' | 'light' | 'dark'`) persisted to `localStorage`; `<ThemeController>` applies the `.dark` class to the document accordingly.
+`themePreference` is a store (`'system' | 'light' | 'dark'`) persisted to `localStorage`.
 
 ## Vite plugin options
 
