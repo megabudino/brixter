@@ -61,10 +61,15 @@ export function compileBrixPage(
 
 		if (!registered) {
 			issues.push(
-				issue('unknown-brik', file, `no brik named \`${brik.type}\`.${suggest(brik.type, registry)}`, {
-					path: `brix[${index}].type`,
-					...at(positionOf, `brix[${index}].type`)
-				})
+				issue(
+					'unknown-brik',
+					file,
+					`no brik named \`${brik.type}\`.${suggest(brik.type, registry)}`,
+					{
+						path: `brix[${index}].type`,
+						...at(positionOf, `brix[${index}].type`)
+					}
+				)
 			);
 			return;
 		}
@@ -110,7 +115,8 @@ export function compileBrixPage(
 	const seo = options.seo !== false;
 
 	if (needsRenderer) imports.unshift(`import { renderBrikSource } from '@brixter/core';`);
-	if (layout) imports.unshift(`import BrixLayout from '${layoutsDir}/${toComponentName(layout)}.svelte';`);
+	if (layout)
+		imports.unshift(`import BrixLayout from '${layoutsDir}/${toComponentName(layout)}.svelte';`);
 	if (seo) imports.unshift(`import BrixSeo from 'brixter/seo';`);
 
 	const content = renderMarkdown(page.body);

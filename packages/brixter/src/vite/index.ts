@@ -225,7 +225,8 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 
 function resolveTypesPath(option: string | undefined, root: string): string {
 	const target = option ?? '$lib/brixter/brixter.generated.d.ts';
-	if (target.startsWith('$lib/')) return path.join(root, 'src', 'lib', target.slice('$lib/'.length));
+	if (target.startsWith('$lib/'))
+		return path.join(root, 'src', 'lib', target.slice('$lib/'.length));
 	return path.resolve(root, target);
 }
 

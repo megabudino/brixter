@@ -6,9 +6,12 @@ const brik = (body: string, frontmatter = '') =>
 
 describe('buildBrikSchema', () => {
 	it('reads title and description from the frontmatter', () => {
-		const { schema } = buildBrikSchema('---\ntitle: Pricing\ndescription: Plans.\n---\n<p>{x}</p>', {
-			file: 'Pricing.brix'
-		});
+		const { schema } = buildBrikSchema(
+			'---\ntitle: Pricing\ndescription: Plans.\n---\n<p>{x}</p>',
+			{
+				file: 'Pricing.brix'
+			}
+		);
 
 		expect(schema.title).toBe('Pricing');
 		expect(schema.description).toBe('Plans.');
@@ -145,9 +148,9 @@ describe('validateProps', () => {
 	});
 
 	it('descends into nested objects', () => {
-		expect(codes('<a href={cta.href}>{cta.label}</a>', { cta: { label: 'Go', hrf: '/x' } })).toEqual(
-			['unknown-prop']
-		);
+		expect(
+			codes('<a href={cta.href}>{cta.label}</a>', { cta: { label: 'Go', hrf: '/x' } })
+		).toEqual(['unknown-prop']);
 	});
 
 	it('treats an explicit null as "use the default"', () => {

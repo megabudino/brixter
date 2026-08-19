@@ -5,26 +5,37 @@
 			"name": "brixter-site",
 			"dir": "brixter-site",
 			"description": "Build or extend a Brixter-compatible marketing site in SvelteKit — install and configure the Vite plugin, lay out the $lib/brixter directories, decide what becomes a brik vs a page prop, and wire theming, SEO and the sitemap.",
-			"globs": ["**/*.brix", "**/*.brix.yaml", "**/*.brix.yml", "**/lib/brixter/**"],
+			"globs": [
+				"**/*.brix",
+				"**/+page.md",
+				"**/lib/brixter/**"
+			],
 			"entry": true
 		},
 		{
 			"name": "brixter-brik",
 			"dir": "brixter-brik",
-			"description": "Author or edit a .brix file — the annotated HTML of a reusable Brixter section, including data-brixter-field / -bind / -collection-item annotations, field kinds, and the frontmatter field schema.",
-			"globs": ["**/*.brix"]
+			"description": "Author or edit a .brix file — the template of a reusable Brixter section, including {interpolation}, {#each}, {#if}, the @tag annotations that type a prop, and the ?? fallback that doubles as its editor placeholder.",
+			"globs": [
+				"**/*.brix"
+			]
 		},
 		{
 			"name": "brixter-page",
 			"dir": "brixter-page",
-			"description": "Author or edit a .brix.yaml page — routing, the components list and its props, page metadata, SEO tags, and per-page sitemap control.",
-			"globs": ["**/*.brix.yaml", "**/*.brix.yml"]
+			"description": "Author or edit a +page.md — routing, the brix list and its props, the metadata block that drives <head>, the markdown body handed to the layout, per-page sitemap control, and redirects via aliases.",
+			"globs": [
+				"**/+page.md",
+				"**/+page@*.md"
+			]
 		},
 		{
 			"name": "brixter-controller",
 			"dir": "brixter-controller",
 			"description": "Add interactivity to a Brixter site by writing a controller — the vanilla JS/TS module that progressively enhances .brix markup, its init/cleanup signature, auto-registration, and lifecycle wiring.",
-			"globs": ["**/lib/brixter/controllers/**"]
+			"globs": [
+				"**/lib/brixter/controllers/**"
+			]
 		}
 	]
 }

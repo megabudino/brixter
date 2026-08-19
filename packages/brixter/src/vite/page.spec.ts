@@ -119,9 +119,9 @@ describe('compileBrixPage', () => {
 		expect(compileBrixPage(source, '+page.md', {}, registry).code).toContain(
 			'"editorAnchors": true'
 		);
-		expect(
-			compileBrixPage(source, '+page.md', { editorAnchors: false }, registry).code
-		).toContain('"editorAnchors": false');
+		expect(compileBrixPage(source, '+page.md', { editorAnchors: false }, registry).code).toContain(
+			'"editorAnchors": false'
+		);
 	});
 });
 
@@ -150,9 +150,10 @@ describe('validation during compilation', () => {
 	});
 
 	it('reports a missing required prop and an unknown one', () => {
-		expect(
-			codes('---\nbrix:\n  - type: Hero\n    props: { subtitel: x }\n---\n')
-		).toEqual(['unknown-prop', 'missing-required']);
+		expect(codes('---\nbrix:\n  - type: Hero\n    props: { subtitel: x }\n---\n')).toEqual([
+			'unknown-prop',
+			'missing-required'
+		]);
 	});
 
 	it("reports a brik's own template problems once, however often the page uses it", () => {

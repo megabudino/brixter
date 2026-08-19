@@ -114,9 +114,7 @@ describe('annotations', () => {
 	});
 
 	it('records constraints', () => {
-		const props = propsOf(
-			"<p>{@min(1) @max(9) count}</p><p>{@pattern('^[a-z]+$') slug}</p>"
-		);
+		const props = propsOf("<p>{@min(1) @max(9) count}</p><p>{@pattern('^[a-z]+$') slug}</p>");
 
 		expect(props.count).toMatchObject({ min: 1, max: 9 });
 		expect(props.slug).toMatchObject({ pattern: '^[a-z]+$' });
@@ -186,7 +184,7 @@ describe('issues', () => {
 	it.each([
 		['<p>{@enum() accent}</p>', '`@enum` with no values'],
 		["<p>{@min('x') count}</p>", '`@min` with a string'],
-		["<p>{@label(3) x}</p>", '`@label` with a number'],
+		['<p>{@label(3) x}</p>', '`@label` with a number'],
 		["<p>{@pattern('[') x}</p>", 'an invalid regex']
 	])('reports %s — %s', (template) => {
 		expect(codesOf(template)).toEqual(['tag-argument']);

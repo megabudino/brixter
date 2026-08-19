@@ -86,7 +86,9 @@ function renderFields(fields: Record<string, PropSchema>, depth: number): string
 	for (const [key, field] of Object.entries(fields)) {
 		const doc = describe(field);
 		if (doc) lines.push(`${inner}/** ${doc} */`);
-		lines.push(`${inner}${propertyName(key)}${field.required ? '' : '?'}: ${render(field, depth + 1)};`);
+		lines.push(
+			`${inner}${propertyName(key)}${field.required ? '' : '?'}: ${render(field, depth + 1)};`
+		);
 	}
 
 	lines.push(`${indent}}`);

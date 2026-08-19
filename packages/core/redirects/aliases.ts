@@ -13,7 +13,7 @@
  *         status: 302
  *
  * Like `extractSitemapMeta`, this is a plain-object mapper over the metadata the
- * `.brix.yaml` compiler already exposes — not a second parser.
+ * page compiler already exposes — not a second parser.
  */
 import type { DeclaredRedirect, RedirectSource } from './types.js';
 

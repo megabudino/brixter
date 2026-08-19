@@ -144,9 +144,9 @@ describe('style attributes', () => {
 	});
 
 	it('neutralises characters that would break out of the declaration', () => {
-		expect(plain('<div style="color: {value};">x</div>', { value: 'red; background: url(<x)' })).toBe(
-			'<div style="color: red background: url(x);">x</div>'
-		);
+		expect(
+			plain('<div style="color: {value};">x</div>', { value: 'red; background: url(<x)' })
+		).toBe('<div style="color: red background: url(x);">x</div>');
 	});
 
 	it('keeps quotes and parens so `url("…")` survives', () => {
@@ -177,9 +177,9 @@ describe('{#each}', () => {
 	});
 
 	it('exposes the index binding', () => {
-		expect(
-			plain('{#each items as item, i}<li>{i}:{item}</li>{/each}', { items: ['a', 'b'] })
-		).toBe('<li>0:a</li><li>1:b</li>');
+		expect(plain('{#each items as item, i}<li>{i}:{item}</li>{/each}', { items: ['a', 'b'] })).toBe(
+			'<li>0:a</li><li>1:b</li>'
+		);
 	});
 
 	it('nests, with each alias scoped to its own block', () => {
@@ -197,10 +197,12 @@ describe('{#each}', () => {
 	});
 
 	it('still reads page-level props from inside the block', () => {
-		expect(plain('{#each items as item}<li>{prefix}{item}</li>{/each}', {
-			prefix: '#',
-			items: ['a']
-		})).toBe('<li>#a</li>');
+		expect(
+			plain('{#each items as item}<li>{prefix}{item}</li>{/each}', {
+				prefix: '#',
+				items: ['a']
+			})
+		).toBe('<li>#a</li>');
 	});
 });
 
@@ -289,9 +291,9 @@ describe('editor anchors', () => {
 	});
 
 	it('can be turned off', () => {
-		expect(renderToString('<h1>{headline}</h1>', { headline: 'Hi' }, { editorAnchors: false })).toBe(
-			'<h1>Hi</h1>'
-		);
+		expect(
+			renderToString('<h1>{headline}</h1>', { headline: 'Hi' }, { editorAnchors: false })
+		).toBe('<h1>Hi</h1>');
 	});
 });
 
@@ -305,9 +307,9 @@ describe('renderBrikSource', () => {
 	});
 
 	it('renders a file with no frontmatter at all', () => {
-		expect(renderBrikSource('<h1>{headline}</h1>', { headline: 'Hi' }, { editorAnchors: false })).toBe(
-			'<h1>Hi</h1>'
-		);
+		expect(
+			renderBrikSource('<h1>{headline}</h1>', { headline: 'Hi' }, { editorAnchors: false })
+		).toBe('<h1>Hi</h1>');
 	});
 });
 

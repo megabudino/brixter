@@ -194,7 +194,15 @@ function readReference(cursor: Cursor): Reference {
 		hasFallback = true;
 	}
 
-	return { kind: 'reference', path, tags, fallback, hasFallback, canonicalPath: '', isIndex: false };
+	return {
+		kind: 'reference',
+		path,
+		tags,
+		fallback,
+		hasFallback,
+		canonicalPath: '',
+		isIndex: false
+	};
 }
 
 function readTags(cursor: Cursor): Tag[] {

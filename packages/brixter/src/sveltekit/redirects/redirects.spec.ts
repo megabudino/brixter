@@ -48,7 +48,8 @@ describe('scanBrixPages', () => {
 	it('finds pages, their URL, and the file to blame', () => {
 		const root = project({
 			'src/routes/+page.md': '---\nmetadata:\n  title: Home\n---\n',
-			'src/routes/(marketing)/pricing/+page.md': '---\nmetadata:\n  title: Pricing\naliases:\n  - /plans\n---\n',
+			'src/routes/(marketing)/pricing/+page.md':
+				'---\nmetadata:\n  title: Pricing\naliases:\n  - /plans\n---\n',
 			'src/routes/about/+page.svelte': '<h1>About</h1>',
 			'src/routes/blog/[slug]/+page.md': '---\nmetadata:\n  title: Post\n---\n'
 		});
@@ -134,7 +135,9 @@ describe('collectRedirects', () => {
 	});
 
 	it('takes extra sources from a factory, given the pages it found', async () => {
-		const root = project({ 'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n' });
+		const root = project({
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n'
+		});
 		const rules = await collectRedirects(
 			fakeBuilder(['/pricing']),
 			{

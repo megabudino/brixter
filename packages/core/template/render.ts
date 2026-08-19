@@ -375,7 +375,11 @@ function evaluate(condition: Condition, ctx: RenderContext): unknown {
 		case 'not':
 			return !truthy(evaluate(condition.operand, ctx));
 		case 'compare':
-			return compare(condition.operator, evaluate(condition.left, ctx), evaluate(condition.right, ctx));
+			return compare(
+				condition.operator,
+				evaluate(condition.left, ctx),
+				evaluate(condition.right, ctx)
+			);
 	}
 }
 

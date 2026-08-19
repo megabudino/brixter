@@ -133,7 +133,8 @@ export function issue(
 	message: string,
 	options: { path?: string; line?: number; column?: number } = {}
 ): SchemaIssue {
-	const where = options.line === undefined ? file : `${file}:${options.line}:${options.column ?? 1}`;
+	const where =
+		options.line === undefined ? file : `${file}:${options.line}:${options.column ?? 1}`;
 	return {
 		code,
 		file,

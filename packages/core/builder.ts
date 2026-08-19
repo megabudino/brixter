@@ -562,7 +562,9 @@ export function ensureItemIds(value: unknown): unknown {
 		);
 	}
 	if (!isRecord(value)) return value;
-	return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, ensureItemIds(entry)]));
+	return Object.fromEntries(
+		Object.entries(value).map(([key, entry]) => [key, ensureItemIds(entry)])
+	);
 }
 
 /** Remove the internal id again so serialized output stays clean. */

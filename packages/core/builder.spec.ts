@@ -170,7 +170,8 @@ describe('prop manipulation', () => {
 });
 
 describe('documents', () => {
-	const source = '---\nmetadata:\n  title: Home\nbrix:\n  - type: Hero\n    props:\n      plans:\n        - name: A\n---\n\nProse.\n';
+	const source =
+		'---\nmetadata:\n  title: Home\nbrix:\n  - type: Hero\n    props:\n      plans:\n        - name: A\n---\n\nProse.\n';
 
 	it('gives each block an id and each collection entry an identity', () => {
 		const document = documentFromPage(parsePage(source).page);
@@ -191,7 +192,9 @@ describe('documents', () => {
 
 	it('strips ids at every depth', () => {
 		expect(
-			stripItemIds({ a: [{ [BUILDER_ITEM_ID_KEY]: 'x', b: [{ [BUILDER_ITEM_ID_KEY]: 'y', c: 1 }] }] })
+			stripItemIds({
+				a: [{ [BUILDER_ITEM_ID_KEY]: 'x', b: [{ [BUILDER_ITEM_ID_KEY]: 'y', c: 1 }] }]
+			})
 		).toEqual({ a: [{ b: [{ c: 1 }] }] });
 	});
 });

@@ -115,8 +115,8 @@ brix:
     props:
       eyebrow: Core offer
       headline: A visual builder on top of real Svelte components.
-      description: Define reusable sections, assemble them in .brix.yaml files, and
-        let the dashboard handle editing, media, preview, and saving.
+      description: Define reusable sections, assemble them in .md pages, and let the
+        dashboard handle editing, media, preview, and saving.
       cta:
         label: Try Brixter
         href: "#"

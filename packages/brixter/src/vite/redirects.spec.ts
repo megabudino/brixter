@@ -45,7 +45,9 @@ describe('compileDevRedirects', () => {
 	});
 
 	it('accepts the same extra sources the adapter takes', () => {
-		const root = project({ 'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n' });
+		const root = project({
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n'
+		});
 		const compiled = compileDevRedirects(root, {
 			sources: [
 				{

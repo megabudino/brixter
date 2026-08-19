@@ -87,7 +87,12 @@ export function splitFrontmatter(source: string): FrontmatterDocument {
 			present: false,
 			unterminated: opened,
 			issues: opened
-				? [{ message: 'unterminated frontmatter block — add a closing `---`', position: positionAt(0) }]
+				? [
+						{
+							message: 'unterminated frontmatter block — add a closing `---`',
+							position: positionAt(0)
+						}
+					]
 				: [],
 			positionAt,
 			positionOf: () => positionAt(0),

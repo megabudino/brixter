@@ -1,98 +1,129 @@
 ---
 name: brixter-page
-description: Author or edit a `.brix.yaml` page — routing, the `components` list and its props, page metadata, SEO tags (title, description, canonical, robots, Open Graph, Twitter, JSON-LD), per-page sitemap control, and redirects from old URLs via `aliases`. Use when adding a page to a Brixter site, changing the sections on one, redirecting a URL that moved, or editing any `.brix.yaml` / `.brix.yml` file.
+description: Author or edit a `+page.md` — routing, the `brix` list and its props, the `metadata` block that drives `<head>` (title, description, canonical, robots, Open Graph, Twitter, JSON-LD), the markdown body handed to the layout, per-page sitemap control, and redirects from old URLs via `aliases`. Use when adding a page to a Brixter site, changing the sections on one, redirecting a URL that moved, or editing any `+page.md` file.
 ---
 
 # Authoring a page
 
-A page is a `+page.brix.yaml` file placed exactly where a `+page.svelte` would
-go. **Its URL is its location in `src/routes`** — no slugs, no mapping table.
+A page is a `+page.md` file placed exactly where a `+page.svelte` would go.
+**Its URL is its location in `src/routes`** — no slugs, no mapping table.
 
 ```
-src/routes/+page.brix.yaml           →  /
-src/routes/pricing/+page.brix.yaml   →  /pricing
-src/routes/(marketing)/about/+page.brix.yaml  →  /about
+src/routes/+page.md                     →  /
+src/routes/pricing/+page.md             →  /pricing
+src/routes/(marketing)/about/+page.md   →  /about
 ```
 
-The file is a YAML document with one special key — `components` — plus `layout`,
-plus page **metadata**. Everything that is not `components` or `layout` is
-metadata, and metadata drives `<head>`.
+The file is YAML frontmatter followed by a markdown body:
 
-```yaml
-# src/routes/+page.brix.yaml
-title: The content is in your codebase.
-description: A visual CMS for marketing sites, versioned in your repo.
-components:
+```markdown
+---
+metadata:
+  title: Pricing — Brixter
+  description: Simple per-seat pricing. No content API, no vendor lock-in.
+layout: Marketing
+brix:
   - type: Hero
     props:
-      eyebrow: Brixter
       headline: Ship pages, not tickets.
-      subtitle: Landing pages editable in preview. Code stays in the repo.
       cta:
         label: Get started
         href: /docs
   - type: Pricing
     props:
       plans: [...]
+---
+
+## Frequently asked
+
+The body is ordinary markdown. It is compiled to HTML and handed to the layout
+as `content`.
 ```
 
-## `components`
+The frontmatter's top level is a **closed set of five keys** — `metadata`,
+`brix`, `layout`, `aliases`, `sitemap`. Anything else is an error, so a
+misspelled `titel:` is caught rather than quietly becoming a metadata key that
+renders nothing.
+
+## `brix`
 
 An ordered list — it _is_ the vertical order of the page. Each entry is:
 
 - `type` — the brik's file name without extension. `Hero` resolves to
   `$lib/brixter/brix/Hero.brix` (falling back to `Hero.svelte`).
-- `props` — the values for that brik's fields.
+- `props` — the values for that brik's props.
 
-Props must match the paths the brik annotates. Before writing props, **open the
-brik** and read its `data-brixter-field` / `data-brixter-bind` /
-`data-brixter-collection-item` attributes — those paths are the contract:
+Props must match what the brik's template reads, and **the build checks that they
+do**. Before writing props, open the brik: every `{ … }` in it is a prop, and its
+annotations are the contract.
 
-| In the brik                                                             | In the page                                  |
-| ----------------------------------------------------------------------- | -------------------------------------------- |
-| `data-brixter-field="headline"`                                         | `headline: …`                                |
-| `data-brixter-field="cta.label"` + `data-brixter-bind="href: cta.href"` | `cta: { label: …, href: … }`                 |
-| `data-brixter-collection-item="reviews"` with `reviews[].quote`         | `reviews: [{ quote: …, author: … }]`         |
-| `data-brixter-field="screenshot:image"`                                 | `screenshot: /images/app.png`                |
-| `data-brixter-field="icon"` with kind `icon`                            | `icon: "<svg …>…</svg>"` (inline SVG string) |
+| In the brik                                       | In the page                                      |
+| ------------------------------------------------- | ------------------------------------------------ |
+| `{headline}`                                      | `headline: …`                                    |
+| `{cta.label}` and `href={cta.href}`               | `cta: { label: …, href: … }`                     |
+| `{#each reviews as review}` with `{review.quote}` | `reviews: [{ quote: …, author: … }]`             |
+| `{@image screenshot}`                             | `screenshot: /images/app.png`                    |
+| `{@icon feature.icon}`                            | `icon: "<svg …>…</svg>"` (inline SVG string)     |
+| `{@enum('yellow','blue') accent}`                 | `accent: yellow` — anything else fails the build |
+| `{@required headline}`                            | `headline` must be present                       |
 
-A prop the brik doesn't annotate is silently ignored; a field the page omits
-renders empty (unless the brik's frontmatter gives it a `default`). Both fail
-quietly — check the paths.
+Get one wrong and the build stops with the file, the line and the path of the
+field at fault. `npx brixter check` gives the same answers without a build.
 
 Notes on values:
 
-- **Richtext fields** (`:richtext-inline` / `:richtext-block`) accept an HTML
-  string: `headline: Ship <em>pages</em>, not tickets.` Quote the scalar when it
-  starts with a character YAML treats specially.
+- **Richtext props** (`{@richtext …}`) accept an HTML string:
+  `headline: Ship <em>pages</em>, not tickets.` Quote the scalar when it starts
+  with a character YAML treats specially.
 - **Icons and long SVG** read best as YAML block scalars (`icon: |`).
+- **Omit a prop to accept its placeholder.** A brik's `??` values are its
+  defaults; a page only has to say what differs.
 - **The same brik can appear more than once** with different props. That is the
   normal way to build a page — reuse over new files.
 
-## Metadata and SEO
+## The markdown body
 
-Top-level keys other than `components` / `layout` become the page metadata,
-exported as `metadata` and rendered into `<head>` by `<BrixSeo>`:
+Everything after the closing `---` is markdown. It is compiled to HTML and passed
+to the layout as `content`:
+
+```svelte
+<!-- $lib/brixter/layouts/Marketing.svelte -->
+<script>
+	let { metadata, content, children } = $props();
+</script>
+
+{@render children()}
+
+{#if content}
+	<article class="prose">{@html content}</article>
+{/if}
+```
+
+With no layout, the body renders after the sections. Use it for editorial copy
+that does not deserve a brik of its own — an FAQ, a changelog entry, the long
+half of a documentation page.
+
+## `metadata` — everything that reaches `<head>`
 
 ```yaml
-title: Pricing — Brixter
-description: Simple per-seat pricing. No content API, no vendor lock-in.
-canonical: /pricing
-robots: index,follow
-og:
-  title: Brixter pricing
-  description: Simple per-seat pricing.
-  image: /og/pricing.png
-  type: website
-twitter:
-  card: summary_large_image
-  title: Brixter pricing
-  image: /og/pricing.png
-jsonLd:
-  '@context': https://schema.org
-  '@type': Product
-  name: Brixter
-components: [...]
+metadata:
+  title: Pricing — Brixter
+  description: Simple per-seat pricing. No content API, no vendor lock-in.
+  canonical: /pricing
+  robots: index,follow
+  og:
+    title: Brixter pricing
+    description: Simple per-seat pricing.
+    image: /og/pricing.png
+    type: website
+  twitter:
+    card: summary_large_image
+    title: Brixter pricing
+    image: /og/pricing.png
+  jsonLd:
+    '@context': https://schema.org
+    '@type': Product
+    name: Brixter
 ```
 
 | Field         | Renders                                                                                |
@@ -110,8 +141,10 @@ absolutised against the request origin, since social crawlers don't resolve
 relative paths — so write them root-relative and let the runtime do it. Under
 `adapter-node` the origin comes from the `ORIGIN` env var.
 
-Every page should carry at least `title` and `description`. Injection can be
-disabled globally with `brixter({ seo: false })`.
+Keys beyond these are allowed and reach the layout untouched, which is how a
+layout takes a per-page setting of its own. Every page should carry at least
+`title` and `description`. Injection can be disabled globally with
+`brixter({ seo: false })`.
 
 ## `layout`
 
@@ -119,19 +152,20 @@ disabled globally with `brixter({ seo: false })`.
 layout: Marketing
 ```
 
-Wraps the page in `$lib/brixter/layouts/Marketing.svelte`. The layout receives
-the metadata both as a `metadata` prop and spread as individual props. Omit the
-key to use the plugin's `defaultLayout`, if configured.
+Wraps the page in `$lib/brixter/layouts/Marketing.svelte`, which receives
+`metadata`, `content`, and the briks as `children`. Omit the key to use the
+plugin's `defaultLayout`, if configured.
 
-## Sitemap
+## `sitemap`
 
 `brixter/sveltekit/sitemap` discovers every page under `src/routes` — no list to
-maintain. Per-page control lives in the page's own metadata:
+maintain. Per-page control sits at the top level of the frontmatter:
 
 ```yaml
-robots: noindex          # excluded from the sitemap
-sitemap: false           # excluded
-sitemap:                 # or override individual fields
+metadata:
+  robots: noindex # excluded from the sitemap
+sitemap: false # excluded
+sitemap: # or override individual fields
   changefreq: weekly
   priority: 0.8
   lastmod: 2026-01-15
@@ -166,12 +200,14 @@ pages claim the same alias, or if the aliases form a cycle. A page on a dynamic
 ## Workflow
 
 1. Create the file at the path that _is_ the URL.
-2. Write `title` and `description` first.
-3. List the sections in `components`, in visual order, reusing existing briks —
-   check `$lib/brixter/brix/` before assuming a new one is needed.
-4. For each entry, open the brik and fill props against its annotated paths.
-5. Add `og` / `twitter` / `jsonLd` if the page is a share target.
-6. Load the route in the dev server to confirm it renders.
+2. Write `metadata.title` and `metadata.description` first.
+3. List the sections in `brix`, in visual order, reusing existing briks — check
+   `$lib/brixter/brix/` before assuming a new one is needed.
+4. For each entry, open the brik and fill props against what its template reads.
+   Omit anything whose `??` placeholder is already right.
+5. Add editorial prose under the frontmatter if the page needs it.
+6. Add `og` / `twitter` / `jsonLd` if the page is a share target.
+7. Run `npx brixter check`, then load the route in the dev server.
 
 If a section needs markup no existing brik provides, author the brik first — see
 the `brixter-brik` skill — then reference it here.

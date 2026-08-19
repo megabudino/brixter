@@ -83,7 +83,10 @@ export interface AnalyzeResult {
 }
 
 /** Build the schema for a parsed, bound template. */
-export function analyzeTemplate(nodes: TemplateNode[], options: AnalyzeOptions = {}): AnalyzeResult {
+export function analyzeTemplate(
+	nodes: TemplateNode[],
+	options: AnalyzeOptions = {}
+): AnalyzeResult {
 	const file = options.file ?? '<template>';
 	const issues: SchemaIssue[] = [];
 	const root = createDraft('');
