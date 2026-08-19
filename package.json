@@ -14,8 +14,8 @@
 	"scripts": {
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"build:core": "npm run build --workspace=@brixter/core",
-		"build:brixter": "npm run build:core && npm run build:package --workspace=brixter",
+		"build:core": "node ./packages/core/scripts/build.mjs",
+		"build:brixter": "npm run build:core && node ./packages/brixter/scripts/build-package.mjs",
 		"pack:brixter": "npm run build:brixter && npm pack --workspace=brixter",
 		"release:core:patch": "node ./release.mjs core patch",
 		"release:core:minor": "node ./release.mjs core minor",
