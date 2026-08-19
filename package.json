@@ -1,25 +1,27 @@
 {
-  "name": "brixter-monorepo",
-  "private": true,
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Brixter-Labs/brixter.git"
-  },
-  "workspaces": [
-    "site",
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "build:core": "npm run build --workspace=@brixter/core",
-    "build:brixter": "npm run build:core && npm run build:package --workspace=brixter",
-    "pack:brixter": "npm run build:brixter && npm pack --workspace=brixter",
-    "release:core:patch": "node ./release.mjs core patch",
-    "release:core:minor": "node ./release.mjs core minor",
-    "release:core:major": "node ./release.mjs core major",
-    "release:brixter:patch": "node ./release.mjs brixter patch",
-    "release:brixter:minor": "node ./release.mjs brixter minor",
-    "release:brixter:major": "node ./release.mjs brixter major"
-  }
+	"name": "brixter-monorepo",
+	"private": true,
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Brixter-Labs/brixter.git"
+	},
+	"workspaces": [
+		"site",
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"test": "vitest --run",
+		"test:watch": "vitest",
+		"build:core": "npm run build --workspace=@brixter/core",
+		"build:brixter": "npm run build:core && npm run build:package --workspace=brixter",
+		"pack:brixter": "npm run build:brixter && npm pack --workspace=brixter",
+		"release:core:patch": "node ./release.mjs core patch",
+		"release:core:minor": "node ./release.mjs core minor",
+		"release:core:major": "node ./release.mjs core major",
+		"release:brixter:patch": "node ./release.mjs brixter patch",
+		"release:brixter:minor": "node ./release.mjs brixter minor",
+		"release:brixter:major": "node ./release.mjs brixter major"
+	}
 }

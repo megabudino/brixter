@@ -20,8 +20,11 @@
   },
   "include": [
     "./index.ts",
-    "./core.ts",
-    "./markup/**/*.ts",
+    "./builder.ts",
+    "./frontmatter.ts",
+    "./template/**/*.ts",
+    "./schema/**/*.ts",
+    "./page/**/*.ts",
     "./sitemap/**/*.ts",
     "./redirects/**/*.ts"
   ],

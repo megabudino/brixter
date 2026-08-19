@@ -18,9 +18,9 @@
 		"resolveJsonModule": true,
 		"skipLibCheck": true
 	},
-	// Everything that runs in Node during a build — the Vite plugin, and the
-	// adapter wrapper loaded from `svelte.config.js` — has to ship as compiled
-	// JS. The rest of the package is consumed through the app's own bundler and
-	// ships as source.
-	"include": ["./src/vite/**/*.ts", "./src/sveltekit/redirects/**/*.ts"]
+	// Everything that runs in Node outside the app's bundler — the Vite plugin,
+	// the CLI, and the adapter wrapper loaded from `svelte.config.js` — has to
+	// ship as compiled JS. The rest of the package is consumed through the app's
+	// own bundler and ships as source.
+	"include": ["./src/vite/**/*.ts", "./src/cli/**/*.ts", "./src/sveltekit/redirects/**/*.ts"]
 }

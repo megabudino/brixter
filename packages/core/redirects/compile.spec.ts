@@ -11,7 +11,7 @@ const source = (
 	name = 'page aliases'
 ): RedirectSource => ({
 	name,
-	rules: rules.map(([from, to, file = 'src/routes/x/+page.brix.yaml', status]) => ({
+	rules: rules.map(([from, to, file = 'src/routes/x/+page.md', status]) => ({
 		from,
 		to,
 		file,
@@ -30,7 +30,7 @@ describe('compileRedirects', () => {
 				from: '/old-pricing',
 				to: '/pricing',
 				status: 301,
-				file: 'src/routes/x/+page.brix.yaml',
+				file: 'src/routes/x/+page.md',
 				source: 'page aliases',
 				via: []
 			}
@@ -203,14 +203,14 @@ describe('compileRedirects — inconsistencies break the build', () => {
 
 	it('refuses an alias that collides with an existing route', () => {
 		const error = failsWith({
-			sources: [source([['/pricing', '/plans', 'src/routes/plans/+page.brix.yaml']])],
+			sources: [source([['/pricing', '/plans', 'src/routes/plans/+page.md']])],
 			routes: routes('/pricing', '/plans')
 		});
 		expect(error).toBeInstanceOf(RedirectCompileError);
 		expect(error.issues).toHaveLength(1);
 		expect(error.issues[0].code).toBe('route-collision');
-		expect(error.issues[0].file).toBe('src/routes/plans/+page.brix.yaml');
-		expect(error.message).toContain('src/routes/plans/+page.brix.yaml');
+		expect(error.issues[0].file).toBe('src/routes/plans/+page.md');
+		expect(error.message).toContain('src/routes/plans/+page.md');
 		expect(error.message).toContain('/pricing');
 	});
 
@@ -235,23 +235,23 @@ describe('compileRedirects — inconsistencies break the build', () => {
 	it('refuses an alias claimed by two pages, naming both files', () => {
 		const error = failsWith({
 			sources: [
-				source([['/plans', '/pricing', 'src/routes/pricing/+page.brix.yaml']]),
-				source([['/plans', '/packages', 'src/routes/packages/+page.brix.yaml']])
+				source([['/plans', '/pricing', 'src/routes/pricing/+page.md']]),
+				source([['/plans', '/packages', 'src/routes/packages/+page.md']])
 			],
 			routes: routes('/pricing', '/packages')
 		});
 		expect(error.issues[0].code).toBe('duplicate-alias');
-		expect(error.issues[0].file).toBe('src/routes/packages/+page.brix.yaml');
-		expect(error.message).toContain('src/routes/pricing/+page.brix.yaml');
+		expect(error.issues[0].file).toBe('src/routes/packages/+page.md');
+		expect(error.message).toContain('src/routes/pricing/+page.md');
 	});
 
 	it('refuses a destination that resolves to nothing', () => {
 		const error = failsWith({
-			sources: [source([['/old', '/gone', 'src/routes/a/+page.brix.yaml']])],
+			sources: [source([['/old', '/gone', 'src/routes/a/+page.md']])],
 			routes: routes('/pricing')
 		});
 		expect(error.issues[0].code).toBe('unresolved-destination');
-		expect(error.issues[0].file).toBe('src/routes/a/+page.brix.yaml');
+		expect(error.issues[0].file).toBe('src/routes/a/+page.md');
 		expect(error.message).toContain('/gone');
 	});
 
@@ -285,7 +285,7 @@ describe('compileRedirects — inconsistencies break the build', () => {
 
 	it('refuses aliases on a page with no single URL', () => {
 		const error = failsWith({
-			sources: [source([['/old', '/blog/[slug]', 'src/routes/blog/[slug]/+page.brix.yaml']])]
+			sources: [source([['/old', '/blog/[slug]', 'src/routes/blog/[slug]/+page.md']])]
 		});
 		expect(error.issues[0].code).toBe('invalid-rule');
 		expect(error.message).toContain('dynamic route segments');

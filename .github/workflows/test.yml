@@ -1,0 +1,42 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - run: bun install --frozen-lockfile
+
+      - name: Unit tests
+        run: bun run test
+
+      # The published packages ship compiled JS; a type error there is a broken
+      # release, so both builds run even though the tests import from source.
+      - name: Build packages
+        run: bun run build:brixter
+
+      # The demo site is the end-to-end check: it exercises the page compiler,
+      # the schema validator and the renderer against real content.
+      - name: Check the demo site
+        run: node ../packages/brixter/bin/brixter.mjs check
+        working-directory: site
+
+      - name: Build the demo site
+        run: bun run build
+        working-directory: site

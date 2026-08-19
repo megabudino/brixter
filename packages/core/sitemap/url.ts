@@ -10,13 +10,12 @@ import type { RouteUrlOptions } from './types.js';
 
 // The optional `@…` layout-reset suffix may name a segment or a `(group)`, so
 // it can contain parentheses — match everything up to the extension dot.
-const PAGE_FILE = /^\+page(@[^.]*)?\.(svelte|md|svx)$/;
-const PAGE_BRIX_FILE = /^\+page(@[^.]*)?\.brix\.ya?ml$/;
+export const PAGE_FILE = /^\+page(@[^.]*)?\.(svelte|md|svx)$/;
 const ROUTE_GROUP = /^\(.+\)$/;
 
 /**
  * Translate a page-file path (relative to the routes root, e.g.
- * `(marketing)/pricing/+page.brix.yaml`) into a URL pathname (`/pricing`).
+ * `(marketing)/pricing/+page.md`) into a URL pathname (`/pricing`).
  *
  * Returns `null` when the path is not a page file, or when any segment is a
  * dynamic route (`[slug]`, `[...rest]`, `[[opt]]`, `[x=matcher]`) — dynamic
@@ -25,7 +24,7 @@ const ROUTE_GROUP = /^\(.+\)$/;
 export function routeFileToUrl(routesRelPath: string, opts: RouteUrlOptions = {}): string | null {
 	const segments = routesRelPath.replace(/\\/g, '/').replace(/^\/+/, '').split('/');
 	const file = segments.pop();
-	if (!file || (!PAGE_FILE.test(file) && !PAGE_BRIX_FILE.test(file))) return null;
+	if (!file || !PAGE_FILE.test(file)) return null;
 
 	const urlSegments: string[] = [];
 	for (const segment of segments) {

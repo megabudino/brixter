@@ -1,6 +1,9 @@
-title: Test
-description: ""
-components:
+---
+metadata:
+  title: Test
+  description: A page that mixes briks with a markdown body.
+layout: Marketing
+brix:
   - type: Test
     props:
       eyebrow: Gallery
@@ -50,3 +53,13 @@ components:
           ctaHref: "#"
           accent: green
           featured: false
+---
+
+## Why this page has prose
+
+Everything above comes from the `brix` list in this page's frontmatter. This
+paragraph does not: it is the page's **markdown body**, compiled to HTML and
+handed to the `Marketing` layout as its `content` prop.
+
+That is the point of pages being `.md` — a layout can host editorial copy
+without anyone having to build a brik for it first.
