@@ -23,6 +23,14 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      # `packages/brixter/tsconfig.json` extends `./.svelte-kit/tsconfig.json`,
+      # which `svelte-kit sync` generates and `.gitignore` excludes. Without it
+      # Vite cannot resolve the tsconfig and eight spec files fail to load,
+      # before a single test runs.
+      - name: Generate the SvelteKit tsconfig the package extends
+        run: bunx svelte-kit sync
+        working-directory: packages/brixter
+
       - name: Unit tests
         run: bun run test
 
