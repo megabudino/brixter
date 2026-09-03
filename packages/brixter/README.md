@@ -1,17 +1,17 @@
 # brixter
 
-The SvelteKit integration for [Brixter](../../README.md). It compiles declarative `.brix.yaml` pages into Svelte components, renders reusable content blocks (_briks_), and wires SEO metadata into `<head>` — so your marketing content stays as versioned files in your repo.
+The SvelteKit integration for [Brixter](../../README.md). It compiles `+page.md` pages into Svelte components, renders reusable content blocks (_briks_), checks every page against the schemas its briks infer, and wires SEO metadata into `<head>` — so your marketing content stays as versioned files in your repo.
 
 > Prefer the big picture first? Start with the [project README](../../README.md).
 
 ## What's in this package
 
-| Import                | What it is                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------------- |
-| `brixter/vite`        | The Vite plugin that compiles `.brix.yaml` / `.brix.yml` pages.                                 |
-| `brixter/seo`         | `<BrixSeo>`, the component that renders SEO metadata into `<head>`.                             |
-| `brixter/controllers` | `initBrixControllers` + the `BrixController` type — progressive enhancement for `.brix` markup. |
-| `brixter`             | Theming primitives: `<ThemeController>` and the `themePreference` store helpers.                |
+| Import                | What it is                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `brixter/vite`        | The Vite plugin that compiles `+page.md` pages and validates them against their briks.       |
+| `brixter/seo`         | `<BrixSeo>`, the component that renders SEO metadata into `<head>`.                          |
+| `brixter/controllers` | `initBrixControllers` + the `BrixController` type — progressive enhancement for brik markup. |
+| `brixter`             | Theming primitives: `<ThemeController>` and the `themePreference` store helpers.             |
 
 ## Install
 
@@ -25,11 +25,11 @@ You'll also need `@brixter/core` (installed as a dependency of `brixter`) — it
 
 ### 1. Register the page extensions
 
-In `svelte.config.js`, tell SvelteKit to treat `.brix.yaml` / `.brix.yml` as routable page files:
+In `svelte.config.js`, tell SvelteKit to treat `.md` as a routable page extension:
 
 ```js
 const config = {
-	extensions: ['.svelte', '.brix.yaml', '.brix.yml'],
+	extensions: ['.svelte', '.md'],
 	preprocess: [vitePreprocess()]
 };
 ```
@@ -53,61 +53,86 @@ That's the whole setup. There's no database, no server hooks, and no runtime ser
 
 ## Authoring pages
 
-A page is a `+page.brix.yaml` file placed exactly where you'd put a `+page.svelte`. **Its URL is its location in `src/routes`** — no slugs, no mapping table.
+A page is a `+page.md` file placed exactly where you'd put a `+page.svelte`. **Its URL is its location in `src/routes`** — no slugs, no mapping table.
 
-```yaml
-# src/routes/+page.brix.yaml  →  /
+```markdown
+## <!-- src/routes/+page.md  →  / -->
+
+metadata:
 title: Ship pages, not tickets.
 description: A marketing site whose content lives in your repo.
-components:
-  - type: Hero
-    props:
-      eyebrow: Brixter
-      headline: The content is in your codebase.
-      cta: { label: Get started, href: /docs }
-  - type: Pricing
-    props:
-      plans: [...]
+brix:
+
+- type: Hero
+  props:
+  eyebrow: Brixter
+  headline: The content is in your codebase.
+  cta: { label: Get started, href: /docs }
+- type: Pricing
+  props:
+  plans: [...]
+
+---
+
+Optional prose. It is compiled to HTML and handed to the layout as `content`.
 ```
 
 The plugin compiles this into a Svelte page that:
 
-- renders each entry in `components` (matched by `type`) from your brik directory,
-- exposes the rest of the document as page **metadata** (exported as `metadata`), and
-- injects `<BrixSeo {...metadata} />` into `<head>` (see [SEO](#seo)).
+- renders each entry in `brix` (matched by `type`) from your brik directory,
+- exports the `metadata` block and injects `<BrixSeo {...metadata} />` into `<head>` (see [SEO](#seo)),
+- compiles the markdown body and passes it to the layout as `content`, and
+- **fails the build** if a page and a brik disagree (see [Validation](#validation)).
 
-Everything that isn't `components` or `layout` is treated as metadata.
+The frontmatter's top level is a closed set: `metadata`, `brix`, `layout`, `aliases`, `sitemap`. Anything else is an error, so a misspelled key is caught rather than quietly becoming metadata that renders nothing.
 
 ## Authoring briks
 
 A _brik_ is a reusable section — a hero, a pricing table, a testimonial wall. Each `type` referenced by a page resolves to a component in `$lib/brixter/brix/` (`Hero` → `$lib/brixter/brix/Hero.brix`).
 
-A `.brix` file is annotated HTML. `data-brixter-*` attributes mark which parts are content-driven, so the same markup renders on the site and drives the visual editor:
+A `.brix` file is HTML with braces. `{ … }` marks what a page supplies, so the same markup renders on the site and drives the visual editor:
 
-```html
+```brix
 ---
+title: Hero
 description: Primary hero with promise, subtitle, and CTA.
 ---
 
 <section class="...">
-	<p data-brixter-field="eyebrow">Eyebrow</p>
-	<h1 data-brixter-field="headline" data-brixter-kind="richtext-inline">Headline goes here.</h1>
-	<a href="#" data-brixter-field="cta.label" data-brixter-bind="href:cta.href">Get started</a>
-	<img src="" alt="" data-brixter-field="screenshot" data-brixter-kind="image" />
+	<p>{eyebrow ?? 'Eyebrow'}</p>
+	<h1>{@richtext @required headline}</h1>
+	<a href={cta.href ?? '#'}>{cta.label ?? 'Get started'}</a>
+	<img src={@image screenshot} alt="" />
 </section>
 ```
 
-- `data-brixter-field="path"` — binds an element's content to a prop (dot-paths like `cta.label` are supported).
-- `data-brixter-kind="richtext-inline" | "image" | "icon"` — declares the field's editor kind.
-- `data-brixter-bind="attr:path"` — binds an attribute (e.g. `href`) to a prop.
-- `data-brixter-collection-item="items"` — repeats the element once per entry in an array field.
-- The optional `--- ... ---` frontmatter carries a `fields:` schema to add defaults or override inferred field config. It is not rendered.
+- `{path}` — a value, HTML-escaped, in element content or in an attribute. Dot paths work.
+- `?? '…'` — the value used when the page omits the prop, and the placeholder the editor shows before content exists.
+- `@tag` — annotations: `@richtext` / `@icon` / `@image` / `@url` / `@number` / `@boolean` / `@enum('a','b')` for the type, `@required` / `@min` / `@max` / `@pattern` for constraints, `@label('…')` for the editor.
+- `{#each xs as x}` … `{/each}` — repeats its body once per entry; collections nest.
+- `{#if e}` … `{:else}` … `{/if}` — conditionals.
+- The frontmatter carries only `title` and `description`. **There is no schema to write:** the props a brik accepts are derived from the markup that reads them.
 
-`.brix` markup is interpreted at runtime via `@brixter/core`. If you'd rather hand-write a brik as a Svelte component, drop a `Hero.svelte` in the same directory instead — the plugin picks `.brix` when present, otherwise falls back to `.svelte`.
+`.brix` markup is interpreted at runtime via `@brixter/core`. If you'd rather hand-write a brik as a Svelte component, drop a `Hero.svelte` in the same directory instead — the plugin picks `.brix` when present, otherwise falls back to `.svelte`. A `.svelte` brik has no template to infer from, so its props are not validated.
+
+## Validation
+
+Every page is checked against its briks at compile time. A prop the template never reads, a `@required` one that is missing, a value of the wrong type or outside an `@enum`, a brik that does not exist — each stops the build with a file, a line, a column and the path of the field at fault:
+
+```
+[brixter] 3 problems found:
+  • src/routes/pricing/+page.md:6:11: no brik named `Hreo`. Did you mean `Hero`?
+  • src/routes/pricing/+page.md:13:14: `plans` expects a list, but got text.
+  • src/routes/pricing/+page.md:19:17: `headlien` is not used by this brik. Did you mean `headline`?
+```
+
+In `vite dev` the same problems raise the error overlay while the rest of the site keeps serving. `npx brixter check` gives the same answers without a build — use it in CI.
+
+The plugin also writes TypeScript declarations for every brik's props to `$lib/brixter/brixter.generated.d.ts` (configurable with `types`, `false` to skip), so a bad prop shows up in your editor first. It is regenerated whenever a `.brix` changes; gitignore it.
 
 ## Controllers (progressive enhancement)
 
-`.brix` files are **pure markup — no `<script>`**. The interactivity that would live in a Svelte component's `<script>` lives instead in vanilla JS/TS **controllers**: small modules that progressively enhance the rendered DOM by hooking onto elements marked with `data-*` attributes.
+`.brix` files carry **no `<script>`**. The interactivity that would live in a Svelte component's `<script>` lives instead in vanilla JS/TS **controllers**: small modules that progressively enhance the rendered DOM by hooking onto elements marked with `data-*` attributes.
 
 ### The convention
 
@@ -116,7 +141,7 @@ Drop controller files in `$lib/brixter/controllers/`:
 ```
 src/lib/brixter/
 ├── brix/
-│   └── Hero.brix          ← pure markup, no <script>
+│   └── Hero.brix          ← template, no <script>
 └── controllers/
     └── hero.ts            ← behaviour for Hero.brix
 ```
@@ -250,7 +275,7 @@ Four skills are installed, each activating on the files it governs:
 | -------------------- | -------------------------------------- |
 | `brixter-site`       | Setting up or extending a Brixter site |
 | `brixter-brik`       | `**/*.brix`                            |
-| `brixter-page`       | `**/*.brix.yaml`                       |
+| `brixter-page`       | `**/+page.md`                          |
 | `brixter-controller` | `**/lib/brixter/controllers/**`        |
 
 Other commands: `npx brixter skills list` shows the skills and their globs;
@@ -282,7 +307,22 @@ reliable check, and `npx brixter skills install` always works.
 
 ## Layouts
 
-Set `layout: <Name>` on a page (or configure a `defaultLayout`) to wrap its content in a component from `$lib/brixter/layouts/<Name>.svelte`. The layout receives the page `metadata` both as a `metadata` prop and spread as individual props.
+Set `layout: <Name>` on a page (or configure a `defaultLayout`) to wrap its content in a component from `$lib/brixter/layouts/<Name>.svelte`. The layout receives three props: `metadata` (the page's frontmatter metadata block), `children` (its briks, in order), and `content` — the page's markdown body, compiled to HTML.
+
+```svelte
+<!-- $lib/brixter/layouts/Marketing.svelte -->
+<script>
+	let { metadata, content, children } = $props();
+</script>
+
+{@render children()}
+
+{#if content}
+	<article class="prose">{@html content}</article>
+{/if}
+```
+
+A layout that renders `content` is what lets a page carry editorial prose without a brik for it. With no layout, the body renders after the sections.
 
 ## SEO
 
@@ -312,7 +352,7 @@ Automatic injection can be turned off with `brixter({ seo: false })`, and you ca
 
 ## Sitemap
 
-Add a `sitemap.xml` that auto-discovers every page under `src/routes` — `.brix.yaml`, `+page.svelte`, and mdsvex — with one file:
+Add a `sitemap.xml` that auto-discovers every page under `src/routes` — `+page.md` and `+page.svelte` alike — with one file:
 
 ```ts
 // src/routes/sitemap.xml/+server.ts
@@ -335,11 +375,13 @@ import { createSitemap } from 'brixter/sveltekit/sitemap';
 export const { GET, prerender } = createSitemap({ siteUrl: PUBLIC_SITE_URL });
 ```
 
-Per-page control lives in the page's metadata (no extra config):
+Per-page control lives in the page's frontmatter (no extra config):
 
-- `robots: noindex` (or `noindex,nofollow`) — excluded from the sitemap.
+- `metadata.robots: noindex` (or `noindex,nofollow`) — excluded from the sitemap.
 - `sitemap: false` — excluded.
 - `sitemap: { changefreq, priority, lastmod, loc }` — override individual fields (`loc` sets an explicit URL).
+
+`robots` sits under `metadata` because it renders a `<head>` tag; `sitemap` is a build directive and sits at the top level.
 
 Route groups `(marketing)` are collapsed and dynamic `[slug]` routes are skipped from the automatic set — feed those from your data with `additionalPaths`:
 
@@ -359,8 +401,9 @@ When a page replaces an old URL, the page says so. Add the old paths to its
 `aliases`:
 
 ```yaml
-# src/routes/pricing/+page.brix.yaml  →  /pricing
-title: Pricing
+# src/routes/pricing/+page.md  →  /pricing
+metadata:
+  title: Pricing
 aliases:
   - /plans
   - /old-pricing
@@ -406,7 +449,7 @@ reaching production as a dead URL. Every message names the file holding the rule
 ```
 error during build:
 Error: [brixter] redirects: 1 redirect could not be compiled:
-  • src/routes/test/+page.brix.yaml: alias `/sitemap.xml` collides with an
+  • src/routes/test/+page.md: alias `/sitemap.xml` collides with an
     existing path — it is already served by the site
 ```
 
@@ -478,6 +521,16 @@ For a light/dark toggle, use the theming primitives from the package root. `<The
 
 `themePreference` is a store (`'system' | 'light' | 'dark'`) persisted to `localStorage`.
 
+## CLI
+
+```sh
+npx brixter check   # validate every page against its briks; exits non-zero on a problem
+npx brixter types   # write the generated declarations without running Vite
+npx brixter skills  # install the agent skills into this project
+```
+
+`check` runs the same inference and the same validator the plugin does, straight over the filesystem — so CI can ask "is this site coherent?" without a build.
+
 ## Vite plugin options
 
 ```ts
@@ -487,6 +540,8 @@ brixter({
 	controllersDir: '$lib/brixter/controllers', // where progressive-enhancement controllers live
 	defaultLayout: undefined, // layout used when a page omits `layout`
 	seo: true, // inject <BrixSeo> into every page
+	editorAnchors: true, // emit the data-brixter-* attributes the editor binds to
+	types: '$lib/brixter/brixter.generated.d.ts', // `false` to skip
 	redirects: {} // serve page `aliases` in dev; `false` to disable
 });
 ```

@@ -32,23 +32,23 @@ describe('extractAliases', () => {
 describe('pageAliasSource', () => {
 	const pages = [
 		{
-			file: 'src/routes/pricing/+page.brix.yaml',
+			file: 'src/routes/pricing/+page.md',
 			url: '/pricing',
-			metadata: { aliases: ['/plans', { path: '/old-pricing', status: 302 }] }
+			frontmatter: { aliases: ['/plans', { path: '/old-pricing', status: 302 }] }
 		},
-		{ file: 'src/routes/about/+page.brix.yaml', url: '/about', metadata: { title: 'About' } }
+		{ file: 'src/routes/about/+page.md', url: '/about', frontmatter: { title: 'About' } }
 	];
 
 	it('turns each alias into a rule pointing at its page, tagged with the page file', () => {
 		expect(pageAliasSource(pages)).toEqual({
 			name: 'page aliases',
 			rules: [
-				{ from: '/plans', to: '/pricing', file: 'src/routes/pricing/+page.brix.yaml' },
+				{ from: '/plans', to: '/pricing', file: 'src/routes/pricing/+page.md' },
 				{
 					from: '/old-pricing',
 					to: '/pricing',
 					status: 302,
-					file: 'src/routes/pricing/+page.brix.yaml'
+					file: 'src/routes/pricing/+page.md'
 				}
 			]
 		});

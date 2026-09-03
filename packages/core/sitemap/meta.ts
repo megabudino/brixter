@@ -1,7 +1,7 @@
 /**
  * Extract sitemap directives from a page's metadata object.
  *
- * The `.brix.yaml` compiler exposes every non-`components`/`layout` key as the
+ * The page compiler exposes the parsed frontmatter as the
  * page's exported `metadata`, so `robots` and an optional `sitemap` key arrive
  * here unchanged. This reader is deliberately a plain-object mapper (not the
  * full `parseBrixYamlDocument`, which needs brik definitions and injects
@@ -23,17 +23,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
 }
 
-export function extractSitemapMeta(metadata: unknown): SitemapMeta {
+export function extractSitemapMeta(frontmatter: unknown): SitemapMeta {
 	const result: SitemapMeta = { exclude: false };
-	if (!isRecord(metadata)) return result;
+	if (!isRecord(frontmatter)) return result;
 
 	// `robots: noindex` (or `noindex,nofollow`) drops the page from the sitemap.
-	const robots = metadata.robots;
+	// It is a `<head>` tag, so it lives under `metadata`; `sitemap` is a build
+	// directive and sits at the top level beside `brix` and `layout`.
+	const metadata = frontmatter.metadata;
+	const robots = isRecord(metadata) ? metadata.robots : undefined;
 	if (typeof robots === 'string' && /\bnoindex\b/i.test(robots)) {
 		result.exclude = true;
 	}
 
-	const sitemap = metadata.sitemap;
+	const sitemap = frontmatter.sitemap;
 	if (sitemap === false) {
 		result.exclude = true;
 		return result;

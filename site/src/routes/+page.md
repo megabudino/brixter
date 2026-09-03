@@ -1,9 +1,11 @@
-title: Brixter CMS
-description: A visual CMS for SvelteKit, versioned in your repository.
-og:
-  ? image
-jsonLd: {}
-components:
+---
+metadata:
+  title: Brixter CMS
+  description: A visual CMS for SvelteKit, versioned in your repository.
+  og:
+    image: null
+  jsonLd: {}
+brix:
   - type: Hero
     props:
       eyebrow: Brixter CMS
@@ -13,7 +15,7 @@ components:
       cta:
         label: Prova contenteditable
         note: Visual editing, clean commits, SvelteKit-first.
-        href: '#'
+        href: "#"
       screenshot: ""
   - type: CoreOffer
     props:
@@ -22,7 +24,7 @@ components:
       description: A focused preview with realistic content so you can recognize this brik.
       cta:
         label: Get started
-        href: '#'
+        href: "#"
       features:
         - icon: |
             <!-- @license lucide-static v0.477.0 - ISC -->
@@ -113,11 +115,11 @@ components:
     props:
       eyebrow: Core offer
       headline: A visual builder on top of real Svelte components.
-      description: Define reusable sections, assemble them in .brix.yaml files, and
-        let the dashboard handle editing, media, preview, and saving.
+      description: Define reusable sections, assemble them in .md pages, and let the
+        dashboard handle editing, media, preview, and saving.
       cta:
         label: Try Brixter
-        href: '#'
+        href: "#"
       features:
         - icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -184,15 +186,16 @@ components:
       cta:
         label: Enter Brixter
         note: Homepage generated with reusable briks.
-        href: '#'
+        href: "#"
   - type: Footer
     props:
       brand: Brixter
       claim: Visual CMS for SvelteKit. Versioned, composable, direct.
       links:
         - label: Dashboard
-          href: '#'
+          href: "#"
         - label: Routes
-          href: '#'
+          href: "#"
         - label: Settings
-          href: '#'
+          href: "#"
+---

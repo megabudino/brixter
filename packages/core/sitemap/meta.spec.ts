@@ -3,17 +3,23 @@ import { extractSitemapMeta } from './meta.js';
 
 describe('extractSitemapMeta', () => {
 	it('defaults to included with no directives', () => {
-		expect(extractSitemapMeta({ title: 'Home' })).toEqual({ exclude: false });
+		expect(extractSitemapMeta({ metadata: { title: 'Home' } })).toEqual({ exclude: false });
 		expect(extractSitemapMeta(undefined)).toEqual({ exclude: false });
 		expect(extractSitemapMeta(null)).toEqual({ exclude: false });
 	});
 
-	it('excludes robots noindex variants', () => {
-		expect(extractSitemapMeta({ robots: 'noindex' }).exclude).toBe(true);
-		expect(extractSitemapMeta({ robots: 'noindex,nofollow' }).exclude).toBe(true);
-		expect(extractSitemapMeta({ robots: 'NOINDEX' }).exclude).toBe(true);
-		expect(extractSitemapMeta({ robots: 'index,follow' }).exclude).toBe(false);
-		expect(extractSitemapMeta({ robots: 'nofollow' }).exclude).toBe(false);
+	it('excludes robots noindex variants, read from `metadata`', () => {
+		const robots = (value: string) => extractSitemapMeta({ metadata: { robots: value } }).exclude;
+
+		expect(robots('noindex')).toBe(true);
+		expect(robots('noindex,nofollow')).toBe(true);
+		expect(robots('NOINDEX')).toBe(true);
+		expect(robots('index,follow')).toBe(false);
+		expect(robots('nofollow')).toBe(false);
+	});
+
+	it('ignores a top-level `robots` — it is a `<head>` tag and belongs to metadata', () => {
+		expect(extractSitemapMeta({ robots: 'noindex' }).exclude).toBe(false);
 	});
 
 	it('excludes on sitemap: false', () => {

@@ -1,14 +1,19 @@
 /**
  * Vite plugin for brixter.
  *
- * Compiles `.brix.yaml` / `.brix.yml` page files into Svelte components at
- * transform time. It carries only the Vite-level integration that cannot live
- * in SvelteKit route modules.
+ * Compiles `+page.md` files into Svelte components at transform time, and holds
+ * pages to the schemas their briks declare: a mistyped prop, a missing required
+ * one, or a brik that does not exist stops the build with a file, a line, and
+ * the path of the field at fault. In `vite dev` the same issues surface through
+ * the error overlay instead, so one bad page does not take the server down.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { compileBrixYaml, isBrixYaml } from './brix-yaml.ts';
+import { SchemaError, type SchemaIssue } from '@brixter/core';
+import { createBrikRegistry, type BrikRegistry } from './briks.ts';
+import { compileBrixPage, isBrixPage } from './page.ts';
+import { writeGeneratedTypes } from './types.ts';
 import {
 	compileDevRedirects,
 	resolveDevRedirect,
@@ -18,13 +23,13 @@ import {
 
 export interface BrixterPluginOptions {
 	/**
-	 * Directory containing the components referenced by `.brix.yaml` files.
+	 * Directory containing the briks referenced by `+page.md` files.
 	 *
 	 * @default '$lib/brixter/brix'
 	 */
 	brixDir?: string;
 	/**
-	 * Directory containing page layout components referenced by `.brix.yaml` files.
+	 * Directory containing page layout components referenced by `+page.md` files.
 	 *
 	 * @default '$lib/brixter/layouts'
 	 */
@@ -38,16 +43,33 @@ export interface BrixterPluginOptions {
 	 */
 	controllersDir?: string;
 	/**
-	 * Optional layout name used when a `.brix.yaml` file omits `layout`.
+	 * Optional layout name used when a `+page.md` file omits `layout`.
 	 */
 	defaultLayout?: string;
 	/**
-	 * Inject a `<BrixSeo>` component into every compiled `.brix.yaml` page so
-	 * standard SEO metadata is rendered into `<head>` regardless of layout.
+	 * Inject a `<BrixSeo>` component into every compiled page so standard SEO
+	 * metadata is rendered into `<head>` regardless of layout.
 	 *
 	 * @default true
 	 */
 	seo?: boolean;
+	/**
+	 * Emit the `data-brixter-*` attributes the visual editor binds click-to-edit
+	 * to. Turn off for a production build that will never be opened in the
+	 * editor; the rendered HTML is a little smaller and carries no authoring
+	 * metadata.
+	 *
+	 * @default true
+	 */
+	editorAnchors?: boolean;
+	/**
+	 * Write TypeScript declarations for every brik's props and for the page
+	 * frontmatter, so `svelte-check` and the editor catch a bad prop before the
+	 * build does. Pass a path to choose where; `false` to skip.
+	 *
+	 * @default '$lib/brixter/brixter.generated.d.ts'
+	 */
+	types?: string | false;
 	/**
 	 * Serve page `aliases` as real redirects in `vite dev`, matching what the
 	 * hosting layer will do in production. Pass the same `sources` you give
@@ -77,19 +99,35 @@ function controllersGlobPattern(dir: string): string {
 	return `${base.replace(/\/$/, '')}/*.{ts,js}`;
 }
 
+/** Resolve a `$lib/…`-style option to a filesystem path under `root`. */
+function resolveDir(dir: string, root: string): string {
+	if (dir.startsWith('$lib/')) return path.join(root, 'src', 'lib', dir.slice('$lib/'.length));
+	return path.resolve(root, dir);
+}
+
 export function brixter(options: BrixterPluginOptions = {}): Plugin {
-	let brixFsDir: string | undefined;
 	const controllersPattern = controllersGlobPattern(
 		options.controllersDir ?? '$lib/brixter/controllers'
 	);
 
+	let root = process.cwd();
+	let brixFsDir: string | undefined;
+	let registry: BrikRegistry;
+
+	const refreshTypes = () => {
+		if (options.types === false || !registry) return;
+		writeGeneratedTypes(registry, resolveTypesPath(options.types, root));
+	};
+
 	return {
 		name: 'brixter',
 		enforce: 'pre',
+
 		resolveId(id) {
 			if (id === CONTROLLERS_MODULE_ID) return RESOLVED_CONTROLLERS_MODULE_ID;
 			return null;
 		},
+
 		load(id) {
 			if (id !== RESOLVED_CONTROLLERS_MODULE_ID) return null;
 			// Eagerly collect the consumer's controller modules. Adding or removing
@@ -100,18 +138,15 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 				`export default modules;\n`
 			);
 		},
-		config(userConfig) {
-			const root = path.resolve(userConfig.root ?? process.cwd());
 
-			// Resolve the brix directory to a filesystem path so we can check
-			// whether a `.brix` markup file exists for a referenced component.
-			const brixDir = options.brixDir ?? '$lib/brixter/brix';
-			if (brixDir.startsWith('$lib/')) {
-				const libPath = path.join(root, 'src', 'lib', brixDir.slice('$lib/'.length));
-				brixFsDir = existsSync(libPath) ? libPath : undefined;
-			} else {
-				brixFsDir = path.resolve(root, brixDir);
-			}
+		config(userConfig) {
+			root = path.resolve(userConfig.root ?? process.cwd());
+
+			// Resolve the brik directory to a filesystem path: briks are read from
+			// disk to derive their schemas, not just imported.
+			const resolved = resolveDir(options.brixDir ?? '$lib/brixter/brix', root);
+			brixFsDir = existsSync(resolved) ? resolved : undefined;
+			registry = createBrikRegistry(brixFsDir, root);
 
 			return {
 				ssr: {
@@ -121,18 +156,45 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 				}
 			};
 		},
-		transform(code, id) {
-			if (!isBrixYaml(id)) return null;
-			return {
-				code: compileBrixYaml(code, options, brixFsDir),
-				map: { mappings: '' }
-			};
+
+		buildStart() {
+			registry?.invalidate();
+			refreshTypes();
 		},
+
+		transform(code, id) {
+			if (!isBrixPage(id)) return null;
+
+			const file = toPosix(path.relative(root, id.split('?', 1)[0]));
+			const result = compileBrixPage(code, file, options, registry);
+
+			// `this.error` fails this module: in a build that stops it, and in `vite
+			// dev` it raises the error overlay while the server keeps serving every
+			// other route. Both are what we want, so there is nothing to branch on.
+			if (result.issues.length > 0) this.error(describe(result.issues));
+
+			return { code: result.code, map: { mappings: '' } };
+		},
+
 		configureServer(server) {
+			// A brik's schema is what pages are validated against, so a change to one
+			// has to drop the cached schema *and* re-run every page through it.
+			const onBrikChange = (file: string) => {
+				if (!brixFsDir || !file.startsWith(brixFsDir)) return;
+				registry.invalidate(file);
+				refreshTypes();
+				for (const module of server.moduleGraph.idToModuleMap.values()) {
+					if (isBrixPage(module.id ?? '')) server.moduleGraph.invalidateModule(module);
+				}
+				server.ws.send({ type: 'full-reload' });
+			};
+			server.watcher.on('change', onBrikChange);
+			server.watcher.on('add', onBrikChange);
+			server.watcher.on('unlink', onBrikChange);
+
 			const redirectOptions = options.redirects === false ? null : (options.redirects ?? {});
 			if (!redirectOptions || redirectOptions.enabled === false) return;
 
-			const root = server.config.root;
 			// Compiled lazily and thrown away whenever a route file changes, so
 			// adding an alias takes effect without restarting the dev server.
 			let compiled: CompiledDevRedirects | null = null;
@@ -146,7 +208,7 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 			server.middlewares.use((req, res, next) => {
 				if (!req.url) return next();
 				if (!compiled) {
-					compiled = compileDevRedirects(root, redirectOptions);
+					compiled = compileDevRedirects(server.config.root, redirectOptions);
 					for (const warning of compiled.warnings) {
 						server.config.logger.warn(`[brixter] redirects: ${warning}`);
 					}
@@ -159,4 +221,19 @@ export function brixter(options: BrixterPluginOptions = {}): Plugin {
 			});
 		}
 	};
+}
+
+function resolveTypesPath(option: string | undefined, root: string): string {
+	const target = option ?? '$lib/brixter/brixter.generated.d.ts';
+	if (target.startsWith('$lib/'))
+		return path.join(root, 'src', 'lib', target.slice('$lib/'.length));
+	return path.resolve(root, target);
+}
+
+function describe(issues: SchemaIssue[]): string {
+	return `[brixter] ${new SchemaError(issues).message}`;
+}
+
+function toPosix(value: string): string {
+	return value.split(path.sep).join('/');
 }

@@ -1,23 +1,24 @@
 ---
 name: brixter-site
-description: Build or extend a Brixter-compatible marketing site in SvelteKit — install and configure the Vite plugin, lay out the `$lib/brixter` directories, decide what becomes a brik vs a page prop, and wire theming, SEO, the sitemap and redirects. Use this whenever the project contains `.brix` / `.brix.yaml` files or the `brixter` dependency, or when asked to add a landing page, section, or marketing page to such a project.
+description: Build or extend a Brixter-compatible marketing site in SvelteKit — install and configure the Vite plugin, lay out the `$lib/brixter` directories, decide what becomes a brik vs a page prop, and wire theming, SEO, the sitemap and redirects. Use this whenever the project contains `.brix` files or the `brixter` dependency, or when asked to add a landing page, section, or marketing page to such a project.
 ---
 
 # Building a Brixter site
 
-Brixter keeps marketing content in the repo as files. A page is a declarative
-`.brix.yaml` list of sections; a section (a _brik_) is annotated HTML; behaviour
-lives in vanilla controllers. Nothing is fetched at runtime — pages compile at
-build time.
+Brixter keeps marketing content in the repo as files. A page is a `+page.md`
+whose frontmatter lists its sections and whose body is prose; a section (a
+_brik_) is HTML with `{ … }` interpolation; behaviour lives in vanilla
+controllers. Nothing is fetched at runtime — pages compile at build time, and
+the build fails if a page and a brik disagree.
 
 Three companion skills cover the file types in depth. Read the one that matches
 what you are about to write:
 
-| Task                                                                         | Skill                |
-| ---------------------------------------------------------------------------- | -------------------- |
-| Author or edit a page (`+page.brix.yaml`), metadata, SEO, sitemap, redirects | `brixter-page`       |
-| Author or edit a section (`.brix` markup, editable fields, collections)      | `brixter-brik`       |
-| Add interactivity to a brik                                                  | `brixter-controller` |
+| Task                                                                  | Skill                |
+| --------------------------------------------------------------------- | -------------------- |
+| Author or edit a page (`+page.md`), metadata, SEO, sitemap, redirects | `brixter-page`       |
+| Author or edit a section (`.brix` template, props, collections)       | `brixter-brik`       |
+| Add interactivity to a brik                                           | `brixter-controller` |
 
 ## The mental model
 
@@ -25,10 +26,10 @@ what you are about to write:
 src/
 ├── routes/
 │   ├── +layout.svelte              ← runs initBrixControllers on afterNavigate
-│   ├── +page.brix.yaml             ← the page at "/" : metadata + list of briks
-│   └── pricing/+page.brix.yaml     ← the page at "/pricing"
+│   ├── +page.md                    ← the page at "/" : metadata, briks, prose
+│   └── pricing/+page.md            ← the page at "/pricing"
 └── lib/brixter/
-    ├── brix/Hero.brix              ← reusable section, pure markup
+    ├── brix/Hero.brix              ← reusable section, HTML + { … }
     ├── layouts/Marketing.svelte    ← optional page wrapper
     └── controllers/hero.ts         ← behaviour for Hero.brix
 ```
@@ -36,6 +37,8 @@ src/
 - **A page's URL is its location in `src/routes`.** No slugs, no mapping table.
 - **A page holds only content**; every visual decision lives in the brik.
 - **A brik is reused across pages**; it never hardcodes copy that a page should own.
+- **A brik's template is its schema.** There is no separate field definition to
+  keep in sync — the props a brik accepts are the ones its markup reads.
 
 ## Setup checklist
 
@@ -48,7 +51,7 @@ Verify these before writing any brik or page. If one is missing, add it.
 
 ```js
 const config = {
-	extensions: ['.svelte', '.brix.yaml', '.brix.yml'],
+	extensions: ['.svelte', '.md'],
 	preprocess: [vitePreprocess()]
 };
 ```
@@ -76,9 +79,16 @@ brixter({
 	controllersDir: '$lib/brixter/controllers',
 	defaultLayout: undefined,
 	seo: true, // inject <BrixSeo> into every compiled page
+	editorAnchors: true, // emit the data-brixter-* attributes the editor binds to
+	types: '$lib/brixter/brixter.generated.d.ts', // `false` to skip
 	redirects: {} // serve page `aliases` in dev; `false` to disable
 });
 ```
+
+The plugin also writes TypeScript declarations for every brik's props, so a bad
+prop shows up in the editor and in `svelte-check` before the build sees it. The
+file is regenerated whenever a `.brix` changes — treat it as a build artifact and
+gitignore it.
 
 **4. Redirects (only if pages declare `aliases`)** — wrap the adapter so they
 are compiled and emitted in its native format:
@@ -113,15 +123,16 @@ into markup.
 1. **Reuse before creating.** List `$lib/brixter/brix/`. If an existing brik
    fits the shape of the section (even with different copy), use it with new
    props instead of authoring a near-duplicate.
-2. **Decide the field surface.** What varies per page (copy, links, images,
-   list entries) becomes an editable field. What never varies (layout, spacing,
+2. **Decide the prop surface.** What varies per page (copy, links, images, list
+   entries) becomes an interpolation. What never varies (layout, spacing,
    colour, order) stays hardcoded in the markup.
-3. **Write the brik** — see `brixter-brik`. Pure markup, no `<script>`, realistic
-   placeholder content in the element bodies.
+3. **Write the brik** — see `brixter-brik`. Markup with `{ … }`, no `<script>`,
+   and a realistic `??` placeholder on every interpolation.
 4. **Add it to the page** — see `brixter-page`. `type` matches the file name
    (`Hero.brix` → `type: Hero`).
 5. **Add interactivity only if needed** — see `brixter-controller`.
-6. **Verify** it renders: run the dev server and load the route.
+6. **Verify.** `npx brixter check` validates every page against its briks
+   without a build; then run the dev server and load the route.
 
 ## Conventions that keep a site coherent
 
@@ -136,7 +147,7 @@ into markup.
 - **One responsibility per brik.** A hero is a hero. If a section starts growing
   optional halves that pages toggle on and off, split it.
 - **Content lives in the page.** A brik that renders the same words on every page
-  either has a missing field or should not be a field at all.
+  either has a missing prop or should not have one at all.
 
 ## Theming
 
@@ -164,13 +175,15 @@ explicitly, or nothing happens:
 
 `layout: <Name>` on a page wraps its content in
 `$lib/brixter/layouts/<Name>.svelte` (or set `defaultLayout` in the plugin
-options). The layout receives the page metadata both as a `metadata` prop and
-spread as individual props.
+options). The layout receives three props: `metadata` (the page's frontmatter
+metadata block), `children` (its briks, in order), and `content` — the page's
+markdown body, compiled to HTML. A layout that renders `content` lets pages
+carry editorial prose without a brik for it.
 
 ## Svelte escape hatch
 
 A brik can be a `Hero.svelte` in `$lib/brixter/brix/` instead of a `Hero.brix`.
 The plugin prefers `.brix` when both exist. Reach for `.svelte` only when a
 section genuinely needs component state or Svelte control flow — a `.svelte`
-brik is **not** visually editable, so it costs the site its main advantage.
-Default to `.brix` + a controller.
+brik is **not** visually editable and its props are **not** validated, so it
+costs the site both of its main advantages. Default to `.brix` + a controller.

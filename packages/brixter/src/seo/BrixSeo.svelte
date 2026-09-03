@@ -3,7 +3,7 @@
 	 * Renders standard SEO metadata into the document `<head>`.
 	 *
 	 * The brixter Vite plugin injects `<BrixSeo {...metadata} />` for every
-	 * compiled `.brix.yaml` page, so the props mirror the `STANDARD_SEO_FIELDS`
+	 * compiled `+page.md`, so the props mirror the `PAGE_METADATA_SCHEMA`
 	 * schema declared in `@brixter/core`.
 	 */
 	interface OpenGraph {

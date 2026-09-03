@@ -2,11 +2,11 @@
 
 The agnostic brix engine that powers [Brixter](https://github.com/Brixter-Labs/brixter).
 
-A pure parser + runtime interpreter for `.brix` markup, plus the brix document
-format (YAML import/export, field/definition types and helpers). It depends only
-on [`yaml`](https://www.npmjs.com/package/yaml) and contains **no editor, Svelte
-or DOM code**, so a published site and the authoring dashboard can share the same
-render/format base.
+Everything needed to go from files to HTML, with no editor, Svelte or DOM code:
+the `.brix` template language, the `.md` page format, the analyzer that derives
+a brik's schema from its own markup, and the validator that holds pages to it.
+It depends only on [`yaml`](https://www.npmjs.com/package/yaml), so a published
+site and the authoring dashboard can share the same base.
 
 ## Install
 
@@ -16,78 +16,95 @@ npm install @brixter/core
 
 ## Entry points
 
-| Import | Contents |
-|--------|----------|
-| `@brixter/core` | Everything: the document format (fields, definitions, builder helpers) plus the markup renderer. |
-| `@brixter/core/render` | Only the standalone renderer — parser + interpreter, no authoring helpers. Use this for build/SSR rendering to keep the bundle minimal. |
-| `@brixter/core/sitemap` | Route-path → URL translation, per-page sitemap directives, and the XML serializer. |
+| Import                    | Contents                                                                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@brixter/core`           | Everything, plus the document model the authoring UI builds on.                                                                                      |
+| `@brixter/core/template`  | The template engine — parser, interpreter, static analyzer. No authoring helpers. Use this for build/SSR rendering to keep the bundle minimal.       |
+| `@brixter/core/schema`    | `buildBrikSchema` and the page validator.                                                                                                            |
+| `@brixter/core/page`      | The `+page.md` format: parse and serialize.                                                                                                          |
+| `@brixter/core/sitemap`   | Route-path → URL translation, per-page sitemap directives, and the XML serializer.                                                                   |
 | `@brixter/core/redirects` | The redirect compiler: alias reading, validation against a route manifest, chain flattening, and serializers for the hosting layers' native formats. |
 
-## Rendering brix
+## Rendering a brik
 
 ```ts
-import { renderBrixSource } from '@brixter/core/render';
+import { renderBrikSource } from '@brixter/core/template';
 
-const html = renderBrixSource(source, props);
+const html = renderBrikSource(source, props);
 ```
 
-Other renderer exports: `render`, `renderToString`, `stripFrontmatter`,
-`parseTemplate` (with the `TemplateNode` type), and the bind helpers
-`parseBindings`, `parseStyleDeclarations`, `serializeStyleDeclarations`,
-`mergeStyleDeclaration`, `sanitizeStyleValue` (with the `Binding` /
-`StyleDeclaration` types).
+The template language is HTML with braces — `{path}`, `{#each xs as x}`,
+`{#if}`/`{:else}` — where an interpolation may carry `@tag` annotations and a
+`??` fallback:
 
-## `data-brixter-bind`
+```brix
+<h1>{@richtext @required headline}</h1>
+<p>{eyebrow ?? 'Pricing'}</p>
 
-`data-brixter-bind` wires resolved prop values onto an element's attributes. The
-grammar is a `;`-separated list of `target: path` pairs; the **first** `:` of
-each pair splits the target from the path, so the target side never contains a
-`:` (`style.object-position` is a single target).
-
-```html
-<a href="#" data-brixter-bind="href: cta.href; target: cta.target">Go</a>
+{#each plans as plan}
+  <article data-featured={plan.featured}>
+    <h3>{plan.name}</h3>
+    <a href={plan.ctaHref ?? '#'}>{plan.ctaLabel ?? 'Get started'}</a>
+  </article>
+{/each}
 ```
 
-Two kinds of target:
+Other exports: `render` (over a pre-parsed AST), `renderToString`,
+`parseTemplate`, `analyzeTemplate`, and the expression parsers
+(`parseReference`, `parseCondition`, `parseEachHeader`).
 
-| Target | Effect |
-|--------|--------|
-| `attr: path` | Replaces the **whole** attribute value. Works for any attribute, including the entire `style` / `class` attribute. |
-| `style.<prop>: path` | Merges a **single** CSS declaration into the existing `style` attribute, composing with the static markup instead of clobbering it. `<prop>` may be a CSS property (`object-position`, `background-image`) or a custom property (`--op`). |
+Rendering emits `data-brixter-field` and `data-brixter-collection-item` onto the
+elements the visual editor binds click-to-edit to — an element whose whole
+content is one interpolation, and the sole element inside an `{#each}`. Pass
+`{ editorAnchors: false }` to leave them out.
 
-### `style.<prop>` semantics (SSR-native)
+## The schema is the template
 
-```html
-<img
-  style="object-position: 47.5% 50%;"
-  data-brixter-field="imageSrc"
-  data-brixter-bind="alt: imageAlt; style.object-position: imagePosition" />
+There is no schema document. `buildBrikSchema` reads a `.brix` file and derives
+the props it accepts from the markup that uses them:
+
+```ts
+import { buildBrikSchema, validateProps } from '@brixter/core/schema';
+
+const { schema, nodes, issues } = buildBrikSchema(source, { file: 'Hero.brix' });
+const problems = validateProps(page.brix[0].props, schema, { file: '+page.md' });
 ```
 
-With `{ imageSrc: '/a.jpg', imageAlt: 'x', imagePosition: '50% 28%' }` this
-renders `… src="/a.jpg" alt="x" style="object-position: 50% 28%;"` — the static
-default for that one property is overridden, every other declaration is
-preserved.
+A type comes from how a prop is used — the collection of an `{#each}` is an
+array, a path with sub-paths is an object, `src=` implies an image, `href=` a
+URL — refined by any explicit `@tag`. `@enum` is the one type nothing can infer.
 
-- The static `style` is parsed into ordered declarations; the bound property is
-  set/overridden and the rest kept in place, then re-serialized into one
-  `style="…"`.
-- A `null` / empty resolved value emits **no** declaration and does **not**
-  remove a static one already present — the markup default stands.
-- Multiple `style.*` targets on the same element accumulate.
-- If both `style: path` (whole replace) and `style.<prop>: path` are present, the
-  whole replace is applied **first**, then the per-property merges compose onto
-  its result.
+Neither function throws. `validateProps` returns every issue it finds, each
+carrying a code, a message already prefixed with the file, and the path of the
+field at fault; `compileBrikSchema` is the throwing variant for build-time
+callers. This mirrors the redirect compiler's `analyze*` / `compile*` split.
+
+## Attributes and `style`
+
+An attribute whose value is a lone interpolation disappears when the value is
+absent or `false`, so `data-featured={plan.featured}` is only present on a
+featured plan. A `true` is written as `="true"`, so attribute-value selectors
+(Tailwind's `data-[featured=true]:`) still match.
+
+Inside `style`, a declaration whose interpolation resolves to nothing is dropped
+while the others stand:
+
+```brix
+<img style="object-fit: cover; object-position: {position};" src={@image src} />
+```
+
+With no `position`, this renders `style="object-fit: cover;"` — the markup's own
+default survives rather than being clobbered by an empty value.
 
 ### Escaping / trust model
 
-`style.<prop>` values follow the same "content is semi-trusted" posture as
-richtext `{@html}` — the engine renders author-provided data — but a per-page
-value can never inject extra declarations or break out of the attribute:
+Only `@richtext` and `@icon` emit markup from content, and their values are
+treated as semi-trusted and are not sanitised. Interpolated `style` values are:
 `sanitizeStyleValue` drops `;`, `{`, `}`, `<`, `>` and folds newlines/tabs to a
-space. Quotes and parentheses are **kept** so `url("…")` / `url('…')` survive;
-quotes are HTML-escaped to `&quot;` at attribute-serialization time and decoded
-back inside the value by the browser.
+space, so a per-page value can never inject an extra declaration or break out of
+the attribute. Quotes and parentheses are **kept** so `url("…")` survives; quotes
+are HTML-escaped to `&quot;` at serialization time and decoded back inside the
+value by the browser.
 
 ## Redirects
 
@@ -116,14 +133,18 @@ deterministically. `formatRedirectsFile` / `mergeRedirectsFile` serialize to the
 Build Output API. `routeIdToPattern` builds a route matcher for callers that
 have no framework manifest to hand.
 
-## Document format & helpers
+## Document model & authoring helpers
 
-The package root additionally exposes the brix document model and the helpers the
-authoring UI builds on — e.g. `createBuilderDocument`, `createBlock`,
-`getCollectionItems`, `createBuilderDefaultsFromFields`, and the
-`Builder*`/`BrixYaml*` types. These describe the `.brix.yaml` shape and drive
-schema inference; consumers rendering finished pages usually only need
-`@brixter/core/render`.
+The package root additionally exposes what the visual editor builds on:
+`documentFromPage` / `pageFromDocument` to move between a parsed page and an
+editable document, `previewBindingsFromSchema` and `collectionsFromSchema` to
+turn an inferred schema into a field list and a set of editable collections,
+`createFallbackProps` to synthesise the placeholder content a preview shows
+before anything is written, and the prop-manipulation primitives
+(`updatePropsAtPath`, `addCollectionItem`, `reorderCollectionItem`, …).
+
+Consumers rendering finished pages need none of it — `@brixter/core/template`
+is enough.
 
 ## License
 

@@ -24,7 +24,7 @@ function project(files: Record<string, string>): string {
 describe('compileDevRedirects', () => {
 	it('compiles page aliases against the routes found on disk', () => {
 		const root = project({
-			'src/routes/pricing/+page.brix.yaml': 'title: Pricing\naliases: [/plans]\n',
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\naliases: [/plans]\n---\n',
 			'src/routes/+page.svelte': ''
 		});
 		const compiled = compileDevRedirects(root);
@@ -34,18 +34,20 @@ describe('compileDevRedirects', () => {
 
 	it('reports inconsistencies as warnings instead of throwing', () => {
 		const root = project({
-			'src/routes/a/+page.brix.yaml': 'aliases: [/dup]\n',
-			'src/routes/b/+page.brix.yaml': 'aliases: [/dup]\n'
+			'src/routes/a/+page.md': '---\naliases: [/dup]\n---\n',
+			'src/routes/b/+page.md': '---\naliases: [/dup]\n---\n'
 		});
 		const compiled = compileDevRedirects(root);
 		expect(compiled.warnings).toHaveLength(1);
-		expect(compiled.warnings[0]).toContain('+page.brix.yaml');
+		expect(compiled.warnings[0]).toContain('+page.md');
 		// The rule that was declared first still works while the clash is fixed.
 		expect(compiled.map.get('/dup')).toEqual({ to: '/a', status: 301 });
 	});
 
 	it('accepts the same extra sources the adapter takes', () => {
-		const root = project({ 'src/routes/pricing/+page.brix.yaml': 'title: Pricing\n' });
+		const root = project({
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n'
+		});
 		const compiled = compileDevRedirects(root, {
 			sources: [
 				{

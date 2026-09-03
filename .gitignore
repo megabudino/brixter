@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Brixter — regenerated from the `.brix` files by the plugin and `brixter types`
+brixter.generated.d.ts
+
 # SvelteKit / Vite
 .svelte-kit/
 build/

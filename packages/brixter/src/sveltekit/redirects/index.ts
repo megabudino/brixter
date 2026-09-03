@@ -62,7 +62,7 @@ export interface RedirectSourceContext {
 	root: string;
 	/** Absolute path to the routes directory. */
 	routesDir: string;
-	/** Every `.brix.yaml` page found on the site. */
+	/** Every `+page.md` found on the site. */
 	pages: AliasPage[];
 }
 
@@ -109,7 +109,7 @@ function toAliasPages(pages: ReturnType<typeof scanBrixPages>): AliasPage[] {
 	return pages.map((page) => ({
 		file: page.file,
 		url: page.url ?? page.routeId,
-		metadata: page.metadata
+		frontmatter: page.frontmatter
 	}));
 }
 
