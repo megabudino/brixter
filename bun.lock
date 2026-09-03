@@ -6,7 +6,7 @@
     },
     "packages/brixter": {
       "name": "brixter",
-      "version": "0.5.1",
+      "version": "0.6.0",
       "bin": {
         "brixter": "bin/brixter.mjs",
       },

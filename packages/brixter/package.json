@@ -1,6 +1,6 @@
 {
 	"name": "brixter",
-	"version": "0.5.1",
+	"version": "0.6.0",
 	"description": "SvelteKit CMS with a visual builder, .brix section templates and .md pages",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
