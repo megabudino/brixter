@@ -1,6 +1,6 @@
 {
 	"name": "@brixter/core",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Agnostic brix engine: .brix template language, .md page format, schema inference and validation",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
