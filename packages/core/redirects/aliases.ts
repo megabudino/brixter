@@ -1,5 +1,5 @@
 /**
- * Read redirect declarations out of page metadata.
+ * Read redirect declarations out of a page's frontmatter.
  *
  * A page that replaced an old URL owns that URL's redirect: it declares the old
  * path in an `aliases` field, next to the content that answers for it. Deleting
@@ -13,7 +13,7 @@
  *         status: 302
  *
  * Like `extractSitemapMeta`, this is a plain-object mapper over the metadata the
- * `.brix.yaml` compiler already exposes — not a second parser.
+ * page compiler already exposes — not a second parser.
  */
 import type { DeclaredRedirect, RedirectSource } from './types.js';
 
@@ -28,15 +28,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Pull the `aliases` entries out of a page's metadata.
+ * Pull the `aliases` entries out of a page's frontmatter.
  *
  * Accepts a single string, a list of strings, and the long form. Entries that
  * are neither are kept with an unusable `path`, so the compiler reports them
  * against their file rather than silently dropping a redirect an author wrote.
  */
-export function extractAliases(metadata: unknown): DeclaredAlias[] {
-	if (!isRecord(metadata)) return [];
-	const aliases = metadata.aliases;
+export function extractAliases(frontmatter: unknown): DeclaredAlias[] {
+	if (!isRecord(frontmatter)) return [];
+	const aliases = frontmatter.aliases;
 	if (aliases === undefined || aliases === null) return [];
 
 	const entries = Array.isArray(aliases) ? aliases : [aliases];
@@ -60,7 +60,8 @@ export interface AliasPage {
 	 * with a message naming the file.
 	 */
 	url: string;
-	metadata: unknown;
+	/** The page's whole parsed frontmatter — `aliases` sits at its top level. */
+	frontmatter: unknown;
 }
 
 /**
@@ -72,7 +73,7 @@ export interface AliasPage {
 export function pageAliasSource(pages: AliasPage[], name = 'page aliases'): RedirectSource {
 	const rules: DeclaredRedirect[] = [];
 	for (const page of pages) {
-		for (const alias of extractAliases(page.metadata)) {
+		for (const alias of extractAliases(page.frontmatter)) {
 			const rule: DeclaredRedirect = {
 				// Kept raw: normalization and its diagnostics belong to the compiler,
 				// so every source reports malformed paths the same way.

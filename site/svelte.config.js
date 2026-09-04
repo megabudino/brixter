@@ -14,7 +14,7 @@ const config = {
 			return isExternalLibrary ? undefined : true;
 		}
 	},
-	extensions: ['.svelte', '.brix.yaml', '.brix.yml'],
+	extensions: ['.svelte', '.md'],
 	preprocess: [vitePreprocess()],
 	kit: {
 		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
@@ -27,6 +27,9 @@ const config = {
 			// More-specific subpath MUST come before '@brixter/core' (Vite alias =
 			// first match wins). Otherwise SvelteKit's prefix expansion resolves
 			// '@brixter/core/sitemap' to '../packages/core/index.ts/sitemap'.
+			'@brixter/core/template': '../packages/core/template/index.ts',
+			'@brixter/core/schema': '../packages/core/schema/index.ts',
+			'@brixter/core/page': '../packages/core/page/index.ts',
 			'@brixter/core/sitemap': '../packages/core/sitemap/index.ts',
 			'@brixter/core/redirects': '../packages/core/redirects/index.ts',
 			'@brixter/core': '../packages/core/index.ts'

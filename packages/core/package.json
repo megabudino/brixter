@@ -1,7 +1,7 @@
 {
 	"name": "@brixter/core",
-	"version": "0.4.0",
-	"description": "Agnostic brix render engine + format (parser, interpreter, YAML import/export)",
+	"version": "0.5.0",
+	"description": "Agnostic brix engine: .brix template language, .md page format, schema inference and validation",
 	"license": "MIT",
 	"author": "megabudino (https://github.com/megabudino)",
 	"repository": {
@@ -35,9 +35,17 @@
 			"types": "./dist/index.d.ts",
 			"default": "./dist/index.js"
 		},
-		"./render": {
-			"types": "./dist/markup/index.d.ts",
-			"default": "./dist/markup/index.js"
+		"./template": {
+			"types": "./dist/template/index.d.ts",
+			"default": "./dist/template/index.js"
+		},
+		"./schema": {
+			"types": "./dist/schema/index.d.ts",
+			"default": "./dist/schema/index.js"
+		},
+		"./page": {
+			"types": "./dist/page/index.d.ts",
+			"default": "./dist/page/index.js"
 		},
 		"./sitemap": {
 			"types": "./dist/sitemap/index.d.ts",
@@ -53,6 +61,6 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
-		"yaml": "^1.10.3"
+		"yaml": "^2.8.1"
 	}
 }

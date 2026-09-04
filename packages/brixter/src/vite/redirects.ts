@@ -50,7 +50,7 @@ export function compileDevRedirects(
 	const pages = scanBrixPages(routesDir, root).map((page) => ({
 		file: page.file,
 		url: page.url ?? page.routeId,
-		metadata: page.metadata
+		frontmatter: page.frontmatter
 	}));
 	const extra = typeof options.sources === 'function' ? options.sources() : options.sources;
 

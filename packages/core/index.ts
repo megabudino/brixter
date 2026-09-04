@@ -1,11 +1,17 @@
 /**
- * `@brixter/core` — the agnostic brix engine.
+ * `@brixter/core` — the framework-agnostic brix engine.
  *
- * Pure parser + runtime interpreter for `.brix` markup plus the brix document
- * format (YAML import/export, field/definition types and helpers). It depends
- * only on `yaml` and contains no editor, Svelte or DOM code, so the public site
- * and the future dashboard can share the same render/format base.
+ * Everything a Brixter site needs to go from files to HTML, with no editor,
+ * Svelte or DOM code: the `.brix` template language (parser, interpreter and
+ * the analyzer that derives a brik's schema from its markup), the `.md` page
+ * format, the validator that holds the two to their contract, and the document
+ * model the visual editor works against.
+ *
+ * Its only dependency is `yaml`.
  */
 
-export * from './core.js';
-export * from './markup/index.js';
+export * from './frontmatter.js';
+export * from './template/index.js';
+export * from './schema/index.js';
+export * from './page/index.js';
+export * from './builder.js';

@@ -14,7 +14,7 @@ afterEach(() => {
 	for (const dir of temporaries.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-/** Build a throwaway project tree: `{ 'src/routes/a/+page.brix.yaml': '…' }`. */
+/** Build a throwaway project tree: `{ 'src/routes/a/+page.md': '---\n…\n---\n' }`. */
 function project(files: Record<string, string>): string {
 	const root = mkdtempSync(path.join(tmpdir(), 'brixter-redirects-'));
 	temporaries.push(root);
@@ -47,26 +47,27 @@ function fakeAdapter(name: string, onAdapt?: () => void): Adapter {
 describe('scanBrixPages', () => {
 	it('finds pages, their URL, and the file to blame', () => {
 		const root = project({
-			'src/routes/+page.brix.yaml': 'title: Home\n',
-			'src/routes/(marketing)/pricing/+page.brix.yaml': 'title: Pricing\naliases:\n  - /plans\n',
+			'src/routes/+page.md': '---\nmetadata:\n  title: Home\n---\n',
+			'src/routes/(marketing)/pricing/+page.md':
+				'---\nmetadata:\n  title: Pricing\naliases:\n  - /plans\n---\n',
 			'src/routes/about/+page.svelte': '<h1>About</h1>',
-			'src/routes/blog/[slug]/+page.brix.yaml': 'title: Post\n'
+			'src/routes/blog/[slug]/+page.md': '---\nmetadata:\n  title: Post\n---\n'
 		});
 		const pages = scanBrixPages(path.join(root, 'src/routes'), root);
 
 		expect(pages.map((page) => [page.file, page.url])).toEqual([
-			['src/routes/(marketing)/pricing/+page.brix.yaml', '/pricing'],
-			['src/routes/+page.brix.yaml', '/'],
-			['src/routes/blog/[slug]/+page.brix.yaml', null]
+			['src/routes/(marketing)/pricing/+page.md', '/pricing'],
+			['src/routes/+page.md', '/'],
+			['src/routes/blog/[slug]/+page.md', null]
 		]);
-		expect(pages[0].metadata).toMatchObject({ aliases: ['/plans'] });
+		expect(pages[0].frontmatter).toMatchObject({ aliases: ['/plans'] });
 		// A page on a dynamic route has no single URL; its id is kept so the
 		// compiler can name the file if it declares aliases anyway.
 		expect(pages[2].routeId).toBe('/blog/[slug]');
 	});
 
 	it('skips a page whose YAML does not parse, leaving that error to the compiler', () => {
-		const root = project({ 'src/routes/x/+page.brix.yaml': 'title: [unclosed\n' });
+		const root = project({ 'src/routes/x/+page.md': '---\nbrix: [unclosed\n---\n' });
 		expect(scanBrixPages(path.join(root, 'src/routes'), root)).toEqual([]);
 	});
 });
@@ -75,7 +76,7 @@ describe('scanRoutes', () => {
 	it('treats every directory with a page or endpoint as a route', () => {
 		const root = project({
 			'src/routes/+page.svelte': '',
-			'src/routes/pricing/+page.brix.yaml': '',
+			'src/routes/pricing/+page.md': '---\n---\n',
 			'src/routes/sitemap.xml/+server.ts': '',
 			'src/routes/blog/[slug]/+page.svelte': '',
 			'src/routes/+layout.svelte': ''
@@ -98,10 +99,10 @@ describe('scanStaticAssets', () => {
 describe('collectRedirects', () => {
 	it('compiles the aliases declared across the site', () => {
 		const root = project({
-			'src/routes/pricing/+page.brix.yaml':
-				'title: Pricing\naliases:\n  - /plans\n  - /old-pricing\n',
-			'src/routes/about/+page.brix.yaml':
-				'title: About\naliases:\n  - path: /company\n    status: 302\n'
+			'src/routes/pricing/+page.md':
+				'---\nmetadata:\n  title: Pricing\naliases:\n  - /plans\n  - /old-pricing\n---\n',
+			'src/routes/about/+page.md':
+				'---\nmetadata:\n  title: About\naliases:\n  - path: /company\n    status: 302\n---\n'
 		});
 		const rules = collectRedirects(fakeBuilder(['/pricing', '/about']), {}, root);
 
@@ -115,7 +116,7 @@ describe('collectRedirects', () => {
 	it('resolves a destination that is a prerendered path or a static asset', async () => {
 		const root = project({
 			'static/files/paper.pdf': '%PDF',
-			'src/routes/x/+page.brix.yaml': 'aliases: [/paper]\nredirect_to: ignored\n'
+			'src/routes/x/+page.md': '---\naliases: [/paper]\nredirect_to: ignored\n---\n'
 		});
 		// The page's own aliases point at the page; add a source that points elsewhere.
 		const rules = await collectRedirects(
@@ -134,7 +135,9 @@ describe('collectRedirects', () => {
 	});
 
 	it('takes extra sources from a factory, given the pages it found', async () => {
-		const root = project({ 'src/routes/pricing/+page.brix.yaml': 'title: Pricing\n' });
+		const root = project({
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n'
+		});
 		const rules = await collectRedirects(
 			fakeBuilder(['/pricing']),
 			{
@@ -154,28 +157,28 @@ describe('collectRedirects', () => {
 
 	it('fails on an alias that collides with a route, naming the page file', async () => {
 		const root = project({
-			'src/routes/plans/+page.brix.yaml': 'aliases: [/pricing]\n',
-			'src/routes/pricing/+page.brix.yaml': 'title: Pricing\n'
+			'src/routes/plans/+page.md': '---\naliases: [/pricing]\n---\n',
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\n---\n'
 		});
 		await expect(collectRedirects(fakeBuilder(['/plans', '/pricing']), {}, root)).rejects.toThrow(
-			/src\/routes\/plans\/\+page\.brix\.yaml.*\/pricing/s
+			/src\/routes\/plans\/\+page\.md.*\/pricing/s
 		);
 	});
 
 	it('fails on an alias declared by two pages, naming both', async () => {
 		const root = project({
-			'src/routes/a/+page.brix.yaml': 'aliases: [/shared]\n',
-			'src/routes/b/+page.brix.yaml': 'aliases: [/shared]\n'
+			'src/routes/a/+page.md': '---\naliases: [/shared]\n---\n',
+			'src/routes/b/+page.md': '---\naliases: [/shared]\n---\n'
 		});
 		await expect(collectRedirects(fakeBuilder(['/a', '/b']), {}, root)).rejects.toThrow(
-			/src\/routes\/a\/\+page\.brix\.yaml/
+			/src\/routes\/a\/\+page\.md/
 		);
 	});
 
 	it('fails on aliases declared by a page with no single URL', async () => {
-		const root = project({ 'src/routes/blog/[slug]/+page.brix.yaml': 'aliases: [/old-blog]\n' });
+		const root = project({ 'src/routes/blog/[slug]/+page.md': '---\naliases: [/old-blog]\n---\n' });
 		await expect(collectRedirects(fakeBuilder(['/blog/[slug]']), {}, root)).rejects.toThrow(
-			/blog\/\[slug\]\/\+page\.brix\.yaml/
+			/blog\/\[slug\]\/\+page\.md/
 		);
 	});
 });
@@ -278,7 +281,7 @@ describe('withRedirects', () => {
 
 	it('runs the wrapped adapter and emits its native format', async () => {
 		const root = project({
-			'src/routes/pricing/+page.brix.yaml': 'title: Pricing\naliases: [/plans]\n',
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\naliases: [/plans]\n---\n',
 			'build/_redirects': '/*  /.netlify/functions/render  200\n'
 		});
 		let adapted = false;
@@ -296,21 +299,21 @@ describe('withRedirects', () => {
 
 	it('stops the build before the adapter runs when a redirect is inconsistent', async () => {
 		const root = project({
-			'src/routes/a/+page.brix.yaml': 'aliases: [/dup]\n',
-			'src/routes/b/+page.brix.yaml': 'aliases: [/dup]\n'
+			'src/routes/a/+page.md': '---\naliases: [/dup]\n---\n',
+			'src/routes/b/+page.md': '---\naliases: [/dup]\n---\n'
 		});
 		let adapted = false;
 		const adapter = withRedirects(fakeAdapter('@sveltejs/adapter-netlify', () => (adapted = true)));
 		await inProject(root, async () => {
 			await expect(adapter.adapt(fakeBuilder(['/a', '/b']))).rejects.toThrow(
-				/\[brixter\] redirects:[\s\S]*\+page\.brix\.yaml/
+				/\[brixter\] redirects:[\s\S]*\+page\.md/
 			);
 		});
 		expect(adapted).toBe(false);
 	});
 
 	it('refuses to guess a format rather than falling back to a meta refresh', async () => {
-		const root = project({ 'src/routes/a/+page.brix.yaml': 'title: A\n' });
+		const root = project({ 'src/routes/a/+page.md': '---\nmetadata:\n  title: A\n---\n' });
 		const adapter = withRedirects(fakeAdapter('@sveltejs/adapter-static'));
 		await inProject(root, async () => {
 			await expect(adapter.adapt(fakeBuilder(['/a']))).rejects.toThrow(/Set `target`/);
@@ -319,7 +322,7 @@ describe('withRedirects', () => {
 
 	it('honours an explicit target and outDir', async () => {
 		const root = project({
-			'src/routes/pricing/+page.brix.yaml': 'title: Pricing\naliases: [/plans]\n',
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\naliases: [/plans]\n---\n',
 			'dist/index.html': ''
 		});
 		const adapter = withRedirects(fakeAdapter('@sveltejs/adapter-static'), {
@@ -334,7 +337,7 @@ describe('withRedirects', () => {
 
 	it('validates without emitting when emit is off', async () => {
 		const root = project({
-			'src/routes/pricing/+page.brix.yaml': 'title: Pricing\naliases: [/plans]\n'
+			'src/routes/pricing/+page.md': '---\nmetadata:\n  title: Pricing\naliases: [/plans]\n---\n'
 		});
 		const adapter = withRedirects(fakeAdapter('@sveltejs/adapter-static'), { emit: false });
 		await inProject(root, async () => {

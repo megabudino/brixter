@@ -1,70 +1,37 @@
 ---
+title: Showcase
 description: Feature showcase rendered from plain markup, interpreted at runtime.
-fields:
-  features:
-    label: Features
-    itemLabel: Feature
-    summaryField: title
-    item:
-      fields:
-        icon:
-          kind: icon
-  cta:
-    fields:
-      href:
-        default: '#'
 ---
 <section class="bg-white px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-5xl text-center">
-		<p
-			class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase"
-			data-brixter-field="eyebrow"
-		>
-			Showcase
+		<p class="text-muted mb-3 text-[11px] font-semibold tracking-wide uppercase">
+			{eyebrow ?? 'Showcase'}
 		</p>
 
-		<h2
-			class="font-display text-heading text-3xl md:text-4xl"
-			data-brixter-field="headline:richtext-inline"
-		>
-			Built from a plain markup file.
+		<h2 class="font-display text-heading text-3xl md:text-4xl">
+			{@richtext headline ?? 'Built from a plain markup file.'}
 		</h2>
 
-		<p
-			class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7"
-			data-brixter-field="description:richtext-inline"
-		>
-			This brik has no Svelte component — it is interpreted at runtime.
+		<p class="text-secondary mx-auto mt-4 max-w-2xl text-base leading-7">
+			{@richtext description ?? 'This brik has no Svelte component — it is interpreted at runtime.'}
 		</p>
 
 		<div class="mt-12 grid gap-6 sm:grid-cols-3">
-			<div
-				class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-left dark:border-gray-700 dark:bg-gray-800"
-				data-brixter-collection-item="features"
-			>
-				<span
-					class="mb-3 inline-flex h-6 w-6 text-yellow-500 dark:text-yellow-400"
-					data-brixter-field="features[].icon:icon"
-				></span>
-				<h3 class="text-heading text-lg font-semibold" data-brixter-field="features[].title">
-					Feature title
-				</h3>
-				<p
-					class="text-secondary mt-2 text-sm leading-6"
-					data-brixter-field="features[].text:richtext-inline"
-				>
-					Feature description goes here.
-				</p>
-			</div>
+			{#each features as feature}
+				<div class="rounded-lg border border-gray-200 bg-gray-50 p-6 text-left dark:border-gray-700 dark:bg-gray-800">
+					<span class="mb-3 inline-flex h-6 w-6 text-yellow-500 dark:text-yellow-400">
+						{@icon feature.icon}
+					</span>
+					<h3 class="text-heading text-lg font-semibold">{feature.title ?? 'Feature title'}</h3>
+					<p class="text-secondary mt-2 text-sm leading-6">
+						{@richtext feature.text ?? 'Feature description goes here.'}
+					</p>
+				</div>
+			{/each}
 		</div>
 
-		<a
-			href="#"
-			class="btn-site-primary mt-10 inline-block"
-			data-brixter-field="cta.label"
-			data-brixter-bind="href:cta.href"
-		>
-			Get started
+		<a href={cta.href ?? '#'} class="btn-site-primary mt-10 inline-block">
+			{cta.label ?? 'Get started'}
 		</a>
 	</div>
 </section>

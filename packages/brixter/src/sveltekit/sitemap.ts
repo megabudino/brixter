@@ -54,33 +54,36 @@ const ROUTES_PREFIX = '/src/routes/';
 
 interface DiscoveredPage {
 	path: string;
-	metadata: unknown;
+	frontmatter: unknown;
 }
 
 /**
- * Enumerate page files under the consumer's `src/routes`. Brixter pages are
- * globbed eagerly for their compiled `metadata` export (single source of truth
- * with `<BrixSeo>`); plain/mdsvex pages contribute their path only. `+page@*`
- * layout-reset variants need their own patterns — they don't match `+page.*`.
+ * Enumerate page files under the consumer's `src/routes`.
+ *
+ * Brixter pages are globbed eagerly for their compiled `frontmatter` export —
+ * the same object the page compiler builds, so `robots`, `sitemap` and the rest
+ * are read from one source rather than re-parsed here. `.svelte` pages
+ * contribute their path only. `+page@*` layout-reset variants need their own
+ * patterns: they do not match `+page.*`.
  */
 function discoverPages(): DiscoveredPage[] {
-	const brix = import.meta.glob('/src/routes/**/+page.brix.{yaml,yml}', {
+	const brix = import.meta.glob('/src/routes/**/+page.md', {
 		eager: true,
-		import: 'metadata'
+		import: 'frontmatter'
 	});
-	const brixReset = import.meta.glob('/src/routes/**/+page@*.brix.{yaml,yml}', {
+	const brixReset = import.meta.glob('/src/routes/**/+page@*.md', {
 		eager: true,
-		import: 'metadata'
+		import: 'frontmatter'
 	});
-	const plain = import.meta.glob('/src/routes/**/+page.{svelte,md,svx}');
-	const reset = import.meta.glob('/src/routes/**/+page@*.{svelte,md,svx}');
+	const plain = import.meta.glob('/src/routes/**/+page.{svelte,svx}');
+	const reset = import.meta.glob('/src/routes/**/+page@*.{svelte,svx}');
 
 	const pages: DiscoveredPage[] = [];
-	for (const [path, metadata] of Object.entries({ ...brix, ...brixReset })) {
-		pages.push({ path, metadata });
+	for (const [path, frontmatter] of Object.entries({ ...brix, ...brixReset })) {
+		pages.push({ path, frontmatter });
 	}
 	for (const path of [...Object.keys(plain), ...Object.keys(reset)]) {
-		pages.push({ path, metadata: null });
+		pages.push({ path, frontmatter: null });
 	}
 	return pages;
 }
@@ -121,7 +124,7 @@ export function createSitemap(options: SitemapOptions = {}): {
 			const path = routeFileToUrl(rel, { trailingSlash: options.trailingSlash });
 			if (path === null) continue;
 
-			const meta = extractSitemapMeta(page.metadata);
+			const meta = extractSitemapMeta(page.frontmatter);
 			if (meta.exclude) continue;
 
 			const entry: SitemapEntry = {

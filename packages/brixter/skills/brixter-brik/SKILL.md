@@ -1,6 +1,6 @@
 ---
 name: brixter-brik
-description: Author or edit a `.brix` file — the annotated HTML of a reusable Brixter section, including `data-brixter-field` / `-bind` / `-collection-item` annotations, field kinds, and the frontmatter field schema. Use when creating a new section for a Brixter site, or when editing any file with the `.brix` extension.
+description: Author or edit a `.brix` file — the template of a reusable Brixter section, including `{interpolation}`, `{#each}`, `{#if}`, the `@tag` annotations that type a prop, and the `??` fallback that doubles as its editor placeholder. Use when creating a new section for a Brixter site, or when editing any file with the `.brix` extension.
 ---
 
 # Authoring a brik
@@ -9,210 +9,187 @@ A _brik_ is one reusable section of a page — a hero, a pricing table, a
 testimonial wall — living in `$lib/brixter/brix/<Name>.brix`. A page references
 it by file name: `Hero.brix` → `type: Hero`.
 
-A `.brix` file is **annotated HTML**: plain markup where `data-brixter-*`
-attributes mark which parts are driven by page props. The same annotations serve
-two consumers — the site renderer substitutes values into them, and the visual
-editor uses them to know what is editable. Write markup that reads well with the
-placeholder content still in it.
+A `.brix` file is **HTML with braces**: plain markup where `{ … }` marks what a
+page supplies. The same braces serve two consumers — the site renderer
+substitutes values into them, and the visual editor derives from them what is
+editable.
 
-**A `.brix` file has no `<script>` and no framework syntax** — no `{#if}`, no
-`{expr}`, no event handlers. Interactivity goes in a controller (see the
+**There is no schema to write.** The props a brik accepts, their types, their
+defaults and their editor labels are all read back out of the template. If it is
+not in the markup, it is not a prop.
+
+**A `.brix` file has no `<script>` and no framework syntax** — no event handlers,
+no imports, no arbitrary JavaScript. Interactivity goes in a controller (see the
 `brixter-controller` skill).
 
 ## File shape
 
-```html
+```brix
 ---
+title: Hero
 description: Primary hero with promise, subtitle, and CTA.
-fields:
-  cta:
-    fields:
-      href:
-        default: '#'
 ---
 
-<section class="relative overflow-hidden bg-gray-50 px-6 py-20 dark:bg-gray-900">
+<section class="bg-gray-50 px-6 py-20 dark:bg-gray-900">
 	<div class="mx-auto max-w-2xl text-center">
-		<p class="text-muted mb-3 text-[11px] uppercase" data-brixter-field="eyebrow">Eyebrow</p>
-		<h1 class="font-display text-heading text-4xl" data-brixter-field="headline:richtext-inline">
-			Headline goes here.
+		<p class="text-muted text-[11px] uppercase">{eyebrow ?? 'Eyebrow'}</p>
+
+		<h1 class="font-display text-heading text-4xl">
+			{@richtext @required headline}
 		</h1>
-		<a
-			href="#"
-			class="btn-site-primary"
-			data-brixter-field="cta.label"
-			data-brixter-bind="href:cta.href"
-			>Get started</a
-		>
-		<img src="" alt="" class="mt-12 w-full" data-brixter-field="screenshot:image" />
+
+		<a href={cta.href ?? '#'} class="btn-site-primary">{cta.label ?? 'Get started'}</a>
+
+		<img src={@image screenshot} alt="" class="mt-12 w-full" />
 	</div>
 </section>
 ```
 
-The optional `--- … ---` frontmatter is **not rendered**. Everything after it is
-the template.
+The frontmatter carries **only the brik's own identity** — `title` and
+`description`, both optional, shown when picking a brik in the editor. Any other
+key is an error: everything about the props belongs next to the props.
 
-## The four annotations
+## Interpolation
 
-### `data-brixter-field="path"` — bind element content
+`{path}` puts a value where it is written, HTML-escaped. Dot paths work
+(`cta.label`). It works in element content and in attribute values alike:
 
-Replaces the element's children with the resolved prop value. Dot paths work
-(`cta.label`). A missing value renders empty, dropping the placeholder.
-
-Attach the **kind** as a suffix after the last `:` — this compact form is
-preferred:
-
-```html
-<h1 data-brixter-field="headline:richtext-inline">Headline goes here.</h1>
+```brix
+<p>{eyebrow}</p>
+<p>Hi {name}, welcome.</p>
+<a href={cta.href}>Go</a>
+<div class="card {accent}">…</div>
 ```
 
-| Kind              | Effect on render                                                                                |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| `text`            | Value is HTML-escaped into the element. **Default** for every element except `<img>`.           |
-| `richtext-inline` | Value is injected as **raw HTML**. For a single line that may carry `<em>`, `<strong>`, a link. |
-| `richtext-block`  | Raw HTML, for multi-paragraph prose.                                                            |
-| `icon`            | Raw HTML — the value is an inline `<svg>` string.                                               |
-| `image`           | Sets the element's `src` and drops its children. **Default** for `<img>`.                       |
+Two attribute rules worth knowing:
 
-Two rules follow from that table:
+- An attribute whose value is a **lone** interpolation disappears entirely when
+  the value is absent or `false`. That is how `data-featured={plan.featured}`
+  ends up on featured plans only. A `true` is written as `="true"`, so
+  attribute-value selectors like Tailwind's `data-[featured=true]:` match.
+- Inside `style`, a declaration whose interpolation is empty is dropped and the
+  others stand: `style="object-fit: cover; object-position: {position};"` keeps
+  `object-fit` when no `position` is given. Interpolated style values are
+  sanitised, so a page can never inject extra declarations.
 
-- **Escaping.** Only the raw-HTML kinds (`richtext-*`, `icon`) can emit markup
-  from content. Use `text` unless the field genuinely needs formatting —
-  richtext content is treated as semi-trusted and is not sanitised.
-- **`<img>`.** `data-brixter-field="screenshot"` on an `<img>` already means
-  `image`; the explicit `:image` suffix is clearer but not required. Keep
-  `src=""` in the static markup as the placeholder.
+## `??` — the default _and_ the placeholder
 
-The older two-attribute form still works and is equivalent, but prefer the
-suffix in new markup:
-
-```html
-<h1 data-brixter-field="headline" data-brixter-kind="richtext-inline">…</h1>
+```brix
+<p>{eyebrow ?? 'Pricing'}</p>
 ```
 
-Precedence when both are present: the `path:kind` suffix wins.
+The value after `??` is used when the page omits the prop, when it is null, and
+when it is an empty string. That makes it the placeholder the editor shows
+before content exists, which is why briks carry no separate defaults block.
+**Write realistic placeholders** — real-length sentences, not "Lorem" or
+"Title 1".
 
-### `data-brixter-bind="attr: path; …"` — bind attributes
+Do not write a `??` on a collection. An unpopulated collection is filled with
+placeholder entries built from the `??` values of the fields inside it.
 
-A `;`-separated list of `target: path` pairs. Independent of
-`data-brixter-field`; an element can use both. The **first** `:` of each pair
-splits target from path.
+## `@tag` annotations
 
-```html
-<a href="#" data-brixter-field="cta.label" data-brixter-bind="href: cta.href; target: cta.target">
-	Get started
-</a>
+Any interpolation may carry annotations before its path:
+`{@richtext @required headline ?? 'Ship pages'}`. All of them are optional.
+
+### Type
+
+Most types are inferred from how a prop is used. Annotate when the use is not
+enough — and always for `@richtext`, `@icon` and `@enum`.
+
+| Tag                                           | Meaning                                                                                            |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `@richtext`                                   | The value is raw HTML — one line that may carry `<em>`, `<strong>`, a link, or several paragraphs. |
+| `@icon`                                       | Raw HTML: the value is an inline `<svg>` string.                                                   |
+| `@image`                                      | An image URL. Also inferred from `src`, `srcset` and `poster`.                                     |
+| `@url`                                        | A link. Also inferred from `href` and `action`.                                                    |
+| `@number` `@boolean` `@date` `@color` `@json` | Fix the type when nothing else implies it.                                                         |
+| `@enum('a','b','c')`                          | A closed set of values. Nothing can infer this — always write it.                                  |
+
+**Escaping.** Only `@richtext` and `@icon` emit markup from content, and their
+values are treated as semi-trusted and are not sanitised. Leave a prop plain
+unless it genuinely needs formatting.
+
+What is inferred without you: `{#each xs as x}` makes `xs` a collection, any
+`x.field` inside it shapes the entry, `{cta.label}` makes `cta` an object, and a
+prop only ever tested by `{#if}` is a boolean.
+
+### Constraints
+
+| Tag                     | Meaning                                                             |
+| ----------------------- | ------------------------------------------------------------------- |
+| `@required`             | The page must supply this prop. The build fails if it does not.     |
+| `@min(n)` `@max(n)`     | Bounds: a number's value, a collection's length, a string's length. |
+| `@pattern('^[a-z-]+$')` | A regular expression the string must match.                         |
+
+`@required` and `??` contradict each other — a required prop has nothing to fall
+back to — and writing both is an error.
+
+### Editor
+
+`@label('Button link')` sets the field's label in the editor. Without it the key
+is humanised (`ctaHref` → "Cta href"), which is usually enough.
+
+### Props the markup never renders
+
+A value read only by a controller still has to be declared, or a page passing it
+is reported as an unknown prop:
+
+```brix
+{@prop @boolean autoplay ?? false}
 ```
 
-Two kinds of target:
+It renders nothing. Its type cannot be inferred, so annotate it.
 
-| Target               | Effect                                                                                                                                                                           |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `attr: path`         | Replaces the **whole** attribute value — any attribute, including all of `style` or `class`.                                                                                     |
-| `style.<prop>: path` | Merges a **single** CSS declaration into the existing `style`, keeping the other declarations. `<prop>` may be a CSS property (`object-position`) or a custom property (`--op`). |
+## `{#each}` — collections
 
-`style.<prop>` is how you let a page override one visual detail without giving
-away the whole style attribute:
-
-```html
-<img
-	style="object-position: 50% 50%;"
-	data-brixter-field="imageSrc"
-	data-brixter-bind="alt: imageAlt; style.object-position: imagePosition"
-/>
-```
-
-- A `null`/empty value emits no declaration and does **not** remove the static
-  one — the markup default stands. Rely on this instead of duplicating defaults.
-- Multiple `style.*` targets accumulate; a whole-attribute `style:` replace is
-  applied first, then the per-property merges compose onto its result.
-- Values are sanitised (`;`, `{`, `}`, `<`, `>` dropped) so a page value can
-  never inject extra declarations. Quotes and parens survive, so `url("…")` works.
-
-### `data-brixter-collection-item="items"` — repeat an element
-
-Put it on the element that should repeat once per entry of the array prop.
-Inside it, fields address the current entry with `items[].<key>`:
-
-```html
+```brix
 <div class="mt-12 grid gap-4 md:grid-cols-3">
-	<figure class="border p-6" data-brixter-collection-item="reviews">
-		<blockquote data-brixter-field="reviews[].quote:richtext-inline">
-			I can finally update a landing page without opening an issue.
-		</blockquote>
-		<figcaption>
-			<p data-brixter-field="reviews[].author">Marketing Lead</p>
-			<p data-brixter-field="reviews[].role">Growth team</p>
-		</figcaption>
-	</figure>
+	{#each reviews as review}
+		<figure class="border p-6">
+			<blockquote>{@richtext review.quote ?? 'I can finally update a landing page.'}</blockquote>
+			<figcaption>
+				<p>{review.author ?? 'Marketing Lead'}</p>
+				<p>{review.role ?? 'Growth team'}</p>
+			</figcaption>
+		</figure>
+	{/each}
 </div>
 ```
 
-Write **exactly one** item in the markup — it is the template _and_ the
-placeholder. Do not hand-write three copies to fake a grid; the grid comes from
-the wrapper's classes, the repetition from the data.
+Write **exactly one** entry — it is the template and the placeholder both. Do not
+hand-write three copies to fake a grid; the grid comes from the wrapper's
+classes, the repetition from the data.
 
-`data-brixter-bind` also resolves `items[].x` inside a collection item:
+`{#each xs as x, i}` binds the index as well. The index is not a prop.
 
-```html
-<li data-brixter-collection-item="items" data-brixter-bind="data-href: items[].url"></li>
+Collections **nest**: `{#each plans as plan}{#each plan.tiers as tier}` works,
+and each alias is scoped to its own block.
+
+## `{#if}` — conditionals
+
+```brix
+{#if plan.badge}<p class="badge">{plan.badge}</p>{/if}
+
+{#if plan.tier == 'pro'}Pro{:else if plan.tier == 'max'}Max{:else}Free{/if}
 ```
 
-**Limitation — no nested collections.** The array named by
-`data-brixter-collection-item` is always resolved from the page props root, so a
-collection cannot repeat _inside_ another collection's item. Model
-two-level content as a flat list, or as separate sibling collections.
-
-## Frontmatter: `description` and `fields`
-
-Field config is **inferred from the markup** — you only need frontmatter to add
-what markup cannot express. Keep it minimal.
-
-```yaml
----
-description: Reviews and social proof section.
-fields:
-  reviews:
-    label: Reviews
-    itemLabel: Review
-    summaryField: author
-  cta:
-    fields:
-      href:
-        default: '#'
----
-```
-
-`description` is a one-line summary of the section, shown when picking a brik.
-
-Under `fields`, each key mirrors a field path (nesting via `fields:`), and takes:
-
-| Key            | Purpose                                                                                                                                              |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label`        | Human label in the editor. Defaults to a humanised key.                                                                                              |
-| `description`  | Help text for the editor.                                                                                                                            |
-| `default`      | Value used when a page omits the prop.                                                                                                               |
-| `kind`         | Override the inferred kind — see the table above, plus `boolean`, `number`, `object`, `array`, `select`, `url`, `textarea`, `date`, `color`, `json`. |
-| `options`      | For `kind: select` — a list of `{ label, value }`.                                                                                                   |
-| `fields`       | Nested config for an object field.                                                                                                                   |
-| `item`         | Field config applied to each entry of an array field.                                                                                                |
-| `itemLabel`    | Singular label for a collection entry ("Review").                                                                                                    |
-| `summaryField` | Which key of an entry to show as its title in the editor list.                                                                                       |
-| `imageField`   | Which key of an entry to show as its thumbnail.                                                                                                      |
-
-For a collection, `itemLabel` + `summaryField` are the two that most improve the
-editing experience — set them whenever you add a collection.
+Conditions take a path, `!` to negate, and a comparison against a literal
+(`== != > < >= <=`). An empty collection is falsy. Comparisons are only allowed
+inside `{#if}` — everywhere else an expression is a path with annotations.
 
 ## Checklist before finishing a brik
 
-1. **No `<script>`**, no Svelte syntax, no inline event handlers.
-2. Every piece of copy a page should own is a `data-brixter-field`; everything
+1. **No `<script>`**, no event handlers, no JavaScript beyond the small
+   expression grammar above.
+2. Every piece of copy a page should own is an interpolation; everything
    structural stays hardcoded.
-3. Placeholder content is **realistic** — real-length sentences, not "Lorem" or
-   "Title 1". Placeholders are what the editor shows before content exists.
-4. Collections have exactly one item element in the markup.
-5. `text` is used unless the field really needs formatting.
+3. Every interpolation has a **realistic `??` placeholder**, unless it is
+   `@required`.
+4. `@richtext`, `@icon` and `@enum` are annotated — nothing can infer them.
+5. Collections have exactly one entry written in the markup.
 6. Tailwind classes pair each light utility with its `dark:` variant, and reuse
    the theme tokens (`text-heading`, `text-secondary`, `text-muted`,
    `font-display`, `btn-site-primary`) rather than ad-hoc colours.
 7. The file name is `PascalCase.brix` and names what the section _is_.
+8. `npx brixter check` passes.
